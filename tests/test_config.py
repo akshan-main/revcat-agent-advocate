@@ -4,7 +4,10 @@ from pydantic import ValidationError
 from advocate.config import Config, SafetyError
 
 
-def test_default_values():
+def test_default_values(monkeypatch):
+    monkeypatch.delenv("DEMO_MODE", raising=False)
+    monkeypatch.delenv("DRY_RUN", raising=False)
+    monkeypatch.delenv("ALLOW_WRITES", raising=False)
     config = Config(_env_file=None)
     assert config.dry_run is True
     assert config.allow_writes is False
