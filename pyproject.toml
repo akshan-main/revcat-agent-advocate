@@ -33,6 +33,9 @@ revcat-advocate = "cli:main"
 [tool.setuptools.packages.find]
 include = ["advocate*"]
 
+[tool.setuptools]
+py-modules = ["cli"]
+
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
