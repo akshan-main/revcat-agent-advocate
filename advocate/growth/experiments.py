@@ -50,9 +50,8 @@ def start_experiment(db_conn, name: str, inputs: dict) -> int:
 
     # Validate required inputs
     for req in defn.required_inputs:
-        if req not in inputs and inputs.get(req) is None:
-            # Use defaults for optional inputs
-            pass
+        if req not in inputs and req != "keywords_or_auto":
+            inputs[req] = f"auto_{req}"  # Auto-fill with marker so it's traceable
 
     return insert_row(db_conn, "growth_experiments", {
         "name": defn.name,

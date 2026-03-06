@@ -42,14 +42,20 @@ def _make_session() -> requests.Session:
     return session
 
 
-def fetch_index(cache_dir: str) -> list[DocEntry]:
+def fetch_index(cache_dir: str, demo_mode: bool = False) -> list[DocEntry]:
     """Download the LLM docs index and parse all doc entries."""
     os.makedirs(cache_dir, exist_ok=True)
-    session = _make_session()
 
-    resp = session.get(LLM_INDEX_URL, timeout=30)
-    resp.raise_for_status()
-    raw = resp.text
+    # In demo mode, use local fixture instead of fetching from network
+    sample_path = os.path.join(os.path.dirname(__file__), '..', '..', 'demo', 'fixtures', 'sample_index.txt')
+    if demo_mode and os.path.exists(sample_path):
+        with open(sample_path) as f:
+            raw = f.read()
+    else:
+        session = _make_session()
+        resp = session.get(LLM_INDEX_URL, timeout=30)
+        resp.raise_for_status()
+        raw = resp.text
 
     # Save raw index
     index_path = os.path.join(cache_dir, "index.txt")
@@ -174,7 +180,8 @@ def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
     report = IngestReport()
     cache_dir = config.docs_cache_dir
 
-    entries = fetch_index(cache_dir)
+    demo_mode = getattr(config, 'demo_mode', False)
+    entries = fetch_index(cache_dir, demo_mode=demo_mode)
     report.total_entries = len(entries)
 
     session = _make_session()
@@ -192,6 +199,12 @@ def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
                 cache_path = os.path.join(cache_dir, "pages", f"{_sanitize_path(entry.path)}.md")
                 was_cached = os.path.exists(cache_path) and not force
 
+                # In demo mode, skip uncached pages instead of fetching
+                if demo_mode and not os.path.exists(cache_path):
+                    report.skipped += 1
+                    progress.advance(task)
+                    continue
+
                 content, doc_sha256 = fetch_doc_page(entry, cache_dir, session, force=force)
 
                 if content is None:
@@ -206,7 +219,7 @@ def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
                     # Check if changed
                     existing = db_conn.execute(
                         "SELECT doc_sha256 FROM doc_snapshots WHERE url = ? ORDER BY fetched_at DESC LIMIT 1",
-                        [entry.url],
+                        (entry.url,),
                     ).fetchone()
                     if existing and existing["doc_sha256"] != doc_sha256:
                         report.changed += 1

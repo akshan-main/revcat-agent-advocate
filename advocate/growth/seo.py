@@ -141,6 +141,12 @@ def bulk_generate(
         # Search docs for keyword
         results = search_docs(keyword, search_index, config.docs_cache_dir, top_k=5)
 
+        if not results:
+            if ledger_ctx:
+                from ..ledger import log_tool_call
+                log_tool_call(ledger_ctx, "seo.skip", keyword, "No source docs found, skipping")
+            continue
+
         body_md, slug = generate_seo_page(keyword, results, config, ledger_ctx)
 
         # Save

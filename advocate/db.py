@@ -153,7 +153,7 @@ class DBConnection:
 
     def execute(self, sql, params=None):
         if params:
-            cursor = self._conn.execute(sql, params)
+            cursor = self._conn.execute(sql, tuple(params) if isinstance(params, list) else params)
         else:
             cursor = self._conn.execute(sql)
         if self._is_turso:
@@ -227,7 +227,7 @@ def insert_row(conn: DBConnection, table: str, data: dict) -> int:
     placeholders = ", ".join(["?"] * len(data))
     cursor = conn.execute(
         f"INSERT INTO {table} ({cols}) VALUES ({placeholders})",
-        list(data.values()),
+        tuple(data.values()),
     )
     conn.commit()
     return cursor.lastrowid
@@ -251,7 +251,7 @@ def query_rows(
     sql += f" ORDER BY {order_by}"
     if limit:
         sql += f" LIMIT {limit}"
-    rows = conn.execute(sql, params).fetchall()
+    rows = conn.execute(sql, tuple(params)).fetchall()
     return [_row_to_dict(row) for row in rows]
 
 
@@ -260,7 +260,7 @@ def update_row(conn: DBConnection, table: str, row_id: int, data: dict):
     sets = ", ".join(f"{k} = ?" for k in data.keys())
     conn.execute(
         f"UPDATE {table} SET {sets} WHERE id = ?",
-        [*data.values(), row_id],
+        tuple([*data.values(), row_id]),
     )
     conn.commit()
 
@@ -274,7 +274,7 @@ def count_rows(conn: DBConnection, table: str, where: dict | None = None) -> int
             clauses.append(f"{k} = ?")
             params.append(v)
         sql += " WHERE " + " AND ".join(clauses)
-    result = conn.execute(sql, params).fetchone()
+    result = conn.execute(sql, tuple(params)).fetchone()
     if isinstance(result, dict):
         return list(result.values())[0]
     return result[0]
@@ -287,7 +287,7 @@ def rows_since(
     date_col: str = "created_at",
 ) -> list[dict]:
     sql = f"SELECT * FROM {table} WHERE {date_col} >= ? ORDER BY {date_col} DESC"
-    rows = conn.execute(sql, [since]).fetchall()
+    rows = conn.execute(sql, (since,)).fetchall()
     return [_row_to_dict(row) for row in rows]
 
 

@@ -23,6 +23,11 @@ def test_demo_run_full_pipeline(tmp_path, monkeypatch):
     monkeypatch.setenv("RUNS_DIR", str(tmp_path / "runs"))
     monkeypatch.setenv("DEMO_MODE", "true")
     monkeypatch.setenv("DRY_RUN", "true")
+    # Isolate from real cloud services (override .env file values)
+    monkeypatch.setenv("TURSO_DATABASE_URL", "")
+    monkeypatch.setenv("TURSO_AUTH_TOKEN", "")
+    monkeypatch.setenv("CHROMA_API_KEY", "")
+    monkeypatch.setenv("HF_TOKEN", "")
 
     # Set up fixtures as cached docs to avoid HTTP calls during ingest
     docs_dir = tmp_path / "docs"
@@ -63,12 +68,16 @@ def test_demo_run_full_pipeline(tmp_path, monkeypatch):
     runner = CliRunner()
     result = runner.invoke(main, ["demo-run"], catch_exceptions=False)
 
-    # Print output for debugging if needed
-    if result.exit_code != 0:
-        print(result.output)
+    # Always print output for debugging
+    print(result.output)
 
     site_dir = str(tmp_path / "site")
     runs_dir = str(tmp_path / "runs")
+
+    # Debug: list what site files actually exist
+    for root, dirs, files in os.walk(site_dir):
+        for f in files:
+            print(f"  SITE: {os.path.join(root, f)}")
 
     # Verify site outputs exist
     assert os.path.exists(os.path.join(site_dir, "apply", "index.html")), "Apply page missing"

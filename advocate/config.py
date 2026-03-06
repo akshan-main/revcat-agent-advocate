@@ -61,7 +61,19 @@ class Config(BaseSettings):
     site_output_dir: str = "./site_output"
     runs_dir: str = "./runs"
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+
+    @field_validator(
+        "revenuecat_api_key", "anthropic_api_key", "github_token", "hf_token",
+        "turso_database_url", "turso_auth_token", "chroma_api_key",
+        "twitter_bearer_token", "reddit_client_id",
+        mode="before",
+    )
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == "":
+            return None
+        return v
 
     @field_validator("revenuecat_api_key")
     @classmethod

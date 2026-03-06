@@ -101,12 +101,9 @@ def test_export_to_github_issue_no_github():
 
 
 def test_placeholder_feedback():
+    """Without LLM, no feedback is generated (honest about capabilities)."""
     items = _generate_placeholder_feedback(3)
-    assert len(items) == 3
-    for item in items:
-        assert item.title != ""
-        assert item.severity in Severity
-        assert item.area in FeedbackArea
+    assert len(items) == 0
 
 
 def test_export_batch(db_conn, tmp_path):

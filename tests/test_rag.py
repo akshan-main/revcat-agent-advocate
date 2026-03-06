@@ -1,5 +1,7 @@
-"""Tests for the RAG pipeline: ChromaDB vectors + FlashRank reranking + hybrid search."""
+"""Tests for the RAG pipeline: ChromaDB vectors + HF Inference reranking + hybrid search."""
 import os
+
+import pytest
 
 from advocate.knowledge.rag import (
     chunk_document,
@@ -11,6 +13,11 @@ from advocate.knowledge.rag import (
     _split_by_headings,
     Chunk,
     RAGIndex,
+)
+
+requires_hf = pytest.mark.skipif(
+    not os.environ.get("HF_TOKEN"),
+    reason="HF_TOKEN not set, skipping tests that require HF Inference API",
 )
 
 
@@ -79,6 +86,7 @@ and important information about subscriptions and monetization strategies.
     assert all(c.word_count >= 5 for c in chunks)
 
 
+@requires_hf
 def test_build_rag_index(sample_docs_cache):
     index = build_rag_index(sample_docs_cache)
     assert index.doc_count == 3
@@ -86,6 +94,7 @@ def test_build_rag_index(sample_docs_cache):
     assert index.collection is not None
 
 
+@requires_hf
 def test_semantic_search(sample_docs_cache):
     index = build_rag_index(sample_docs_cache)
     results = semantic_search("subscription metrics MRR churn", index, top_k=5)
@@ -95,6 +104,7 @@ def test_semantic_search(sample_docs_cache):
     assert any("charts" in url for url in top_urls)
 
 
+@requires_hf
 def test_semantic_search_conceptual(sample_docs_cache):
     """Semantic search finds conceptually related content even with different words."""
     index = build_rag_index(sample_docs_cache)
@@ -104,6 +114,7 @@ def test_semantic_search_conceptual(sample_docs_cache):
     assert any("mcp" in url for url in top_urls)
 
 
+@requires_hf
 def test_hybrid_search(sample_docs_cache):
     from advocate.knowledge.search import build_index
     bm25_index = build_index(sample_docs_cache)
@@ -119,6 +130,7 @@ def test_hybrid_search(sample_docs_cache):
     assert hasattr(results[0], "doc_sha256")
 
 
+@requires_hf
 def test_hybrid_search_combines_signals(sample_docs_cache):
     from advocate.knowledge.search import build_index
     bm25_index = build_index(sample_docs_cache)
@@ -133,6 +145,7 @@ def test_hybrid_search_combines_signals(sample_docs_cache):
     assert len(r2) > 0
 
 
+@requires_hf
 def test_get_context_chunks(sample_docs_cache):
     index = build_rag_index(sample_docs_cache)
     chunks = get_context_chunks("charts metrics", index, max_chunks=3, max_words=500)
@@ -140,6 +153,7 @@ def test_get_context_chunks(sample_docs_cache):
     assert len(chunks) <= 3
 
 
+@requires_hf
 def test_get_context_chunks_budget(sample_docs_cache):
     index = build_rag_index(sample_docs_cache)
     chunks = get_context_chunks("RevenueCat", index, max_chunks=20, max_words=50)
@@ -173,6 +187,7 @@ def test_rag_index_empty_dir(tmp_path):
     assert index.doc_count == 0
 
 
+@requires_hf
 def test_rag_index_with_db(sample_docs_cache, db_conn):
     from advocate.knowledge.ingest import store_snapshot, DocEntry
     entry = DocEntry(

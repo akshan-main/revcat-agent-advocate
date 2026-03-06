@@ -27,7 +27,7 @@ def create_mcp_server(config: Config) -> FastMCP:
             "RevenueCat Developer Advocate agent. I help developers understand "
             "RevenueCat's APIs, SDKs, Charts, MCP server, and subscription monetization. "
             "I search official docs, generate cited content, and provide product feedback. "
-            "Uses hybrid RAG search (BM25 + TF-IDF semantic) for accurate doc retrieval."
+            "Uses hybrid RAG search (BM25 + vector similarity via HF Inference) for accurate doc retrieval."
         ),
     )
 

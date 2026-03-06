@@ -176,13 +176,18 @@ def generate_competitive_digest(config: Config) -> CompetitiveDigest:
     This intentionally operates at weekly cadence and only uses
     publicly available data. See BOUNDARIES constant for guardrails.
 
-    NOTE: This module fetches PUBLIC pricing pages and blogs regardless
-    of demo_mode. These are public websites, not API calls requiring
-    credentials. demo_mode only gates RevenueCat API/MCP calls.
+    In demo mode, returns a digest with sample data instead of making
+    live HTTP requests to competitor websites.
     """
     digest = CompetitiveDigest(
         week_of=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
     )
+
+    if getattr(config, "demo_mode", False):
+        # Return sample digest without live network requests
+        digest.market_summary = "Demo mode: no live competitor data fetched."
+        digest.rc_positioning = "Maintain current positioning emphasis."
+        return digest
 
     for key in COMPETITORS:
         # Check pricing pages

@@ -15,8 +15,15 @@ import os
 import re
 from dataclasses import dataclass, field
 
-import chromadb
-from chromadb import EmbeddingFunction, Documents, Embeddings
+try:
+    import chromadb
+    from chromadb import EmbeddingFunction, Documents, Embeddings
+    HAS_CHROMADB = True
+except ImportError:
+    HAS_CHROMADB = False
+    Documents = list
+    Embeddings = list
+    EmbeddingFunction = object
 
 from ..models import SearchResult
 
@@ -213,6 +220,8 @@ def _get_chroma_client(cache_dir: str,
                        chroma_tenant: str | None = None,
                        chroma_database: str | None = None):
     """Get ChromaDB client: cloud if credentials provided, else local."""
+    if not HAS_CHROMADB:
+        return None
     if chroma_api_key:
         return chromadb.CloudClient(
             tenant=chroma_tenant or "default_tenant",
@@ -233,6 +242,9 @@ def build_rag_index(cache_dir: str, db_conn=None, hf_token: str | None = None,
     Uses ChromaDB Cloud + HF Inference API, fully remote, no local storage.
     Falls back to local ChromaDB for tests.
     """
+    if not HAS_CHROMADB:
+        return RAGIndex()
+
     pages_dir = os.path.join(cache_dir, "pages")
     if not os.path.isdir(pages_dir):
         return RAGIndex()

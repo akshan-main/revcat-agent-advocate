@@ -143,26 +143,5 @@ def _generate_with_claude(search_index, config, db_conn, ledger_ctx, count):
 
 
 def _generate_placeholder_feedback(count: int) -> list[ProductFeedback]:
-    """Generate basic placeholder feedback (no LLM)."""
-    templates = [
-        ("Charts API documentation lacks code examples", Severity.MINOR, FeedbackArea.DOCS),
-        ("MCP server tool descriptions could be more detailed", Severity.SUGGESTION, FeedbackArea.MCP),
-        ("SDK installation guide missing troubleshooting section", Severity.MINOR, FeedbackArea.DOCS),
-        ("API v2 error responses not documented for all endpoints", Severity.MAJOR, FeedbackArea.API),
-        ("Offerings configuration guide needs agent-specific examples", Severity.SUGGESTION, FeedbackArea.OFFERINGS),
-    ]
-
-    feedbacks = []
-    for i in range(min(count, len(templates))):
-        title, severity, area = templates[i]
-        feedbacks.append(create_feedback(
-            title=title,
-            severity=severity,
-            area=area,
-            repro_steps=f"Navigate to the {area.value} documentation section",
-            expected="Clear, complete documentation with examples",
-            actual="Documentation is missing key details",
-            proposed_fix=f"Add detailed examples and edge cases to {area.value} docs",
-        ))
-
-    return feedbacks
+    """Return empty list when no LLM is available. Feedback requires real doc analysis."""
+    return []
