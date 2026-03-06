@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Growth Experiments</h1>
+
+{% if experiments %}
+<div class="experiment-grid">
+    {% for exp in experiments %}
+    <div class="experiment-card">
+        <div class="experiment-header">
+            <h3>{{ exp.name }}</h3>
+            <span class="badge {% if exp.status == 'concluded' %}badge-verified{% elif exp.status == 'running' %}badge-running{% else %}badge-draft{% endif %}">{{ exp.status }}</span>
+        </div>
+        <div class="experiment-body">
+            <p><strong>Hypothesis:</strong> {{ exp.hypothesis }}</p>
+            <p><strong>Metric:</strong> {{ exp.metric }}</p>
+            <p><strong>Channel:</strong> {{ exp.channel }}</p>
+            <p><strong>Tactic:</strong> {{ exp.tactic }}</p>
+            {% if exp.outputs_json %}
+            <details>
+                <summary>Outputs</summary>
+                <pre><code>{{ json.dumps(exp.outputs_json, indent=2) if exp.outputs_json is mapping else exp.outputs_json }}</code></pre>
+            </details>
+            {% endif %}
+            {% if exp.results_json %}
+            <details>
+                <summary>Results</summary>
+                <pre><code>{{ json.dumps(exp.results_json, indent=2) if exp.results_json is mapping else exp.results_json }}</code></pre>
+            </details>
+            {% endif %}
+        </div>
+        <div class="experiment-footer">
+            <time>Started: {{ exp.created_at[:10] }}</time>
+            {% if exp.concluded_at %}<time>Concluded: {{ exp.concluded_at[:10] }}</time>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="placeholder">No experiments yet. Run: <code>revcat-advocate run-experiment --name programmatic-seo</code></p>
+{% endif %}
+{% endblock %}

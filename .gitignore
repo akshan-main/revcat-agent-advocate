@@ -1,0 +1,11 @@
+.env
+advocate.db
+.docs_cache/
+site_output/
+runs/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+*.egg-info/
+.ruff_cache/

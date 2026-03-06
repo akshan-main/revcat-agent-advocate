@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="content-detail">
+    <header>
+        <span class="content-type">{{ piece.content_type | default(piece.template_type, true) }}</span>
+        <h1>{{ piece.title }}</h1>
+        <time>{{ piece.created_at[:10] }}</time>
+        {% if piece.get('status') %}
+        <span class="badge {% if piece.status == 'verified' %}badge-verified{% else %}badge-draft{% endif %}">{{ piece.status }}</span>
+        {% endif %}
+    </header>
+
+    <div class="article-body">
+        {{ body_html }}
+    </div>
+
+    {% if sources %}
+    <section class="sources-section">
+        <h2>Verified Sources</h2>
+        <ul>
+            {% for source in sources %}
+            <li>
+                <a href="{{ source.url | default(source) }}">{{ source.url | default(source) }}</a>
+                {% if source.doc_sha256 is defined and source.doc_sha256 %}
+                <code class="sha256" title="Document SHA256">{{ source.doc_sha256[:16] }}...</code>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if verification %}
+    <section class="verification-section">
+        <h2>Verification</h2>
+        <ul>
+            {% if verification.citations_all_reachable is defined %}
+            <li>Citations reachable: {% if verification.citations_all_reachable %}<span class="badge badge-verified">Yes</span>{% else %}<span class="badge badge-broken">No</span>{% endif %}</li>
+            {% endif %}
+            {% if verification.snippet_syntax_valid is defined %}
+            <li>Code syntax valid: {% if verification.snippet_syntax_valid %}<span class="badge badge-verified">Yes</span>{% else %}<span class="badge badge-broken">No</span>{% endif %}</li>
+            {% endif %}
+            {% if verification.doc_sha256_matches is defined %}
+            <li>Doc SHA256 matches: {% if verification.doc_sha256_matches %}<span class="badge badge-verified">Yes</span>{% else %}<span class="badge badge-broken">No</span>{% endif %}</li>
+            {% endif %}
+        </ul>
+    </section>
+    {% endif %}
+</article>
+{% endblock %}

@@ -1,0 +1,225 @@
+import hashlib
+import os
+import re
+import time
+from dataclasses import dataclass, field
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
+
+LLM_INDEX_URL = "https://www.revenuecat.com/docs/assets/files/llms-b3277dc1a771ac4b43dc7cfb88ebd955.txt"
+DOCS_BASE_URL = "https://www.revenuecat.com/docs"
+RATE_LIMIT_SECONDS = 0.3
+MAX_RETRIES = 3
+
+
+@dataclass
+class DocEntry:
+    path: str
+    title: str
+    category: str
+    url: str
+
+
+@dataclass
+class IngestReport:
+    total_entries: int = 0
+    fetched: int = 0
+    skipped: int = 0
+    errored: int = 0
+    changed: int = 0
+    errors: list[str] = field(default_factory=list)
+
+
+def _make_session() -> requests.Session:
+    session = requests.Session()
+    retry = Retry(total=MAX_RETRIES, backoff_factor=1, status_forcelist=[429, 500, 502, 503])
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+
+def fetch_index(cache_dir: str) -> list[DocEntry]:
+    """Download the LLM docs index and parse all doc entries."""
+    os.makedirs(cache_dir, exist_ok=True)
+    session = _make_session()
+
+    resp = session.get(LLM_INDEX_URL, timeout=30)
+    resp.raise_for_status()
+    raw = resp.text
+
+    # Save raw index
+    index_path = os.path.join(cache_dir, "index.txt")
+    with open(index_path, "w") as f:
+        f.write(raw)
+
+    return parse_index(raw)
+
+
+def parse_index(raw_text: str) -> list[DocEntry]:
+    """Parse the LLM index text into DocEntry objects."""
+    entries = []
+    current_category = "General"
+
+    for line in raw_text.splitlines():
+        line = line.strip()
+
+        # Section headers (## or #)
+        if line.startswith("#"):
+            current_category = line.lstrip("#").strip()
+            continue
+
+        # Markdown links: - [Title](url): description  or  - [Title](url)
+        match = re.match(r'^-\s*\[([^\]]+)\]\(([^)]+)\)', line)
+        if match:
+            title = match.group(1)
+            url = match.group(2)
+
+            # Extract path from URL
+            if url.startswith(DOCS_BASE_URL):
+                path = url[len(DOCS_BASE_URL):].strip("/")
+            elif url.startswith("/docs/"):
+                path = url[len("/docs/"):].strip("/")
+                url = f"{DOCS_BASE_URL}/{path}"
+            elif url.startswith("https://"):
+                # External URL, skip
+                continue
+            else:
+                path = url.strip("/")
+                url = f"{DOCS_BASE_URL}/{path}"
+
+            if path:
+                entries.append(DocEntry(
+                    path=path,
+                    title=title,
+                    category=current_category,
+                    url=url,
+                ))
+
+    return entries
+
+
+def _sanitize_path(path: str) -> str:
+    """Convert URL path to safe filesystem path."""
+    return path.replace("/", "__")
+
+
+def fetch_doc_page(
+    entry: DocEntry,
+    cache_dir: str,
+    session: requests.Session,
+    force: bool = False,
+) -> tuple[str | None, str | None]:
+    """Fetch a single doc page's .md mirror. Returns (content, sha256) or (None, None) on error."""
+    pages_dir = os.path.join(cache_dir, "pages")
+    os.makedirs(pages_dir, exist_ok=True)
+
+    cache_path = os.path.join(pages_dir, f"{_sanitize_path(entry.path)}.md")
+
+    # Skip if cached and not forcing
+    if os.path.exists(cache_path) and not force:
+        with open(cache_path, "r") as f:
+            content = f.read()
+        return content, hashlib.sha256(content.encode()).hexdigest()
+
+    # Fetch .md mirror
+    md_url = f"{entry.url}.md"
+    try:
+        resp = session.get(md_url, timeout=30)
+        resp.raise_for_status()
+        content = resp.text
+    except requests.RequestException:
+        # Try without .md suffix as fallback
+        try:
+            resp = session.get(entry.url, timeout=30)
+            resp.raise_for_status()
+            content = resp.text
+        except requests.RequestException:
+            return None, None
+
+    doc_sha256 = hashlib.sha256(content.encode()).hexdigest()
+
+    with open(cache_path, "w") as f:
+        f.write(content)
+
+    return content, doc_sha256
+
+
+def store_snapshot(db_conn, entry: DocEntry, doc_sha256: str, content_length: int):
+    """Store or update a doc snapshot in the database."""
+    from ..db import now_iso
+
+    # Check for existing snapshot
+    existing = db_conn.execute(
+        "SELECT doc_sha256 FROM doc_snapshots WHERE url = ? ORDER BY fetched_at DESC LIMIT 1",
+        [entry.url],
+    ).fetchone()
+
+    changed_from = None
+    if existing and existing["doc_sha256"] != doc_sha256:
+        changed_from = existing["doc_sha256"]
+
+    db_conn.execute(
+        "INSERT OR REPLACE INTO doc_snapshots (url, path, doc_sha256, content_length, fetched_at, changed_from) VALUES (?, ?, ?, ?, ?, ?)",
+        [entry.url, entry.path, doc_sha256, content_length, now_iso(), changed_from],
+    )
+    db_conn.commit()
+
+
+def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
+    """Download all docs from the LLM index, cache locally, store snapshots."""
+    report = IngestReport()
+    cache_dir = config.docs_cache_dir
+
+    entries = fetch_index(cache_dir)
+    report.total_entries = len(entries)
+
+    session = _make_session()
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+    ) as progress:
+        task = progress.add_task("Ingesting docs...", total=len(entries))
+
+        for entry in entries:
+            try:
+                cache_path = os.path.join(cache_dir, "pages", f"{_sanitize_path(entry.path)}.md")
+                was_cached = os.path.exists(cache_path) and not force
+
+                content, doc_sha256 = fetch_doc_page(entry, cache_dir, session, force=force)
+
+                if content is None:
+                    report.errored += 1
+                    report.errors.append(f"Failed to fetch: {entry.url}")
+                elif was_cached:
+                    report.skipped += 1
+                else:
+                    report.fetched += 1
+
+                if content and doc_sha256:
+                    # Check if changed
+                    existing = db_conn.execute(
+                        "SELECT doc_sha256 FROM doc_snapshots WHERE url = ? ORDER BY fetched_at DESC LIMIT 1",
+                        [entry.url],
+                    ).fetchone()
+                    if existing and existing["doc_sha256"] != doc_sha256:
+                        report.changed += 1
+
+                    store_snapshot(db_conn, entry, doc_sha256, len(content))
+
+                if not was_cached:
+                    time.sleep(RATE_LIMIT_SECONDS)
+
+            except Exception as e:
+                report.errored += 1
+                report.errors.append(f"{entry.url}: {e}")
+
+            progress.advance(task)
+
+    return report

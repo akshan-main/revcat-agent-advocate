@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Product Feedback</h1>
+
+{% if feedbacks %}
+<div class="feedback-grid">
+    {% for fb in feedbacks %}
+    <div class="feedback-card">
+        <div class="feedback-header">
+            <h3>{{ fb.title }}</h3>
+            <div class="feedback-badges">
+                <span class="badge badge-{{ fb.severity }}">{{ fb.severity }}</span>
+                <span class="badge badge-area">{{ fb.area }}</span>
+                <span class="badge {% if fb.status == 'submitted' %}badge-verified{% else %}badge-draft{% endif %}">{{ fb.status }}</span>
+            </div>
+        </div>
+        <div class="feedback-body">
+            {% if fb.repro_steps %}
+            <h4>Reproduction Steps</h4>
+            <p>{{ fb.repro_steps }}</p>
+            {% endif %}
+            {% if fb.expected %}
+            <h4>Expected</h4>
+            <p>{{ fb.expected }}</p>
+            {% endif %}
+            {% if fb.actual %}
+            <h4>Actual</h4>
+            <p>{{ fb.actual }}</p>
+            {% endif %}
+            {% if fb.evidence_links_json %}
+            <h4>Evidence</h4>
+            <ul>
+                {% set links = fb.evidence_links_json if fb.evidence_links_json is iterable and fb.evidence_links_json is not string else [] %}
+                {% for link in links %}
+                <li><a href="{{ link }}">{{ link }}</a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if fb.proposed_fix %}
+            <h4>Proposed Fix</h4>
+            <p>{{ fb.proposed_fix }}</p>
+            {% endif %}
+        </div>
+        <div class="feedback-footer">
+            <time>Filed: {{ fb.created_at[:10] }}</time>
+            {% if fb.github_issue_url %}<a href="{{ fb.github_issue_url }}">GitHub Issue</a>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="placeholder">No feedback yet. Run: <code>revcat-advocate generate-feedback --count 3</code></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "app_demo_ios_001",
+      "name": "Demo iOS App",
+      "platform": "ios",
+      "bundle_id": "com.demo.subscriptionapp",
+      "created_at": "2025-06-15T10:00:00Z"
+    },
+    {
+      "id": "app_demo_android_001",
+      "name": "Demo Android App",
+      "platform": "android",
+      "bundle_id": "com.demo.subscriptionapp",
+      "created_at": "2025-06-15T10:05:00Z"
+    },
+    {
+      "id": "app_demo_stripe_001",
+      "name": "Demo Web (Stripe)",
+      "platform": "stripe",
+      "created_at": "2025-07-01T12:00:00Z"
+    }
+  ],
+  "next_page": null
+}

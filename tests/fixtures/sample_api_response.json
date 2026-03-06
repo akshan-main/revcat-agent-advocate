@@ -1,0 +1,19 @@
+{
+  "id": "proj_demo_12345",
+  "name": "Demo Subscription App",
+  "created_at": "2025-06-15T10:00:00Z",
+  "apps": [
+    {
+      "id": "app_demo_ios_001",
+      "name": "Demo iOS App",
+      "platform": "ios",
+      "bundle_id": "com.demo.subscriptionapp"
+    },
+    {
+      "id": "app_demo_android_001",
+      "name": "Demo Android App",
+      "platform": "android",
+      "bundle_id": "com.demo.subscriptionapp"
+    }
+  ]
+}

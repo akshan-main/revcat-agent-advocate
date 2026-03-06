@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="runbook">
+<h1>Operator Runbook</h1>
+
+<section>
+<h2>Quick Start (Demo Mode)</h2>
+<pre><code>pip install -e .
+export DEMO_MODE=true
+export ANTHROPIC_API_KEY=sk-ant-...
+revcat-advocate demo-run
+python -m http.server -d site_output 8000</code></pre>
+</section>
+
+<section>
+<h2>Quick Start (Real Mode)</h2>
+<pre><code>pip install -e .
+export REVENUECAT_API_KEY=sk_your_key
+export ANTHROPIC_API_KEY=sk-ant-...
+export DEMO_MODE=false
+revcat-advocate ingest-docs
+revcat-advocate write-content --topic "Your Topic" --type tutorial
+revcat-advocate build-site</code></pre>
+</section>
+
+<section>
+<h2>Safety Gates</h2>
+<table>
+    <thead>
+        <tr><th>Flag</th><th>Default</th><th>Effect</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><code>DRY_RUN</code></td><td><code>true</code></td><td>No external posts, no GitHub issues. Drafts only</td></tr>
+        <tr><td><code>ALLOW_WRITES</code></td><td><code>false</code></td><td>Blocks POST/PUT/DELETE to RevenueCat API</td></tr>
+        <tr><td><code>DEMO_MODE</code></td><td><code>false</code></td><td>Uses mock API responses, labels all output [DEMO]</td></tr>
+    </tbody>
+</table>
+<p>Governance tested with a 16-case red-team suite covering prompt injection, PII extraction, competitor bashing, and brand safety.</p>
+</section>
+
+<section>
+<h2>Where the Receipts Are</h2>
+<ul>
+    <li><a href="/ledger/">/ledger</a>: Every action logged with hash chain. Click any entry to see full JSON.</li>
+    <li><a href="/content/">/content</a>: Every post has a Sources section with cited doc URLs and SHA256 hashes.</li>
+    <li><a href="/experiments/">/experiments</a>: Every experiment has hypothesis, metric, and results.</li>
+    <li><a href="/feedback/">/feedback</a>: Every feedback item has repro steps and evidence links.</li>
+</ul>
+</section>
+
+<section>
+<h2>Commands</h2>
+<table>
+    <thead><tr><th>Command</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td><code>ingest-docs</code></td><td>Download RC docs, fetch .md mirrors, build search index</td></tr>
+        <tr><td><code>write-content --topic "..." --type tutorial</code></td><td>Generate content with citations and verification</td></tr>
+        <tr><td><code>run-experiment --name programmatic-seo</code></td><td>Start a growth experiment</td></tr>
+        <tr><td><code>generate-feedback --count 3</code></td><td>Generate product feedback from doc analysis</td></tr>
+        <tr><td><code>tweet --topic "..."</code></td><td>Draft tweets (DRY_RUN gated)</td></tr>
+        <tr><td><code>scan-github</code></td><td>Scan RC repos for issues, draft responses</td></tr>
+        <tr><td><code>scan-reddit</code></td><td>Scan subreddits, draft responses</td></tr>
+        <tr><td><code>competitive-digest</code></td><td>Competitive intel from public pages</td></tr>
+        <tr><td><code>analyze-docs</code></td><td>Documentation quality analysis</td></tr>
+        <tr><td><code>repro-test</code></td><td>API/MCP repro scenarios</td></tr>
+        <tr><td><code>weekly-report</code></td><td>Weekly activity summary</td></tr>
+        <tr><td><code>build-site</code></td><td>Build static site</td></tr>
+        <tr><td><code>deploy --repo owner/name</code></td><td>Deploy to GitHub Pages</td></tr>
+        <tr><td><code>verify-ledger</code></td><td>Verify hash chain integrity</td></tr>
+        <tr><td><code>chat</code></td><td>Interactive doc-grounded chat</td></tr>
+        <tr><td><code>serve</code></td><td>HTTP API server</td></tr>
+        <tr><td><code>mcp-serve</code></td><td>MCP server for other agents</td></tr>
+        <tr><td><code>auto --interval 6h</code></td><td>Autonomous scheduled operation</td></tr>
+        <tr><td><code>demo-run</code></td><td>Full pipeline end-to-end</td></tr>
+    </tbody>
+</table>
+</section>
+
+<section>
+<h2>Reproduce a Post</h2>
+<pre><code>revcat-advocate write-content --topic "Charts API for Agents" --type tutorial
+# Output: site_output/content/charts-api-for-agents/index.md
+# Includes: outline, citations, code snippets, verification results</code></pre>
+</section>
+
+<section>
+<h2>Reproduce an Experiment</h2>
+<pre><code>revcat-advocate run-experiment --name programmatic-seo
+# Output: SEO pages in site_output/content/
+# DB record in growth_experiments table</code></pre>
+</section>
+
+<section>
+<h2>Verify the Ledger</h2>
+<pre><code>revcat-advocate verify-ledger
+# Expected: "Chain verified: N entries, 0 breaks"</code></pre>
+</section>
+
+<section>
+<h2>Architecture</h2>
+<pre><code>Docs (LLM Index + .md mirrors)
+    -> Knowledge Engine (BM25 + RAG hybrid search)
+        -> Content Engine (Claude API + citation verification)
+        -> Growth Engine (experiments + programmatic SEO)
+        -> Feedback Engine (doc analysis + repro harness)
+        -> Social (GitHub, Reddit, X; all DRY_RUN gated)
+    -> Governance (red-team suite, safety gates)
+    -> Ledger (hash-chained, HMAC-signed)
+        -> Static Site (GitHub Pages)</code></pre>
+</section>
+
+<section>
+<h2>MCP Setup (for Claude Code users)</h2>
+<pre><code>claude mcp add revenuecat -t http -- https://mcp.revenuecat.ai/mcp \
+  --header "Authorization: Bearer YOUR_API_KEY"</code></pre>
+</section>
+
+</article>
+{% endblock %}

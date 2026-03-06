@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+<h1>Weekly Report</h1>
+
+{% if reports %}
+<div class="reports-list">
+    {% for report in reports %}
+    <section class="card">
+        <h3>{{ report.filename }}</h3>
+        <div class="report-content">
+            {{ report.html_content }}
+        </div>
+    </section>
+    {% endfor %}
+</div>
+{% else %}
+<p>No weekly reports generated yet. Run <code>revcat-advocate weekly-report</code> to generate one.</p>
+{% endif %}
+
+</article>
+{% endblock %}

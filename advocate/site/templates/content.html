@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Content</h1>
+
+{% if content_pieces %}
+<h2>Articles</h2>
+<div class="content-grid">
+    {% for piece in content_pieces %}
+    <a href="/content/{{ piece.slug }}/" class="content-card">
+        <span class="content-type">{{ piece.content_type }}</span>
+        <h3>{{ piece.title }}</h3>
+        <div class="content-meta">
+            <span>{{ piece.word_count }} words</span>
+            <span>{{ piece.citations_count }} citations</span>
+            <span class="badge {% if piece.status == 'verified' %}badge-verified{% else %}badge-draft{% endif %}">{{ piece.status }}</span>
+        </div>
+        <time>{{ piece.created_at[:10] }}</time>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if seo_pages %}
+<h2>SEO Pages</h2>
+<div class="content-grid">
+    {% for page in seo_pages %}
+    <a href="/content/{{ page.slug }}/" class="content-card">
+        <span class="content-type">{{ page.template_type }}</span>
+        <h3>{{ page.title }}</h3>
+        <time>{{ page.created_at[:10] }}</time>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if not content_pieces and not seo_pages %}
+<p class="placeholder">No content yet. Run: <code>revcat-advocate write-content --topic "..."</code></p>
+{% endif %}
+{% endblock %}

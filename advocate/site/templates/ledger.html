@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Proof-of-Work Ledger</h1>
+
+<div class="chain-verification-hero">
+    {% if chain_status.valid %}
+    <div class="verification-result verified">
+        <span class="verification-icon">&#10003;</span>
+        <div>
+            <strong>Hash Chain Verified</strong>
+            <p>{{ chain_status.total_entries }} entries, 0 breaks. Every action is intact and auditable</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="verification-result broken">
+        <span class="verification-icon">&#10007;</span>
+        <div>
+            <strong>Hash Chain BROKEN</strong>
+            <p>Breaks detected at entries: {{ chain_status.breaks }}</p>
+        </div>
+    </div>
+    {% endif %}
+    {% if chain_status.hmac_verified is not none %}
+    <div class="verification-result {% if chain_status.hmac_verified %}verified{% else %}broken{% endif %}">
+        <span class="verification-icon">{% if chain_status.hmac_verified %}&#10003;{% else %}&#10007;{% endif %}</span>
+        <div>
+            <strong>HMAC Signatures {% if chain_status.hmac_verified %}Verified{% else %}Failed{% endif %}</strong>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<p class="ledger-explainer">
+    Every command executed by this agent creates a ledger entry. Entries are hash-chained:
+    <code>hash = sha256(prev_hash + canonical_json)</code>. Tampering with any entry breaks the chain.
+    Verify locally: <code>revcat-advocate verify-ledger</code>
+</p>
+
+<table class="ledger-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Command</th>
+            <th>Started</th>
+            <th>Success</th>
+            <th>Hash</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for run in runs %}
+        <tr>
+            <td>{{ run.sequence }}</td>
+            <td><strong>{{ run.command }}</strong></td>
+            <td>{{ run.started_at[:19] }}</td>
+            <td>{% if run.success %}<span class="badge badge-verified">OK</span>{% else %}<span class="badge badge-broken">FAIL</span>{% endif %}</td>
+            <td><code title="{{ run.hash }}">{{ run.hash[:12] }}...</code></td>
+        </tr>
+        <tr class="ledger-detail">
+            <td colspan="5">
+                <details>
+                    <summary>View full entry</summary>
+                    <pre><code>{{ json.dumps({
+                        "run_id": run.run_id,
+                        "sequence": run.sequence,
+                        "prev_hash": run.prev_hash,
+                        "command": run.command,
+                        "started_at": run.started_at,
+                        "ended_at": run.ended_at,
+                        "inputs": run.inputs_json,
+                        "sources": run.sources_json,
+                        "tool_calls": run.tool_calls_json,
+                        "outputs": run.outputs_json,
+                        "verification": run.verification_json,
+                        "hash": run.hash,
+                        "signature": run.signature
+                    }, indent=2) }}</code></pre>
+                </details>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

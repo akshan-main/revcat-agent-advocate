@@ -1,0 +1,33 @@
+{
+  "items": [
+    {
+      "id": "prod_monthly_001",
+      "store_identifier": "com.demo.monthly",
+      "display_name": "Monthly Premium",
+      "type": "subscription",
+      "created_at": "2025-06-20T10:00:00Z"
+    },
+    {
+      "id": "prod_annual_001",
+      "store_identifier": "com.demo.annual",
+      "display_name": "Annual Premium",
+      "type": "subscription",
+      "created_at": "2025-06-20T10:05:00Z"
+    },
+    {
+      "id": "prod_lifetime_001",
+      "store_identifier": "com.demo.lifetime",
+      "display_name": "Lifetime Access",
+      "type": "non_consumable",
+      "created_at": "2025-07-01T10:00:00Z"
+    },
+    {
+      "id": "prod_weekly_001",
+      "store_identifier": "com.demo.weekly",
+      "display_name": "Weekly Premium",
+      "type": "subscription",
+      "created_at": "2025-08-15T10:00:00Z"
+    }
+  ],
+  "next_page": null
+}

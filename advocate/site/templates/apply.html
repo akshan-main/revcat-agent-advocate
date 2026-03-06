@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="apply-page">
+
+    <!-- Above the fold: thesis + proof links + quickstart -->
+    <header class="apply-hero">
+        <h1>Agentic AI Developer &amp; Growth Advocate</h1>
+        <p class="thesis">
+            An autonomous agent system that generates cited technical content, runs measurable growth experiments,
+            files structured product feedback, and publishes everything with a tamper-evident audit trail.
+            Every output is verifiable. Every claim links to evidence.
+        </p>
+
+        <div class="proof-links">
+            <a href="/ledger/" class="proof-card proof-ledger">
+                <strong>Ledger</strong>
+                <span>{{ chain_status.total_entries }} hash-chained entries{% if chain_status.valid %}, chain verified{% endif %}</span>
+            </a>
+            <a href="/content/" class="proof-card">
+                <strong>Content</strong>
+                <span>Technical posts with snapshot-verified citations</span>
+            </a>
+            <a href="/feedback/" class="proof-card">
+                <strong>Feedback</strong>
+                <span>Structured product feedback with repro steps</span>
+            </a>
+        </div>
+    </header>
+
+    <section class="quickstart" id="quickstart">
+        <h2>Reviewer Quickstart</h2>
+
+        <div class="quickstart-tier">
+            <h3>60 seconds: click these 3 links</h3>
+            <ol>
+                <li><a href="/ledger/">Ledger</a>: see the hash chain verification badge and every action logged</li>
+                <li><a href="/content/">Content</a>: open any post, scroll to Sources. Every citation links to a real doc page</li>
+                <li><a href="/feedback/">Feedback</a>: structured product issues with severity, repro steps, and evidence</li>
+            </ol>
+        </div>
+
+        <div class="quickstart-tier">
+            <h3>5 minutes: run it yourself</h3>
+            <pre><code>git clone &lt;this-repo&gt; &amp;&amp; cd rcagent
+pip install -e .
+export DEMO_MODE=true
+revcat-advocate demo-run          # full pipeline, mock API data
+python -m http.server -d site_output 8000</code></pre>
+            <p>Opens a local site with all generated artifacts. Demo data is clearly labeled <code>[DEMO]</code>.</p>
+        </div>
+
+        <div class="quickstart-tier">
+            <h3>Technical deep-dive</h3>
+            <pre><code>pip install -e ".[dev]"
+pytest tests/ -v                  # 259 tests
+revcat-advocate verify-ledger     # hash chain integrity check</code></pre>
+            <p>Tests cover: ledger tamper detection, citation verification, content generation pipeline,
+               API safety gates, governance red-team suite, and golden snapshot regression tests.</p>
+        </div>
+    </section>
+
+    <section class="safety-model">
+        <h2>Safety Model</h2>
+        <table>
+            <thead><tr><th>Gate</th><th>Default</th><th>Effect</th></tr></thead>
+            <tbody>
+                <tr><td><code>DRY_RUN</code></td><td><code>true</code></td><td>No external posts, no GitHub issues. Drafts only</td></tr>
+                <tr><td><code>ALLOW_WRITES</code></td><td><code>false</code></td><td>Read-only API access; blocks POST/PUT/DELETE to RevenueCat</td></tr>
+                <tr><td><code>DEMO_MODE</code></td><td><code>false</code></td><td>Mock API responses, all output labeled <code>[DEMO]</code></td></tr>
+            </tbody>
+        </table>
+        <p>Governance tested with a 16-case red-team suite covering prompt injection, PII extraction,
+           competitor bashing, and brand safety. <a href="/runbook/">See runbook</a> for details.</p>
+    </section>
+
+    {% if content %}
+    <section class="application-letter">
+        {{ content }}
+    </section>
+    {% endif %}
+
+</article>
+{% endblock %}

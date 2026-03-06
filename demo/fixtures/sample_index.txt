@@ -1,0 +1,39 @@
+# RevenueCat Documentation
+
+## Getting Started
+- [Welcome](https://www.revenuecat.com/docs/welcome): Welcome to RevenueCat
+- [Installation](https://www.revenuecat.com/docs/getting-started/installation): Get started with RevenueCat SDKs
+- [Configuring Products](https://www.revenuecat.com/docs/getting-started/configuring-products): Set up your in-app products
+
+## API Reference
+- [Authentication](https://www.revenuecat.com/docs/projects/authentication): API Keys and Authentication
+- [REST API v2](https://www.revenuecat.com/docs/api-v2): RevenueCat REST API v2 reference
+
+## Dashboard and Analytics
+- [Charts Overview](https://www.revenuecat.com/docs/dashboard-and-metrics/charts): Charts and analytics overview
+- [Active Subscriptions](https://www.revenuecat.com/docs/dashboard-and-metrics/active-subscriptions): Track active subscriptions
+
+## Tools
+- [MCP Server](https://www.revenuecat.com/docs/tools/mcp): RevenueCat MCP Server for AI agents
+- [MCP Tools Reference](https://www.revenuecat.com/docs/tools/mcp/tools-reference): All 26 MCP tools
+
+## Product Management
+- [Offerings](https://www.revenuecat.com/docs/offerings): Configure offerings and packages
+- [Paywalls](https://www.revenuecat.com/docs/paywalls): RevenueCat Paywalls
+
+## SDK Guides
+- [iOS SDK](https://www.revenuecat.com/docs/ios): iOS SDK integration guide
+- [Android SDK](https://www.revenuecat.com/docs/android): Android SDK integration guide
+- [Flutter SDK](https://www.revenuecat.com/docs/flutter): Flutter SDK integration guide
+
+## Integrations
+- [Webhooks](https://www.revenuecat.com/docs/integrations/webhooks): Webhook event notifications
+- [Stripe](https://www.revenuecat.com/docs/integrations/stripe): Stripe integration
+
+## Subscriptions
+- [Subscription Lifecycle](https://www.revenuecat.com/docs/subscription-guidance/subscription-lifecycle): Understanding subscription events
+- [Managing Subscriptions](https://www.revenuecat.com/docs/subscription-guidance/managing-subscriptions): Subscription management guide
+
+## Customer Management
+- [Customer Info](https://www.revenuecat.com/docs/customers/customer-info): Customer data and attributes
+- [Entitlements](https://www.revenuecat.com/docs/entitlements): Managing entitlements

@@ -1,0 +1,38 @@
+[project]
+name = "revcat-advocate-os"
+version = "0.1.0"
+description = "Tamper-evident proof-of-work agent system for RevenueCat Developer Advocacy"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "click>=8.0",
+    "rich>=13.0",
+    "jinja2>=3.1",
+    "anthropic>=0.40",
+    "mcp>=1.0",
+    "markdown>=3.5",
+    "chromadb>=1.0",
+    "huggingface-hub>=0.25",
+    "libsql-experimental>=0.0.50",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "pytest-asyncio>=0.23",
+    "responses>=0.25",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+revcat-advocate = "cli:main"
+
+[tool.setuptools.packages.find]
+include = ["advocate*"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

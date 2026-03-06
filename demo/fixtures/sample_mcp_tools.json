@@ -1,0 +1,30 @@
+{
+  "tools": [
+    {"name": "get-project-info", "description": "Get project details and configuration"},
+    {"name": "list-apps", "description": "List all apps in a project"},
+    {"name": "list-products", "description": "List products for an app"},
+    {"name": "list-offerings", "description": "List all offerings in a project"},
+    {"name": "list-entitlements", "description": "List all entitlements"},
+    {"name": "get-customer", "description": "Get customer details by ID"},
+    {"name": "query-charts", "description": "Query charts data for metrics"},
+    {"name": "list-subscribers", "description": "List subscribers with filters"},
+    {"name": "get-subscriber", "description": "Get detailed subscriber info"},
+    {"name": "list-packages", "description": "List packages in an offering"},
+    {"name": "create-offering", "description": "Create a new offering"},
+    {"name": "update-offering", "description": "Update an existing offering"},
+    {"name": "create-package", "description": "Create a package in an offering"},
+    {"name": "update-package", "description": "Update a package"},
+    {"name": "create-entitlement", "description": "Create a new entitlement"},
+    {"name": "attach-product-to-entitlement", "description": "Link a product to an entitlement"},
+    {"name": "grant-promotional-entitlement", "description": "Grant a promotional entitlement to a customer"},
+    {"name": "revoke-promotional-entitlement", "description": "Revoke a promotional entitlement from a customer"},
+    {"name": "set-customer-attributes", "description": "Set custom attributes on a customer"},
+    {"name": "delete-customer", "description": "Delete a customer record"},
+    {"name": "refund-and-revoke", "description": "Process a refund and revoke access"},
+    {"name": "create-purchase", "description": "Record a purchase for a customer"},
+    {"name": "defer-billing", "description": "Defer a subscription billing date"},
+    {"name": "set-offer-eligibility", "description": "Configure offer eligibility for a customer"},
+    {"name": "import-subscribers", "description": "Bulk import subscriber data"},
+    {"name": "trigger-webhook-test", "description": "Send a test webhook event"}
+  ]
+}
