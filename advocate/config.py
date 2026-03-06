@@ -61,6 +61,9 @@ class Config(BaseSettings):
     site_output_dir: str = "./site_output"
     runs_dir: str = "./runs"
 
+    # Site
+    site_base_url: str = ""  # e.g. "/revcat-agent-advocate" for GitHub Pages project sites
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @field_validator(

@@ -6,7 +6,7 @@
 <h2>Articles</h2>
 <div class="content-grid">
     {% for piece in content_pieces %}
-    <a href="/content/{{ piece.slug }}/" class="content-card">
+    <a href="{{ base_url }}/content/{{ piece.slug }}/" class="content-card">
         <span class="content-type">{{ piece.content_type }}</span>
         <h3>{{ piece.title }}</h3>
         <div class="content-meta">
@@ -24,7 +24,7 @@
 <h2>SEO Pages</h2>
 <div class="content-grid">
     {% for page in seo_pages %}
-    <a href="/content/{{ page.slug }}/" class="content-card">
+    <a href="{{ base_url }}/content/{{ page.slug }}/" class="content-card">
         <span class="content-type">{{ page.template_type }}</span>
         <h3>{{ page.title }}</h3>
         <time>{{ page.created_at[:10] }}</time>

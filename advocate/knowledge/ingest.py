@@ -2,12 +2,15 @@ import hashlib
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
+
+PARALLEL_WORKERS = 10  # concurrent doc page fetches
 
 LLM_INDEX_URL = "https://www.revenuecat.com/docs/assets/files/llms-b3277dc1a771ac4b43dc7cfb88ebd955.txt"
 DOCS_BASE_URL = "https://www.revenuecat.com/docs"
@@ -78,32 +81,36 @@ def parse_index(raw_text: str) -> list[DocEntry]:
             current_category = line.lstrip("#").strip()
             continue
 
-        # Markdown links: - [Title](url): description  or  - [Title](url)
+        # Format 1: Markdown links — - [Title](url): description
         match = re.match(r'^-\s*\[([^\]]+)\]\(([^)]+)\)', line)
         if match:
             title = match.group(1)
             url = match.group(2)
 
-            # Extract path from URL
             if url.startswith(DOCS_BASE_URL):
                 path = url[len(DOCS_BASE_URL):].strip("/")
             elif url.startswith("/docs/"):
                 path = url[len("/docs/"):].strip("/")
                 url = f"{DOCS_BASE_URL}/{path}"
             elif url.startswith("https://"):
-                # External URL, skip
                 continue
             else:
                 path = url.strip("/")
                 url = f"{DOCS_BASE_URL}/{path}"
 
             if path:
-                entries.append(DocEntry(
-                    path=path,
-                    title=title,
-                    category=current_category,
-                    url=url,
-                ))
+                entries.append(DocEntry(path=path, title=title, category=current_category, url=url))
+            continue
+
+        # Format 2: Plain path — - /path/to/page - Description text
+        match = re.match(r'^-\s+(/[^\s]+)\s*(?:-\s*(.+))?$', line)
+        if match:
+            path = match.group(1).strip("/")
+            title = match.group(2) or path.split("/")[-1].replace("-", " ").title()
+            url = f"{DOCS_BASE_URL}/{path}"
+
+            if path:
+                entries.append(DocEntry(path=path, title=title, category=current_category, url=url))
 
     return entries
 
@@ -175,6 +182,21 @@ def store_snapshot(db_conn, entry: DocEntry, doc_sha256: str, content_length: in
     db_conn.commit()
 
 
+def _fetch_one(entry: DocEntry, cache_dir: str, session: requests.Session, force: bool, demo_mode: bool):
+    """Fetch a single doc page. Returns (entry, content, doc_sha256, was_cached, error)."""
+    cache_path = os.path.join(cache_dir, "pages", f"{_sanitize_path(entry.path)}.md")
+    was_cached = os.path.exists(cache_path) and not force
+
+    if demo_mode and not os.path.exists(cache_path):
+        return entry, None, None, False, "demo_skip"
+
+    try:
+        content, doc_sha256 = fetch_doc_page(entry, cache_dir, session, force=force)
+        return entry, content, doc_sha256, was_cached, None
+    except Exception as e:
+        return entry, None, None, False, str(e)
+
+
 def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
     """Download all docs from the LLM index, cache locally, store snapshots."""
     report = IngestReport()
@@ -194,20 +216,22 @@ def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
     ) as progress:
         task = progress.add_task("Ingesting docs...", total=len(entries))
 
-        for entry in entries:
-            try:
-                cache_path = os.path.join(cache_dir, "pages", f"{_sanitize_path(entry.path)}.md")
-                was_cached = os.path.exists(cache_path) and not force
+        # Parallel fetching with ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=PARALLEL_WORKERS) as executor:
+            futures = {
+                executor.submit(_fetch_one, entry, cache_dir, session, force, demo_mode): entry
+                for entry in entries
+            }
 
-                # In demo mode, skip uncached pages instead of fetching
-                if demo_mode and not os.path.exists(cache_path):
+            for future in as_completed(futures):
+                entry, content, doc_sha256, was_cached, error = future.result()
+
+                if error == "demo_skip":
                     report.skipped += 1
-                    progress.advance(task)
-                    continue
-
-                content, doc_sha256 = fetch_doc_page(entry, cache_dir, session, force=force)
-
-                if content is None:
+                elif error:
+                    report.errored += 1
+                    report.errors.append(f"{entry.url}: {error}")
+                elif content is None:
                     report.errored += 1
                     report.errors.append(f"Failed to fetch: {entry.url}")
                 elif was_cached:
@@ -216,7 +240,6 @@ def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
                     report.fetched += 1
 
                 if content and doc_sha256:
-                    # Check if changed
                     existing = db_conn.execute(
                         "SELECT doc_sha256 FROM doc_snapshots WHERE url = ? ORDER BY fetched_at DESC LIMIT 1",
                         (entry.url,),
@@ -226,13 +249,6 @@ def ingest_all(db_conn, config, force: bool = False) -> IngestReport:
 
                     store_snapshot(db_conn, entry, doc_sha256, len(content))
 
-                if not was_cached:
-                    time.sleep(RATE_LIMIT_SECONDS)
-
-            except Exception as e:
-                report.errored += 1
-                report.errors.append(f"{entry.url}: {e}")
-
-            progress.advance(task)
+                progress.advance(task)
 
     return report

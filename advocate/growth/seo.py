@@ -129,44 +129,59 @@ def bulk_generate(
     ledger_ctx=None,
     output_dir: str = "./site_output",
 ) -> list[str]:
-    """Generate multiple SEO pages. Returns list of slugs."""
+    """Generate multiple SEO pages in parallel. Returns list of slugs."""
     import os
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from ..knowledge.search import search as search_docs
 
     if keywords is None:
         keywords = DEFAULT_SEO_KEYWORDS
 
-    slugs = []
+    # Phase 1: Search docs for all keywords (fast, local)
+    keyword_results = []
     for keyword in keywords:
-        # Search docs for keyword
         results = search_docs(keyword, search_index, config.docs_cache_dir, top_k=5)
-
         if not results:
             if ledger_ctx:
                 from ..ledger import log_tool_call
                 log_tool_call(ledger_ctx, "seo.skip", keyword, "No source docs found, skipping")
             continue
+        keyword_results.append((keyword, results))
 
-        body_md, slug = generate_seo_page(keyword, results, config, ledger_ctx)
+    # Phase 2: Generate pages in parallel (Claude API calls are I/O-bound)
+    def _generate_one(keyword, results):
+        return keyword, results, generate_seo_page(keyword, results, config, ledger_ctx)
 
-        # Save
-        post_dir = os.path.join(output_dir, "content", slug)
-        os.makedirs(post_dir, exist_ok=True)
-        with open(os.path.join(post_dir, "index.md"), "w") as f:
-            f.write(body_md)
+    slugs = []
+    max_workers = min(4, len(keyword_results)) if keyword_results else 1
 
-        # Insert into DB
-        insert_row(db_conn, "seo_pages", {
-            "keyword": keyword,
-            "template_type": determine_template_type(keyword),
-            "slug": slug,
-            "title": keyword,
-            "body_md": body_md,
-            "sources_json": [r.url for r in results[:5]],
-            "experiment_id": experiment_id,
-            "created_at": now_iso(),
-        })
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_generate_one, kw, res): kw
+            for kw, res in keyword_results
+        }
 
-        slugs.append(slug)
+        for future in as_completed(futures):
+            keyword, results, (body_md, slug) = future.result()
+
+            # Save
+            post_dir = os.path.join(output_dir, "content", slug)
+            os.makedirs(post_dir, exist_ok=True)
+            with open(os.path.join(post_dir, "index.md"), "w") as f:
+                f.write(body_md)
+
+            # Insert into DB
+            insert_row(db_conn, "seo_pages", {
+                "keyword": keyword,
+                "template_type": determine_template_type(keyword),
+                "slug": slug,
+                "title": keyword,
+                "body_md": body_md,
+                "sources_json": [r.url for r in results[:5]],
+                "experiment_id": experiment_id,
+                "created_at": now_iso(),
+            }, or_replace=True)
+
+            slugs.append(slug)
 
     return slugs

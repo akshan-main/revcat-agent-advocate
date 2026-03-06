@@ -204,7 +204,7 @@ def build_source_citations(body_md: str, doc_snippets: dict[str, str]) -> list[S
 
 
 def record_content(db_conn, piece: ContentPiece) -> int:
-    """Insert a content piece into the database."""
+    """Insert or update a content piece in the database."""
     return insert_row(db_conn, "content_pieces", {
         "slug": piece.slug,
         "title": piece.title,
@@ -218,4 +218,4 @@ def record_content(db_conn, piece: ContentPiece) -> int:
         "published_at": piece.published_at,
         "word_count": piece.word_count,
         "citations_count": piece.citations_count,
-    })
+    }, or_replace=True)

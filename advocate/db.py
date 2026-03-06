@@ -221,12 +221,13 @@ def _row_to_dict(row) -> dict:
     return dict(row)
 
 
-def insert_row(conn: DBConnection, table: str, data: dict) -> int:
+def insert_row(conn: DBConnection, table: str, data: dict, or_replace: bool = False) -> int:
     data = {k: _serialize_value(v) for k, v in data.items()}
     cols = ", ".join(data.keys())
     placeholders = ", ".join(["?"] * len(data))
+    verb = "INSERT OR REPLACE" if or_replace else "INSERT"
     cursor = conn.execute(
-        f"INSERT INTO {table} ({cols}) VALUES ({placeholders})",
+        f"{verb} INTO {table} ({cols}) VALUES ({placeholders})",
         tuple(data.values()),
     )
     conn.commit()
@@ -302,3 +303,16 @@ def init_db_from_config(config) -> DBConnection:
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+ALL_TABLES = [
+    "seo_pages", "content_pieces", "community_interactions",
+    "product_feedback", "run_log", "growth_experiments", "doc_snapshots",
+]
+
+
+def reset_all_tables(conn: DBConnection):
+    """Delete all rows from all tables. Use for clean re-runs."""
+    for table in ALL_TABLES:
+        conn.execute(f"DELETE FROM {table}")
+    conn.commit()

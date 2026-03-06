@@ -309,12 +309,13 @@ def build_rag_index(cache_dir: str, db_conn=None, hf_token: str | None = None,
         embedding_function=embedding_fn,
     )
 
-    # Add chunks in batches
-    batch_size = 32  # Smaller batches for API calls
+    # Add chunks in batches, truncating any that exceed ChromaDB's limit
+    max_doc_bytes = 15000  # ChromaDB Cloud free tier limit is 16384 bytes
+    batch_size = 32
     for i in range(0, len(all_chunks), batch_size):
         batch = all_chunks[i:i + batch_size]
         collection.add(
-            documents=[c.text for c in batch],
+            documents=[c.text[:max_doc_bytes] for c in batch],
             metadatas=[{
                 "doc_path": c.doc_path,
                 "doc_url": c.doc_url,

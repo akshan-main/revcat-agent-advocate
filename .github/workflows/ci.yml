@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -48,14 +49,24 @@ jobs:
       - name: Install dependencies
         run: pip install -e "."
 
-      - name: Build site (demo mode)
+      - name: Build site
         env:
-          DEMO_MODE: "true"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          CHROMA_HOST: ${{ secrets.CHROMA_HOST }}
+          CHROMA_API_KEY: ${{ secrets.CHROMA_API_KEY }}
+          CHROMA_TENANT: ${{ secrets.CHROMA_TENANT }}
+          CHROMA_DATABASE: ${{ secrets.CHROMA_DATABASE }}
+          DEMO_MODE: ${{ secrets.ANTHROPIC_API_KEY != '' && 'false' || 'true' }}
           DRY_RUN: "true"
+          SITE_BASE_URL: "/revcat-agent-advocate"
         run: |
           revcat-advocate ingest-docs
           revcat-advocate generate-application
           revcat-advocate write-content --topic "RevenueCat Charts API" --type tutorial
+          revcat-advocate write-content --topic "Building Agent-Native Monetization with RevenueCat MCP Server" --type agent_playbook
           revcat-advocate run-experiment --name programmatic-seo
           revcat-advocate generate-feedback --count 3
           revcat-advocate build-site

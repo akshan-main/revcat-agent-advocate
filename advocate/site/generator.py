@@ -9,18 +9,27 @@ from ..db import query_rows
 from ..ledger import verify_chain
 
 
-def _md_to_html(md_text: str) -> str:
+def _md_to_html(md_text: str, base_url: str = "") -> str:
     """Convert markdown to HTML using the markdown library."""
+    import re
     import markdown
     # Strip YAML front matter
     if md_text.startswith("---"):
         parts = md_text.split("---", 2)
         if len(parts) >= 3:
             md_text = parts[2]
-    return markdown.markdown(
+    html = markdown.markdown(
         md_text,
         extensions=["fenced_code", "tables", "toc"],
     )
+    # Rewrite internal links (e.g. /content/ -> /revcat-agent-advocate/content/)
+    if base_url:
+        html = re.sub(
+            r'href="/((?:content|experiments|feedback|ledger|runbook|apply|roi|weekly-report)(?:/[^"]*)?)"',
+            f'href="{base_url}/\\1"',
+            html,
+        )
+    return html
 
 
 def build_site(db_conn, config):
@@ -34,28 +43,44 @@ def build_site(db_conn, config):
     chain = verify_chain(db_conn, config)
     build_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
+    # Base URL for GitHub Pages project sites (e.g. "/revcat-agent-advocate")
+    base_url = config.site_base_url.rstrip("/") if config.site_base_url else ""
+
     # Shared context
     shared = {
         "chain_status": chain,
         "site_title": "revcat-agent-advocate",
         "build_date": build_date,
+        "base_url": base_url,
     }
+
+    # When base_url is set, nest output under that subpath so local server matches GitHub Pages
+    if base_url:
+        subpath = base_url.lstrip("/")
+        site_dir = os.path.join(output_dir, subpath)
+    else:
+        site_dir = output_dir
 
     # Ensure output dirs
     for subdir in ["apply", "ledger", "content", "experiments", "feedback", "runbook", "assets", "roi"]:
-        os.makedirs(os.path.join(output_dir, subdir), exist_ok=True)
+        os.makedirs(os.path.join(site_dir, subdir), exist_ok=True)
 
-    # 1. Index page (redirect to /apply)
+    # Root redirect (at site_output/index.html)
     with open(os.path.join(output_dir, "index.html"), "w") as f:
-        f.write('<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/apply/"></head><body><a href="/apply/">Apply</a></body></html>')
+        f.write(f'<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url={base_url}/apply/"></head><body><a href="{base_url}/apply/">Apply</a></body></html>')
+
+    # Subpath redirect (at site_output/revcat-agent-advocate/index.html)
+    if base_url:
+        with open(os.path.join(site_dir, "index.html"), "w") as f:
+            f.write(f'<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url={base_url}/apply/"></head><body><a href="{base_url}/apply/">Apply</a></body></html>')
 
     # 2. Apply page
     apply_content = query_rows(db_conn, "content_pieces", where={"slug": "application-letter"})
     apply_html = ""
     if apply_content:
-        apply_html = _md_to_html(apply_content[0].get("body_md", ""))
+        apply_html = _md_to_html(apply_content[0].get("body_md", ""), base_url)
     template = env.get_template("apply.html")
-    with open(os.path.join(output_dir, "apply", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "apply", "index.html"), "w") as f:
         f.write(template.render(**shared, content=apply_html))
 
     # 3. Ledger page
@@ -68,14 +93,14 @@ def build_site(db_conn, config):
                 except json.JSONDecodeError:
                     pass
     template = env.get_template("ledger.html")
-    with open(os.path.join(output_dir, "ledger", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "ledger", "index.html"), "w") as f:
         f.write(template.render(**shared, runs=runs, json=json))
 
     # 4. Content pages
     content_pieces = query_rows(db_conn, "content_pieces", order_by="created_at DESC")
     seo_pages = query_rows(db_conn, "seo_pages", order_by="created_at DESC")
     template = env.get_template("content.html")
-    with open(os.path.join(output_dir, "content", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "content", "index.html"), "w") as f:
         f.write(template.render(**shared, content_pieces=content_pieces, seo_pages=seo_pages))
 
     # Individual content pages
@@ -84,12 +109,12 @@ def build_site(db_conn, config):
     for piece in content_pieces:
         slug = piece["slug"]
         all_slugs.append(slug)
-        slug_dir = os.path.join(output_dir, "content", slug)
-        os.makedirs(slug_dir, exist_ok=True)
-        body_html = _md_to_html(piece.get("body_md", ""))
+        slug_out = os.path.join(site_dir, "content", slug)
+        os.makedirs(slug_out, exist_ok=True)
+        body_html = _md_to_html(piece.get("body_md", ""), base_url)
         sources = json.loads(piece["sources_json"]) if piece.get("sources_json") else []
         verification = json.loads(piece["verification_json"]) if piece.get("verification_json") else {}
-        with open(os.path.join(slug_dir, "index.html"), "w") as f:
+        with open(os.path.join(slug_out, "index.html"), "w") as f:
             f.write(detail_template.render(
                 **shared, piece=piece, body_html=body_html,
                 sources=sources, verification=verification,
@@ -99,10 +124,10 @@ def build_site(db_conn, config):
     for page in seo_pages:
         slug = page["slug"]
         all_slugs.append(slug)
-        slug_dir = os.path.join(output_dir, "content", slug)
-        os.makedirs(slug_dir, exist_ok=True)
-        body_html = _md_to_html(page.get("body_md", ""))
-        with open(os.path.join(slug_dir, "index.html"), "w") as f:
+        slug_out = os.path.join(site_dir, "content", slug)
+        os.makedirs(slug_out, exist_ok=True)
+        body_html = _md_to_html(page.get("body_md", ""), base_url)
+        with open(os.path.join(slug_out, "index.html"), "w") as f:
             f.write(detail_template.render(
                 **shared, piece=page, body_html=body_html,
                 sources=[], verification={},
@@ -118,7 +143,7 @@ def build_site(db_conn, config):
                 except json.JSONDecodeError:
                     pass
     template = env.get_template("experiments.html")
-    with open(os.path.join(output_dir, "experiments", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "experiments", "index.html"), "w") as f:
         f.write(template.render(**shared, experiments=experiments, json=json))
 
     # 6. Feedback page
@@ -130,12 +155,12 @@ def build_site(db_conn, config):
             except json.JSONDecodeError:
                 pass
     template = env.get_template("feedback.html")
-    with open(os.path.join(output_dir, "feedback", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "feedback", "index.html"), "w") as f:
         f.write(template.render(**shared, feedbacks=feedback_rows))
 
     # 7. Runbook page
     template = env.get_template("runbook.html")
-    with open(os.path.join(output_dir, "runbook", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "runbook", "index.html"), "w") as f:
         f.write(template.render(**shared))
 
     # 7b. Weekly report page
@@ -147,9 +172,9 @@ def build_site(db_conn, config):
                 with open(os.path.join(reports_dir, fname), "r") as f:
                     md_content = f.read()
                 reports.append({"filename": fname, "html_content": _md_to_html(md_content)})
-    os.makedirs(os.path.join(output_dir, "weekly-report"), exist_ok=True)
+    os.makedirs(os.path.join(site_dir, "weekly-report"), exist_ok=True)
     template = env.get_template("weekly_report.html")
-    with open(os.path.join(output_dir, "weekly-report", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "weekly-report", "index.html"), "w") as f:
         f.write(template.render(**shared, reports=reports))
 
     # 7c. ROI page
@@ -168,7 +193,7 @@ def build_site(db_conn, config):
 {% endif %}
 {% endblock %}"""
     roi_template = env.from_string(roi_template_str)
-    with open(os.path.join(output_dir, "roi", "index.html"), "w") as f:
+    with open(os.path.join(site_dir, "roi", "index.html"), "w") as f:
         f.write(roi_template.render(**shared, roi_content=roi_html, page_title="Output"))
 
     # 7d. Intelligence reports page (doc quality, competitors, sentiment)
@@ -185,7 +210,7 @@ def build_site(db_conn, config):
     # 8. Copy CSS
     src_css = os.path.join(os.path.dirname(__file__), "assets", "style.css")
     if os.path.exists(src_css):
-        shutil.copy2(src_css, os.path.join(output_dir, "assets", "style.css"))
+        shutil.copy2(src_css, os.path.join(site_dir, "assets", "style.css"))
 
     # 9. Generate sitemap.xml
     base_url = ""
