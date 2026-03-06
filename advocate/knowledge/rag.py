@@ -9,7 +9,6 @@ Stack:
 
 Everything runs remotely; no local models, no local vector storage.
 """
-import hashlib
 import json
 import os
 import re

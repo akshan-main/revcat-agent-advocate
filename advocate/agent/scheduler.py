@@ -18,7 +18,7 @@ import traceback
 from datetime import datetime, timezone, timedelta
 
 from ..config import Config
-from ..db import init_db, init_db_from_config, count_rows, query_rows, now_iso
+from ..db import init_db_from_config, query_rows, now_iso
 
 
 # Content topics the agent can write about autonomously
@@ -83,7 +83,7 @@ class AutonomousScheduler:
         """Run continuously at the given interval (default: 6 hours)."""
         if console:
             hours = interval_seconds / 3600
-            console.print(f"[bold]revcat-agent-advocate: Autonomous Mode[/bold]")
+            console.print("[bold]revcat-agent-advocate: Autonomous Mode[/bold]")
             console.print(f"Running every {hours:.1f} hours. Press Ctrl+C to stop.\n")
 
         while True:
@@ -129,9 +129,8 @@ class AutonomousScheduler:
         from ..knowledge.search import build_index, search
         from ..content.planner import create_outline
         from ..content.writer import generate_draft, save_draft, extract_code_snippets
-        from ..content.verifier import full_verify
         from ..ledger import start_run, finalize_run, log_tool_call
-        from ..models import ContentType, ContentPiece, LedgerOutputs, SourceCitation
+        from ..models import ContentType, LedgerOutputs
         import re
 
         index = build_index(self.config.docs_cache_dir, self.db)

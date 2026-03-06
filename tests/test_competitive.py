@@ -2,8 +2,6 @@
 from advocate.intelligence.competitive import (
     generate_competitive_digest,
     format_competitive_digest,
-    check_pricing_page,
-    check_changelog,
     _extract_page_title,
     CompetitorSignal,
     CompetitiveDigest,

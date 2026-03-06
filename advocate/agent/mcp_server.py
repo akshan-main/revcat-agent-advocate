@@ -10,13 +10,12 @@ Usage:
 Then in Claude Desktop / Claude Code:
     claude mcp add revcat-agent-advocate -t http -- http://localhost:8090/mcp
 """
-import json
 from mcp.server.fastmcp import FastMCP
 
 from ..config import Config
-from ..db import init_db, init_db_from_config, count_rows, now_iso
+from ..db import init_db_from_config, count_rows
 from ..knowledge.search import build_index, search
-from ..knowledge.rag import build_rag_index, build_rag_index_from_config, get_context_chunks, format_context, hybrid_search as rag_hybrid_search, RAGIndex
+from ..knowledge.rag import build_rag_index_from_config, get_context_chunks, hybrid_search as rag_hybrid_search, RAGIndex
 
 
 def create_mcp_server(config: Config) -> FastMCP:
@@ -123,7 +122,7 @@ def create_mcp_server(config: Config) -> FastMCP:
             "community_interactions": count_rows(db, "community_interactions"),
             "ledger_entries": count_rows(db, "run_log"),
         }
-        lines = [f"**revcat-agent-advocate Agent Statistics**\n"]
+        lines = ["**revcat-agent-advocate Agent Statistics**\n"]
         for key, val in stats.items():
             lines.append(f"- {key.replace('_', ' ').title()}: {val}")
         return "\n".join(lines)

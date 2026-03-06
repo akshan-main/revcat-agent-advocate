@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from ..db import rows_since, count_rows, query_rows, now_iso
+from ..db import rows_since, now_iso
 from ..ledger import verify_chain
 
 
@@ -114,7 +114,7 @@ def generate_weekly_report(
         lines.append("## Charts Snapshot")
         lines.append("")
         try:
-            from ..revenuecat.charts import ChartsMetric, CHARTS_CAVEAT
+            from ..revenuecat.charts import ChartsMetric
             week_start_date = week_start[:10]
             week_end_date = week_end[:10]
             for metric in [ChartsMetric.MRR, ChartsMetric.ACTIVE_SUBSCRIPTIONS]:

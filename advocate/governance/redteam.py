@@ -14,7 +14,7 @@ Every red-team run produces a structured report:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, List, Optional, Sequence
 
 # ---------------------------------------------------------------------------
@@ -542,7 +542,6 @@ def format_red_team_report(results: List[RedTeamResult]) -> str:
     lines.append("## Individual Results")
     lines.append("")
     for r in results:
-        status = "PASS" if r.passed else "FAIL"
         icon = "[PASS]" if r.passed else "[FAIL]"
         lines.append(f"### {icon} {r.case_name} ({r.category}, {r.severity})")
         lines.append("")

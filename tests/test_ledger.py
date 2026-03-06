@@ -1,12 +1,11 @@
 import json
 
 from advocate.config import Config
-from advocate.db import insert_row, now_iso
 from advocate.ledger import (
     start_run, finalize_run, log_tool_call, log_source,
-    verify_chain, _canonical_json, _compute_hash, _compute_signature,
+    verify_chain,
 )
-from advocate.models import LedgerOutputs, VerificationResult
+from advocate.models import LedgerOutputs
 
 
 def _make_config(tmp_path, hmac_key=None):
@@ -138,7 +137,7 @@ def test_finalize_sets_ended_at(db_conn, tmp_path):
 
 def test_context_manager_auto_finalize(db_conn, tmp_path):
     config = _make_config(tmp_path)
-    with start_run(db_conn, "auto", {}, config) as ctx:
+    with start_run(db_conn, "auto", {}, config):
         pass  # Don't manually finalize
 
     # Should have auto-finalized

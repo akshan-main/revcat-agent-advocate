@@ -14,13 +14,12 @@ Every experiment gets a metrics contract:
 """
 import json
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 
 import requests
 
 from ..config import Config
-from ..db import init_db, insert_row, query_rows, update_row, now_iso
+from ..db import now_iso
 
 
 # ── Data Models ─────────────────────────────────────────────────────────
@@ -422,8 +421,8 @@ def format_impact_report(report: ImpactReport) -> str:
 
     if report.learnings:
         lines.extend(["", "## Learnings", ""])
-        for l in report.learnings:
-            lines.append(f"- {l}")
+        for learning in report.learnings:
+            lines.append(f"- {learning}")
 
     if report.next_actions:
         lines.extend(["", "## Next Actions", ""])

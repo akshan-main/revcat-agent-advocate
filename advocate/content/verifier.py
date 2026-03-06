@@ -2,7 +2,6 @@ import hashlib
 import os
 import py_compile
 import re
-import tempfile
 
 import requests
 

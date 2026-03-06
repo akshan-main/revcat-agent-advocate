@@ -381,7 +381,7 @@ def run_repro_and_file_feedback(config: Config, db_conn, ledger_ctx=None) -> tup
             all_feedback.append(fb)
 
     if ledger_ctx:
-        from ..ledger import log_tool_call, log_source
+        from ..ledger import log_tool_call
         log_tool_call(
             ledger_ctx, "repro.run_all_scenarios",
             f"scenarios={len(REPRO_SCENARIOS)}",

@@ -9,13 +9,12 @@ Production systems don't just run once and hope. They:
 import hashlib
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 
 import requests
 
-from ..config import Config
 from ..db import now_iso
 
 

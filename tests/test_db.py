@@ -1,6 +1,6 @@
 import json
 
-from advocate.db import init_db, insert_row, query_rows, update_row, count_rows, rows_since, now_iso
+from advocate.db import insert_row, query_rows, update_row, count_rows, rows_since, now_iso
 
 
 def test_schema_creation(db_conn):
@@ -34,7 +34,7 @@ def test_insert_and_query_content(db_conn):
 
 
 def test_insert_json_fields(db_conn):
-    row_id = insert_row(db_conn, "run_log", {
+    insert_row(db_conn, "run_log", {
         "run_id": "run_test_001",
         "sequence": 1,
         "command": "test",

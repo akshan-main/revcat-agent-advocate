@@ -1,7 +1,5 @@
 import hashlib
-import os
 
-import pytest
 import responses
 
 from advocate.knowledge.ingest import (

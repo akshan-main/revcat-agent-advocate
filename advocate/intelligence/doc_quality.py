@@ -6,13 +6,12 @@ A human advocate would spend days doing this manually. This does it in seconds.
 
 Output: a scored report that RevenueCat's docs team can actually act on.
 """
-import hashlib
 import os
 import re
 from dataclasses import dataclass, field
 
 from ..config import Config
-from ..db import init_db, init_db_from_config, query_rows
+from ..db import init_db_from_config
 
 
 @dataclass
@@ -67,7 +66,7 @@ def analyze_doc_quality(config: Config) -> QualityReport:
             top_issues=[], coverage_gaps=[], recommendations=[],
         )
 
-    db = init_db_from_config(config)
+    init_db_from_config(config)
     all_scores = []
     all_issues = []
 
@@ -193,7 +192,7 @@ def _score_page(filename: str, content: str, url: str, all_docs: dict) -> DocSco
             issues.append(DocIssue(
                 page=path, url=url, issue_type="broken_link", severity="major",
                 description=f"Internal link to '/docs/{link_path}' may be broken: not found in doc cache",
-                suggestion=f"Verify the link target exists and update if needed",
+                suggestion="Verify the link target exists and update if needed",
             ))
 
     # 6. Inconsistent terminology
@@ -258,12 +257,6 @@ def _check_terminology(content: str) -> list[str]:
     issues = []
 
     # Common inconsistencies
-    checks = [
-        (r'\bapp user id\b', r'\bApp User ID\b', "Inconsistent casing: 'app user id' vs 'App User ID'"),
-        (r'\bsubscriber\b.*\bcustomer\b', None, "Uses both 'subscriber' and 'customer'; pick one per context"),
-        (r'\bRev(?:enue)?Cat\b', None, None),  # Just checking presence
-    ]
-
     # Check for mixing "product" and "subscription" loosely
     has_product = bool(re.search(r'\bproduct\b', content, re.IGNORECASE))
     has_subscription = bool(re.search(r'\bsubscription\b', content, re.IGNORECASE))

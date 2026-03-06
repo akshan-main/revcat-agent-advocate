@@ -51,7 +51,7 @@ class GitHubResponder:
                         "body": (item.get("body") or "")[:500],
                         "url": item["html_url"],
                         "user": item["user"]["login"],
-                        "labels": [l["name"] for l in item.get("labels", [])],
+                        "labels": [lbl["name"] for lbl in item.get("labels", [])],
                         "created_at": item["created_at"],
                     })
             except requests.RequestException:

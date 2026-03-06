@@ -11,7 +11,7 @@ from advocate.config import Config
 from advocate.db import init_db, now_iso
 from advocate.ledger import start_run, finalize_run, log_tool_call, log_source, verify_chain
 from advocate.models import (
-    ContentPiece, ContentType, LedgerOutputs, VerificationResult,
+    ContentPiece, ContentType, LedgerOutputs,
 )
 
 
@@ -55,13 +55,13 @@ def ingest_docs(ctx, force):
                       f"fetched={report.fetched}, skipped={report.skipped}, errored={report.errored}")
 
         if report.errors:
-            console.print(f"[yellow]Warnings during ingestion:[/yellow]")
+            console.print("[yellow]Warnings during ingestion:[/yellow]")
             for err in report.errors[:5]:
                 console.print(f"  [yellow]- {err}[/yellow]")
             if len(report.errors) > 5:
                 console.print(f"  [yellow]... and {len(report.errors) - 5} more[/yellow]")
 
-        console.print(f"\n[bold]Building search indexes...[/bold]")
+        console.print("\n[bold]Building search indexes...[/bold]")
         index = build_index(config.docs_cache_dir, db)
         log_tool_call(run_ctx, "knowledge.build_index", "", f"docs={index.doc_count}, terms={len(index.inverted_index)}")
 
@@ -105,7 +105,7 @@ def write_content(ctx, topic, content_type, count):
     console = ctx.obj["console"]
 
     from advocate.knowledge.search import build_index, search
-    from advocate.knowledge.rag import build_rag_index, get_context_chunks, RAGIndex
+    from advocate.knowledge.rag import get_context_chunks, RAGIndex
     from advocate.content.planner import create_outline
     from advocate.content.writer import (
         generate_draft, save_draft, extract_code_snippets,
@@ -802,8 +802,8 @@ def repro_test_cmd(ctx, scenario):
     db = ctx.obj["db"]
 
     from advocate.feedback.repro import (
-        run_scenario, run_all_scenarios, run_repro_and_file_feedback,
-        format_transcript, REPRO_SCENARIOS,
+        run_repro_and_file_feedback,
+        format_transcript,
     )
 
     with start_run(db, "repro-test", {"scenario": scenario or "all"}, config) as run_ctx:
@@ -846,11 +846,10 @@ def repro_test_cmd(ctx, scenario):
 @click.pass_context
 def lint_content_cmd(ctx, slug, lint_all):
     """Run editorial quality checks on content pieces."""
-    config = ctx.obj["config"]
     console = ctx.obj["console"]
     db = ctx.obj["db"]
 
-    from advocate.content.linter import lint_content, format_lint_result
+    from advocate.content.linter import lint_content
     from advocate.db import query_rows
 
     pieces = query_rows(db, "content_pieces")
@@ -890,12 +889,11 @@ def lint_content_cmd(ctx, slug, lint_all):
 @click.pass_context
 def distribution_queue_cmd(ctx, status, approve_id, approve_all):
     """View and manage the distribution queue."""
-    config = ctx.obj["config"]
     console = ctx.obj["console"]
     db = ctx.obj["db"]
 
     from advocate.distribution.pipeline import (
-        get_queue, approve, approve_all_drafts, preview_queue, init_distribution_db,
+        approve, approve_all_drafts, preview_queue, init_distribution_db,
     )
 
     init_distribution_db(db)
@@ -938,8 +936,8 @@ def collect_metrics_cmd(ctx, experiment_id):
 
         if report.learnings:
             console.print("\n[bold]Learnings:[/bold]")
-            for l in report.learnings:
-                console.print(f"  - {l}")
+            for learning in report.learnings:
+                console.print(f"  - {learning}")
 
         # Check stopping rules if experiment
         if experiment_id:
@@ -1103,7 +1101,7 @@ def analyze_docs_cmd(ctx):
         console.print("[bold]Analyzing documentation quality...[/bold]")
         report = analyze_doc_quality(config)
 
-        console.print(f"\n[bold]Doc Quality Report[/bold]")
+        console.print("\n[bold]Doc Quality Report[/bold]")
         console.print(f"Pages analyzed: {report.total_pages}")
         console.print(f"Average score: {report.average_score}/100")
         console.print(f"Issues found: {sum(report.issues_by_severity.values())}")
@@ -1112,7 +1110,7 @@ def analyze_docs_cmd(ctx):
         console.print(f"  Minor: {report.issues_by_severity.get('minor', 0)}")
 
         if report.recommendations:
-            console.print(f"\n[bold]Top Recommendations:[/bold]")
+            console.print("\n[bold]Top Recommendations:[/bold]")
             for rec in report.recommendations[:5]:
                 console.print(f"  - {rec}")
 
@@ -1151,7 +1149,7 @@ def roi_cmd(ctx):
     report = calculate_output(config)
     m = report.metrics
 
-    console.print(f"\n[bold]Agent Output Dashboard[/bold]")
+    console.print("\n[bold]Agent Output Dashboard[/bold]")
     console.print(f"{'='*50}")
     console.print(f"  Content pieces:     {m.content_pieces} ({m.content_verified} verified)")
     console.print(f"  SEO pages:          {m.seo_pages}")
@@ -1341,7 +1339,7 @@ def tweet_cmd(ctx, topic, thread, count):
         console.print(f"\n[dim]{len(tweets)} tweets drafted. DRY_RUN={'on' if config.dry_run else 'off'}[/dim]")
     else:
         result = client.draft_tweet(index, topic=topic)
-        console.print(f"\n[bold]Tweet drafted:[/bold]")
+        console.print("\n[bold]Tweet drafted:[/bold]")
         console.print(f"  {result['tweet']}")
         console.print(f"\n[dim]Topic: {result['topic']} | DRY_RUN={'on' if config.dry_run else 'off'}[/dim]")
 
@@ -1550,7 +1548,7 @@ def deploy_cmd(ctx, repo, branch):
             cwd=site_dir, check=True, capture_output=True,
         )
 
-        console.print(f"[bold green]Deployed![/bold green]")
+        console.print("[bold green]Deployed![/bold green]")
         console.print(f"  Repo: https://github.com/{repo}")
         console.print(f"  Site: https://{repo.split('/')[0]}.github.io/{repo.split('/')[1]}/")
         console.print(f"\n[dim]Enable GitHub Pages in repo settings → Source: Deploy from branch → {branch}[/dim]")

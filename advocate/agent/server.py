@@ -1,7 +1,7 @@
 """HTTP API server: lets other systems talk to the advocate agent."""
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 from ..config import Config
 from .chat import AdvocateAgent
@@ -105,13 +105,13 @@ def serve(config: Config, host: str = "0.0.0.0", port: int = 8080):
 
     server = HTTPServer((host, port), AgentHandler)
     print(f"Advocate Agent API running at http://{host}:{port}")
-    print(f"Endpoints:")
-    print(f"  GET  /health    Health check")
-    print(f"  GET  /stats     Agent statistics")
-    print(f"  GET  /suggest   Suggested questions")
-    print(f"  POST /ask       Ask a question (JSON: {{\"question\": \"...\"}})")
-    print(f"  POST /search    Search docs (JSON: {{\"query\": \"...\", \"top_k\": 5}})")
-    print(f"\nPress Ctrl+C to stop.")
+    print("Endpoints:")
+    print("  GET  /health    Health check")
+    print("  GET  /stats     Agent statistics")
+    print("  GET  /suggest   Suggested questions")
+    print("  POST /ask       Ask a question (JSON: {\"question\": \"...\"})")
+    print("  POST /search    Search docs (JSON: {\"query\": \"...\", \"top_k\": 5})")
+    print("\nPress Ctrl+C to stop.")
 
     try:
         server.serve_forever()

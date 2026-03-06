@@ -1,8 +1,7 @@
-import os
 
 from advocate.knowledge.search import (
     tokenize, build_index, search, _bm25_score,
-    get_citation_url, format_citations, SearchIndex,
+    get_citation_url, format_citations,
 )
 
 

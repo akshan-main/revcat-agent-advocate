@@ -1,5 +1,4 @@
 """Tests for operational reliability: idempotency, circuit breakers, alerting."""
-import time
 from advocate.reliability.ops import (
     idempotency_key,
     check_idempotency,

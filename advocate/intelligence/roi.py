@@ -6,11 +6,10 @@ look at the output and decide for themselves.
 
 Every number on this page links to the evidence that produced it.
 """
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 
 from ..config import Config
-from ..db import init_db, init_db_from_config, count_rows, query_rows, now_iso
+from ..db import init_db_from_config, count_rows, query_rows, now_iso
 
 
 @dataclass
@@ -172,8 +171,8 @@ def format_output_report(report: OutputReport) -> str:
         "",
         "## Content Produced",
         "",
-        f"| Metric | Count |",
-        f"|--------|-------|",
+        "| Metric | Count |",
+        "|--------|-------|",
         f"| Content pieces written | {m.content_pieces} |",
         f"| Verified (all citations valid) | {m.content_verified} |",
         f"| SEO pages generated | {m.seo_pages} |",
@@ -200,8 +199,8 @@ def format_output_report(report: OutputReport) -> str:
     lines.extend([
         "## Community Engagement",
         "",
-        f"| Channel | Responses Drafted |",
-        f"|---------|------------------|",
+        "| Channel | Responses Drafted |",
+        "|---------|------------------|",
         f"| GitHub issues | {m.github_responses} |",
         f"| Reddit threads | {m.reddit_responses} |",
         f"| Twitter/X drafts | {m.twitter_drafts} |",
@@ -210,8 +209,8 @@ def format_output_report(report: OutputReport) -> str:
         "",
         "## Product Feedback",
         "",
-        f"| Metric | Count |",
-        f"|--------|-------|",
+        "| Metric | Count |",
+        "|--------|-------|",
         f"| Total feedback items | {m.feedback_items} |",
         f"| Critical severity | {m.feedback_critical} |",
         f"| Major severity | {m.feedback_major} |",
@@ -232,8 +231,8 @@ def format_output_report(report: OutputReport) -> str:
     lines.extend([
         "## Growth Experiments",
         "",
-        f"| Metric | Count |",
-        f"|--------|-------|",
+        "| Metric | Count |",
+        "|--------|-------|",
         f"| Experiments run | {m.experiments_run} |",
         f"| Experiments concluded | {m.experiments_concluded} |",
         "",
@@ -254,20 +253,20 @@ def format_output_report(report: OutputReport) -> str:
     lines.extend([
         "## RAG Pipeline",
         "",
-        f"| Component | Detail |",
-        f"|-----------|--------|",
-        f"| Vector DB | ChromaDB (persistent, cosine similarity) |",
-        f"| Embeddings | all-mpnet-base-v2 (768-dim, HF Inference API) |",
-        f"| Reranker | ms-marco-MiniLM-L-12-v2 (cross-encoder, HF Inference API) |",
-        f"| Keyword search | BM25 (k1=1.2, b=0.75) |",
-        f"| Hybrid scoring | 70% semantic + 30% BM25 |",
+        "| Component | Detail |",
+        "|-----------|--------|",
+        "| Vector DB | ChromaDB (persistent, cosine similarity) |",
+        "| Embeddings | all-mpnet-base-v2 (768-dim, HF Inference API) |",
+        "| Reranker | ms-marco-MiniLM-L-12-v2 (cross-encoder, HF Inference API) |",
+        "| Keyword search | BM25 (k1=1.2, b=0.75) |",
+        "| Hybrid scoring | 70% semantic + 30% BM25 |",
         f"| Doc pages indexed | {m.docs_indexed} |",
         f"| RAG chunks | {m.rag_chunks} |",
         "",
         "## System Integrity",
         "",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| Ledger entries (auditable actions) | {m.ledger_entries} |",
         f"| Hash chain status | {chain_status} |",
         "",

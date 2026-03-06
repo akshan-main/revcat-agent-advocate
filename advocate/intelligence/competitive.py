@@ -113,7 +113,7 @@ def check_pricing_page(competitor_key: str) -> CompetitorSignal | None:
     if not html:
         return None
 
-    title = _extract_page_title(html)
+    _extract_page_title(html)
 
     # Look for pricing signals in the text
     text = re.sub(r'<[^>]+>', ' ', html).lower()
@@ -147,7 +147,7 @@ def check_changelog(competitor_key: str) -> CompetitorSignal | None:
     if not html:
         return None
 
-    title = _extract_page_title(html)
+    _extract_page_title(html)
 
     # Extract recent post titles (basic heuristic)
     h2_matches = re.findall(r'<h[23][^>]*>([^<]+)</h[23]>', html, re.IGNORECASE)

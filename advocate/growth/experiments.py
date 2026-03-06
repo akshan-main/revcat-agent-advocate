@@ -1,4 +1,4 @@
-from ..models import ExperimentDefinition, ExperimentStatus, GrowthExperiment
+from ..models import ExperimentDefinition, ExperimentStatus
 from ..db import insert_row, update_row, query_rows, now_iso
 
 EXPERIMENT_REGISTRY: dict[str, ExperimentDefinition] = {

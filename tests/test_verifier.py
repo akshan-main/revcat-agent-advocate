@@ -1,7 +1,4 @@
-import os
-import tempfile
 
-import pytest
 import responses
 
 from advocate.content.verifier import (

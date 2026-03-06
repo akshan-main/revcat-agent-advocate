@@ -1,4 +1,4 @@
-from ..models import CommunityInteraction, InteractionChannel, InteractionIntent
+from ..models import CommunityInteraction
 from ..db import insert_row, query_rows, update_row, now_iso
 
 

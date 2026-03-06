@@ -1,6 +1,6 @@
 import os
 
-from advocate.content.planner import suggest_topics, create_outline, SUGGESTED_TOPICS
+from advocate.content.planner import suggest_topics, create_outline
 from advocate.content.writer import (
     generate_draft, save_draft, extract_code_snippets,
     save_code_snippets, extract_citations, build_source_citations,

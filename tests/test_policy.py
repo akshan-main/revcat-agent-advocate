@@ -5,8 +5,6 @@ from advocate.distribution.policy import (
     triage_batch,
     TriageDecision,
     QualityGate,
-    TriageResult,
-    QualityResult,
 )
 
 

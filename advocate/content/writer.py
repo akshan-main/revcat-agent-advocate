@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime, timezone
 
-from ..models import ContentOutline, ContentPiece, ContentType, SourceCitation, SearchResult
+from ..models import ContentOutline, ContentPiece, SourceCitation
 from ..db import insert_row, now_iso
 
 WRITER_SYSTEM_PROMPT = """You are a technical writer for RevenueCat, creating content for developers \

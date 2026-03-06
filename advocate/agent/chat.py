@@ -5,12 +5,11 @@ and more, all through natural conversation.
 """
 import json
 import re
-from datetime import datetime, timezone
 
 from ..config import Config
-from ..db import init_db, init_db_from_config, now_iso, count_rows, query_rows
+from ..db import init_db_from_config, now_iso, count_rows, query_rows
 from ..knowledge.search import build_index, search, SearchIndex
-from ..knowledge.rag import build_rag_index, get_context_chunks, format_context, RAGIndex
+from ..knowledge.rag import get_context_chunks, format_context, RAGIndex
 from ..models import CommunityInteraction, InteractionChannel, InteractionIntent
 from ..community.tracker import log_interaction
 
@@ -118,8 +117,6 @@ class AdvocateAgent:
             for r in results:
                 snippets_text = "\n".join(f"  - {s}" for s in r.snippets[:3])
                 doc_context += f"\n**{r.title}** ({r.url}):\n{snippets_text}\n"
-
-        sources_used = [{"url": r.url, "title": r.title, "score": r.score} for r in results]
 
         if self.config.has_anthropic:
             response = self._ask_claude(question, doc_context)

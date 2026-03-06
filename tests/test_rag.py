@@ -12,7 +12,6 @@ from advocate.knowledge.rag import (
     format_context,
     _split_by_headings,
     Chunk,
-    RAGIndex,
 )
 
 requires_hf = pytest.mark.skipif(

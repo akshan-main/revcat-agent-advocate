@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 
-import pytest
 import responses
 
 from click.testing import CliRunner

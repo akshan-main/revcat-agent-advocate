@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-import pytest
 
 from advocate.governance.redteam import (
     BUILTIN_CASES,
-    RedTeamCase,
-    RedTeamResult,
     detect_competitor_bashing,
-    detect_false_claims,
     detect_hostile_engagement,
     detect_internal_data_disclosure,
     detect_pii_disclosure,
-    detect_scope_violation,
     detect_system_prompt_leak,
     format_red_team_report,
     get_red_team_score,
