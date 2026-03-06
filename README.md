@@ -1,6 +1,6 @@
-# RevenueCat Advocate OS
+# revcat-agent-advocate
 
-Agent system for the RevenueCat Agentic AI Developer & Growth Advocate role. Ingests RevenueCat documentation, generates cited technical content, runs growth experiments, files structured product feedback, and publishes to a static site with a hash-chained audit trail.
+Autonomous AI agent applying for RevenueCat's Agentic AI Developer & Growth Advocate role. Ingests RevenueCat documentation, generates cited technical content, runs growth experiments, files structured product feedback, and publishes everything to a static site with a hash-chained audit trail. Every output is verifiable. Every claim has receipts.
 
 ## Quick Start
 
@@ -18,16 +18,23 @@ python -m http.server -d site_output 8000
 
 ```bash
 pip install -e ".[dev]"
-export REVENUECAT_API_KEY=sk_your_key
-export REVENUECAT_PROJECT_ID=proj_your_id
-export ANTHROPIC_API_KEY=sk-ant-...
-export DEMO_MODE=false
+cp .env.example .env  # fill in API keys
 revcat-advocate ingest-docs
 revcat-advocate write-content --topic "Your Topic" --type tutorial
 revcat-advocate build-site
 ```
 
-## Commands
+## What It Does
+
+| Weekly Deliverable | Command |
+|---|---|
+| 2+ content pieces (tutorials, case studies, playbooks) | `write-content --topic "..." --type tutorial` |
+| 1+ growth experiment | `run-experiment --name programmatic-seo` |
+| 50+ community interactions | `scan-github`, `scan-reddit`, `queue-replies` |
+| 3+ product feedback items | `generate-feedback --count 3` |
+| Weekly report | `weekly-report` |
+
+## All Commands
 
 | Command | Description |
 |---------|-------------|
@@ -61,7 +68,7 @@ revcat-advocate build-site
 | `ALLOW_WRITES` | `false` | Blocks POST/PUT/DELETE to RevenueCat API |
 | `DEMO_MODE` | `false` | Uses mock API responses, labels all output `[DEMO]` |
 
-## Ledger
+## Tamper-Evident Ledger
 
 Every command creates a hash-chained log entry:
 
@@ -69,7 +76,7 @@ Every command creates a hash-chained log entry:
 hash = sha256(prev_hash + canonical_json)
 ```
 
-Optional HMAC signature via `LEDGER_HMAC_KEY`. Verify with `revcat-advocate verify-ledger`.
+Optional HMAC signature via `LEDGER_HMAC_KEY`. Verify with `revcat-advocate verify-ledger`. Browse at `/ledger` on the published site.
 
 ## Architecture
 
@@ -79,17 +86,14 @@ Docs (LLM Index + .md mirrors)
         -> Content Engine (Claude API + citation verification)
         -> Growth Engine (experiments + programmatic SEO)
         -> Feedback Engine (doc analysis + repro harness)
-        -> Social (GitHub, Reddit, X, all DRY_RUN gated)
-    -> Governance (red-team suite, safety gates)
+        -> Community (GitHub, Reddit, X, all DRY_RUN gated)
     -> Ledger (hash-chained, HMAC-signed)
         -> Static Site (GitHub Pages)
 ```
 
-## Tests
+## Development
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v    # 259 tests
+pytest tests/ -v
 ```
-
-Covers: ledger tamper detection, citation verification, content pipeline, API safety gates, governance red-team, golden snapshot regression, competitive intelligence, repro harness.

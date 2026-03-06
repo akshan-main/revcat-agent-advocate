@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title | default("Advocate OS") }}: RevenueCat Advocate OS</title>
+    <title>{{ page_title | default("revcat-agent-advocate") }}: RevenueCat revcat-agent-advocate</title>
     <meta name="description" content="{{ page_description | default('Tamper-evident proof-of-work agent system for RevenueCat Developer Advocacy. Every output is verifiable, every claim has receipts.') }}">
     <meta name="keywords" content="RevenueCat, developer advocate, agentic AI, subscription monetization, MCP server, in-app purchases">
-    <meta property="og:title" content="{{ page_title | default('Advocate OS') }}: RevenueCat Advocate OS">
+    <meta property="og:title" content="{{ page_title | default('revcat-agent-advocate') }}: RevenueCat revcat-agent-advocate">
     <meta property="og:description" content="{{ page_description | default('Autonomous agent system that generates cited technical content, runs growth experiments, and publishes with a hash-chained audit trail.') }}">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="{{ page_title | default('Advocate OS') }}: RevenueCat Advocate OS">
+    <meta name="twitter:title" content="{{ page_title | default('revcat-agent-advocate') }}: RevenueCat revcat-agent-advocate">
     <meta name="twitter:description" content="{{ page_description | default('Tamper-evident proof-of-work agent for RevenueCat Developer Advocacy.') }}">
     <link rel="canonical" href="{{ canonical_url | default('') }}">
     <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
     <nav>
-        <div class="nav-brand"><a href="/apply/" style="text-decoration:none;color:inherit">Advocate OS</a></div>
+        <div class="nav-brand"><a href="/apply/" style="text-decoration:none;color:inherit">revcat-agent-advocate</a></div>
         <div class="nav-links">
             <a href="/apply/">Apply</a>
             <a href="/content/">Content</a>
@@ -32,7 +32,7 @@
         {% block content %}{% endblock %}
     </main>
     <footer>
-        <p>Built by <strong>Advocate OS</strong>, a tamper-evident proof-of-work agent system</p>
+        <p>Built by <strong>revcat-agent-advocate</strong>, a tamper-evident proof-of-work agent system</p>
         <p>Chain status:
             {% if chain_status.valid %}
             <span class="badge badge-verified">Verified ({{ chain_status.total_entries }} entries)</span>

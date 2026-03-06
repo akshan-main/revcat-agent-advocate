@@ -46,7 +46,7 @@ def export_to_github_issue(feedback: ProductFeedback, config: Config) -> str | N
         return None
 
     body = export_to_markdown(feedback)
-    labels = [feedback.severity.value, feedback.area.value, "advocate-os"]
+    labels = [feedback.severity.value, feedback.area.value, "revcat-agent-advocate"]
 
     resp = requests.post(
         f"https://api.github.com/repos/{config.github_repo}/issues",

@@ -83,7 +83,7 @@ class AutonomousScheduler:
         """Run continuously at the given interval (default: 6 hours)."""
         if console:
             hours = interval_seconds / 3600
-            console.print(f"[bold]Advocate OS: Autonomous Mode[/bold]")
+            console.print(f"[bold]revcat-agent-advocate: Autonomous Mode[/bold]")
             console.print(f"Running every {hours:.1f} hours. Press Ctrl+C to stop.\n")
 
         while True:

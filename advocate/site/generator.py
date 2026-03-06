@@ -37,7 +37,7 @@ def build_site(db_conn, config):
     # Shared context
     shared = {
         "chain_status": chain,
-        "site_title": "RevenueCat Advocate OS",
+        "site_title": "revcat-agent-advocate",
         "build_date": build_date,
     }
 

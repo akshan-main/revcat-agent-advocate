@@ -8,7 +8,7 @@ Usage:
     revcat-advocate mcp-serve --port 8090
 
 Then in Claude Desktop / Claude Code:
-    claude mcp add advocate-os -t http -- http://localhost:8090/mcp
+    claude mcp add revcat-agent-advocate -t http -- http://localhost:8090/mcp
 """
 import json
 from mcp.server.fastmcp import FastMCP
@@ -22,7 +22,7 @@ from ..knowledge.rag import build_rag_index, build_rag_index_from_config, get_co
 def create_mcp_server(config: Config) -> FastMCP:
     """Create and configure the MCP server with all advocate tools."""
     mcp = FastMCP(
-        "RevenueCat Advocate OS",
+        "RevenueCat revcat-agent-advocate",
         instructions=(
             "RevenueCat Developer Advocate agent. I help developers understand "
             "RevenueCat's APIs, SDKs, Charts, MCP server, and subscription monetization. "
@@ -123,7 +123,7 @@ def create_mcp_server(config: Config) -> FastMCP:
             "community_interactions": count_rows(db, "community_interactions"),
             "ledger_entries": count_rows(db, "run_log"),
         }
-        lines = [f"**Advocate OS Agent Statistics**\n"]
+        lines = [f"**revcat-agent-advocate Agent Statistics**\n"]
         for key, val in stats.items():
             lines.append(f"- {key.replace('_', ' ').title()}: {val}")
         return "\n".join(lines)
@@ -271,7 +271,7 @@ def create_mcp_server(config: Config) -> FastMCP:
     def resource_readme() -> str:
         """Agent README and capabilities overview."""
         return (
-            "# RevenueCat Advocate OS\n\n"
+            "# RevenueCat revcat-agent-advocate\n\n"
             "Autonomous developer advocacy agent for RevenueCat.\n\n"
             "## Capabilities\n"
             "- Search and answer questions from official RevenueCat docs\n"

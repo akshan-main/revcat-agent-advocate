@@ -97,7 +97,7 @@ def test_format_for_twitter():
 def test_format_for_github():
     content = "RevenueCat supports this feature."
     formatted = format_for_channel(content, "github_comment")
-    assert "Advocate OS" in formatted  # Attribution footer
+    assert "revcat-agent-advocate" in formatted  # Attribution footer
 
 
 def test_format_for_reddit():

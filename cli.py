@@ -24,7 +24,7 @@ def _slugify(text: str) -> str:
 @click.group()
 @click.pass_context
 def main(ctx):
-    """RevenueCat Advocate OS: Tamper-Evident Proof-of-Work Agent System"""
+    """RevenueCat revcat-agent-advocate: Tamper-Evident Proof-of-Work Agent System"""
     ctx.ensure_object(dict)
     config = Config()
     os.makedirs(config.runs_dir, exist_ok=True)
@@ -570,7 +570,7 @@ def publish_site(ctx):
         try:
             subprocess.run(["git", "add", config.site_output_dir], check=True, cwd=".")
             log_tool_call(run_ctx, "git.add", config.site_output_dir, "staged")
-            subprocess.run(["git", "commit", "-m", f"Update Advocate OS site, {date}"], check=True, cwd=".")
+            subprocess.run(["git", "commit", "-m", f"Update revcat-agent-advocate site, {date}"], check=True, cwd=".")
             log_tool_call(run_ctx, "git.commit", date, "committed")
             subprocess.run(["git", "push"], check=True, cwd=".")
             log_tool_call(run_ctx, "git.push", "", "pushed")
@@ -1023,7 +1023,7 @@ def demo_run(ctx):
     """Run the full pipeline end-to-end (the mind-blow button)."""
     console = ctx.obj["console"]
 
-    console.print("[bold]Advocate OS: Full Demo Run[/bold]")
+    console.print("[bold]revcat-agent-advocate: Full Demo Run[/bold]")
     console.print("=" * 50)
 
     steps = [
@@ -1254,10 +1254,10 @@ def mcp_serve_cmd(ctx, transport, port):
     this agent to search RevenueCat docs, generate content, and more.
 
     For Claude Desktop, add to claude_desktop_config.json:
-        {"mcpServers": {"advocate-os": {"command": "revcat-advocate", "args": ["mcp-serve"]}}}
+        {"mcpServers": {"revcat-agent-advocate": {"command": "revcat-advocate", "args": ["mcp-serve"]}}}
 
     For Claude Code:
-        claude mcp add advocate-os -- revcat-advocate mcp-serve
+        claude mcp add revcat-agent-advocate -- revcat-advocate mcp-serve
     """
     config = ctx.obj["config"]
     console = ctx.obj["console"]
@@ -1266,11 +1266,11 @@ def mcp_serve_cmd(ctx, transport, port):
     mcp = create_mcp_server(config)
 
     if transport == "stdio":
-        console.print("[bold]Advocate OS: MCP Server (stdio)[/bold]", stderr=True)
+        console.print("[bold]revcat-agent-advocate: MCP Server (stdio)[/bold]", stderr=True)
         console.print("Waiting for MCP client connection...", stderr=True)
         mcp.run(transport="stdio")
     else:
-        console.print(f"[bold]Advocate OS: MCP Server (SSE on port {port})[/bold]")
+        console.print(f"[bold]revcat-agent-advocate: MCP Server (SSE on port {port})[/bold]")
         console.print(f"Connect: http://localhost:{port}/sse")
         mcp.run(transport="sse", sse_port=port)
 
@@ -1293,7 +1293,7 @@ def auto_mode(ctx, interval, once):
     scheduler = AutonomousScheduler(config)
 
     if once:
-        console.print("[bold]Advocate OS: Single Autonomous Cycle[/bold]")
+        console.print("[bold]revcat-agent-advocate: Single Autonomous Cycle[/bold]")
         results = scheduler.run_once(console=console)
         console.print(f"\n[bold]Done:[/bold] {sum(1 for _, s, _ in results if s == 'success')} succeeded, "
                       f"{sum(1 for _, s, _ in results if s == 'error')} failed")
@@ -1519,7 +1519,7 @@ def deploy_cmd(ctx, repo, branch):
         subprocess.run(["git", "add", "-A"], cwd=site_dir, check=True, capture_output=True)
 
         from datetime import datetime, timezone
-        msg = f"Deploy Advocate OS site, {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        msg = f"Deploy revcat-agent-advocate site, {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
         result = subprocess.run(
             ["git", "commit", "-m", msg],
             cwd=site_dir, capture_output=True, text=True,

@@ -30,7 +30,7 @@ class RedditClient:
     def __init__(self, config: Config):
         self.config = config
         self.session = requests.Session()
-        self.session.headers["User-Agent"] = "AdvocateOS/1.0 (developer-advocate-bot)"
+        self.session.headers["User-Agent"] = "revcat-agent-advocate/1.0 (developer-advocate-bot)"
 
     def find_posts(self, since_hours: int = 72, limit: int = 15) -> list[dict]:
         """Search Reddit for RevenueCat-related posts in monitored subreddits."""

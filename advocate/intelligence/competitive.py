@@ -88,7 +88,7 @@ def _fetch_public_page(url: str, timeout: int = 10) -> str | None:
     """Fetch a public URL. Returns page text or None."""
     try:
         resp = requests.get(url, timeout=timeout, headers={
-            "User-Agent": "AdvocateOS/1.0 (competitive-digest; public-data-only)"
+            "User-Agent": "revcat-agent-advocate/1.0 (competitive-digest; public-data-only)"
         })
         if resp.status_code == 200:
             return resp.text

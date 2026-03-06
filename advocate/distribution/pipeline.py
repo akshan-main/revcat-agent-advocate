@@ -262,7 +262,7 @@ def format_for_channel(content: str, channel: str, title: str = "") -> str:
 
     elif channel in ("github_issue", "github_comment", "github_discussion"):
         # GitHub: full markdown, add attribution footer
-        footer = "\n\n---\n*Drafted by [Advocate OS](https://github.com/), verified against official RevenueCat docs*"
+        footer = "\n\n---\n*Drafted by [revcat-agent-advocate](https://github.com/), verified against official RevenueCat docs*"
         return content + footer
 
     elif channel == "reddit":

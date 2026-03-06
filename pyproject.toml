@@ -1,5 +1,5 @@
 [project]
-name = "revcat-advocate-os"
+name = "revcat-agent-advocate"
 version = "0.1.0"
 description = "Tamper-evident proof-of-work agent system for RevenueCat Developer Advocacy"
 requires-python = ">=3.11"

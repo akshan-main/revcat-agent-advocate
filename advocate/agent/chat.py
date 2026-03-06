@@ -282,7 +282,7 @@ class AdvocateAgent:
     def _format_stats(self) -> str:
         """Format agent stats as readable text."""
         stats = self.get_stats()
-        lines = ["**Advocate OS Agent Statistics:**\n"]
+        lines = ["**revcat-agent-advocate Statistics:**\n"]
         for key, val in stats.items():
             label = key.replace('_', ' ').title()
             lines.append(f"  {label}: **{val}**")

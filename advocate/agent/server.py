@@ -16,7 +16,7 @@ class AgentHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         if parsed.path == "/health":
-            self._json_response({"status": "ok", "agent": "RevenueCat Advocate OS"})
+            self._json_response({"status": "ok", "agent": "revcat-agent-advocate"})
 
         elif parsed.path == "/stats":
             stats = self.agent.get_stats()

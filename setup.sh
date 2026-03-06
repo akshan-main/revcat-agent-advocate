@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== RevenueCat Advocate OS — One-Command Setup ==="
+echo "=== revcat-agent-advocate — One-Command Setup ==="
 echo ""
 
 # 1. Check Python version

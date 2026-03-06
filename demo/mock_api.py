@@ -11,7 +11,7 @@ class MockRevenueCatClient:
     def get_project(self) -> dict:
         return {
             "id": "proj_demo_001",
-            "name": f"Advocate OS Demo Project {DEMO_BADGE}",
+            "name": f"revcat-agent-advocate Demo Project {DEMO_BADGE}",
             "created_at": "2026-01-01T00:00:00Z",
         }
 
