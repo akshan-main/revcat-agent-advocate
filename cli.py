@@ -81,7 +81,6 @@ def ingest_docs(ctx, force):
         table.add_row("Errored", str(report.errored))
         table.add_row("BM25 index docs", str(index.doc_count))
         table.add_row("RAG chunks", str(rag_index.chunk_count))
-        table.add_row("RAG vocabulary", str(len(rag_index.vocabulary)))
         console.print(table)
 
         finalize_run(run_ctx, config, db,
