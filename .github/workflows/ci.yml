@@ -58,8 +58,12 @@ jobs:
 
       - name: Ingest docs (incremental — skips already cached)
         env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          CHROMA_API_KEY: ${{ secrets.CHROMA_API_KEY }}
+          CHROMA_TENANT: ${{ secrets.CHROMA_TENANT }}
+          CHROMA_DATABASE: ${{ secrets.CHROMA_DATABASE }}
         run: revcat-advocate ingest-docs
 
       - name: Build site
