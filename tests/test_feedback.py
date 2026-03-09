@@ -48,8 +48,8 @@ def test_save_and_list_feedback(db_conn):
 
 
 def test_list_feedback_filters(db_conn):
-    for area in [FeedbackArea.DOCS, FeedbackArea.API, FeedbackArea.DOCS]:
-        fb = create_feedback(title=f"FB {area.value}", severity=Severity.MINOR, area=area)
+    for i, area in enumerate([FeedbackArea.DOCS, FeedbackArea.API, FeedbackArea.DOCS]):
+        fb = create_feedback(title=f"FB {area.value} {i}", severity=Severity.MINOR, area=area)
         save_feedback(db_conn, fb)
 
     docs_only = list_feedback(db_conn, area="docs")
