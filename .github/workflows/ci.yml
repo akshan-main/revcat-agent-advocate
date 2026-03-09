@@ -118,7 +118,7 @@ jobs:
       - name: Upload to Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site_output/
+          path: site_output/revcat-agent-advocate/
 
       - name: Deploy to Pages
         id: deployment
