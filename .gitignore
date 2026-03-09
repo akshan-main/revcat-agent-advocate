@@ -1,6 +1,6 @@
 .env
 advocate.db
-.docs_cache/
+# .docs_cache/ — tracked in repo (3MB, needed for Render search API deployment)
 site_output/
 runs/
 __pycache__/

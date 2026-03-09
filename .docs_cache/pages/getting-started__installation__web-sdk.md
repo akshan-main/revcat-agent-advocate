@@ -1,0 +1,27 @@
+---
+id: "getting-started/installation/web-sdk"
+title: "Web"
+description: "RevenueCat provides backend, mobile and web SDKs to to make implementing in-app and web purchases and subscriptions easy. With our SDKs, you can build and manage your app business on any platform without having to maintain your own backend infrastructure. You can read more about how RevenueCat fits into your app or you can sign up for free to start building."
+permalink: "/docs/getting-started/installation/web-sdk"
+slug: "web-sdk"
+version: "current"
+original_source: "docs/getting-started/installation/web-sdk.mdx"
+---
+
+RevenueCat provides backend, mobile and web SDKs to to make implementing in-app and web purchases and subscriptions easy. With our SDKs, you can build and manage your app business on any platform without having to maintain your own backend infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/growth/where-does-revenuecat-fit-in-your-app/) or you can [sign up for free](https://app.revenuecat.com/signup) to start building.
+
+The RevenueCat Web SDK supports multiple billing providers; for full compatibility, see the [RevenueCat Web SDK](../../web/web-billing/web-sdk) page.
+
+The SDK allows you to easily implement subscriptions in your web app, or build a web subscription page for your mobile app. You may use an existing supported billing provider, or let RevenueCat's [Web Billing](../../web/web-billing/overview#revenuecat-web-billing) engine handle the recurring billing logic, manage what entitlements customers have access to, and automatically recover payments in the case of billing issues. Web Billing uses Stripe as a trusted payment gateway.
+
+## Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-js.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-js/releases)
+
+To install the RevenueCat Web SDK, add the `@revenuecat/purchases-js` package to your project using the package manager of your choice:
+
+*Interactive content is available in the web version of this doc.*
+
+## Next steps
+
+Now that you've installed the RevenueCat Web SDK, follow the instructions to [configure it](../../web/web-billing/web-sdk).

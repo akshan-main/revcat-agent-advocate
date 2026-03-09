@@ -1,0 +1,122 @@
+---
+id: "tools/targeting/placements"
+title: "By Placement"
+description: "Use Targeting by Placement to define paywall locations in your app so that you can serve unique Offerings at each paywall location to each customer."
+permalink: "/docs/tools/targeting/placements"
+slug: "placements"
+version: "current"
+original_source: "docs/tools/targeting/placements.mdx"
+---
+
+Use Targeting by Placement to define paywall locations in your app so that you can serve unique Offerings at each paywall location to each customer.
+
+**Video:** Watch the video content in the hosted documentation.
+
+![Targeting by Placement Illustration](/docs_images/offerings/targeting/targeting-by-placement-illustration.png)
+
+## Supported in the following SDK versions:
+
+| RevenueCat SDK         | Version required for Placements |
+| :--------------------- | :------------------------------ |
+| purchases-ios          | 4.38.0 and up                   |
+| purchases-android      | 7.7.0 and up                    |
+| react-native-purchases | 7.23.0 and up                   |
+| purchases-flutter      | 6.22.0 and up                   |
+| purchases-capacitor    | 7.5.0 and up                    |
+| purchases-unity        | 6.9.0 and up                    |
+| purchases-js           | 0.8.0 and up                    |
+
+## Defining Placements
+
+To start, you'll need to define a few Placements for your app. To do that, consider the different contexts in your app where you may want to display a paywall, such as:
+
+- At the end of onboarding (e.g. `onboarding_end`)
+- When a customer attempts to use a paywalled feature (e.g. `feature_gate`)
+- When a sale is running (e.g. `sale_offer`)
+
+:::tip Do I need a placement for \_\_\_?
+When deciding which Placements to create, consider how your paywall(s) will compliment your ideal customer journey. For example, when you run a sale, do you want to show a different pitch & offer to onboarded customers vs. those using your app for the first time? If so, define a `sale_offer` Placement. If not, then skip it.
+
+You can always create additional Placements in future releases of your app.
+:::
+
+When your app fetches Offerings by Placement, we'll return the Offering to be displayed for that customer at that Placement, letting you display unique paywalls based on the customer journey.
+
+## Creating Targeting Rules for Placements
+
+To define which Offerings should be served for an audience at each Placement, click **+ Add Placement** when creating a new rule or editing an existing one.
+
+![Add Placement](/docs_images/offerings/targeting/add-placement.png)
+
+:::tip Targeting "Any audience"
+If you want to use Placements to serve unique Offerings at different paywall locations for all customers, you can do so by creating a Targeting Rule that targets "Any audience" as its condition. Then, order that rule at the bottom of your list of Live rules if you want other audience-specific Targeting Rules to supersede it.
+:::
+
+Then, select the Offering you want to display, and enter the identifier of the Placement you want to serve that Offering on. If this is your first time using that Placement, you'll need to click **Add** to add its identifier to your list. Once you've saved this rule, that Placement will be available to select in other Targeting Rules.
+
+![Create a Placement](/docs_images/offerings/targeting/create-a-placement.png)
+
+:::warning Placement Identifiers
+Double check that the Placement strings you've defined in your app and through your Targeting Rules exactly match so that your Targeting Rules are applied correctly.
+:::
+
+When using Placements, you'll always need to select an Offering to serve "for all other cases". This Offering will be served:
+
+- For any Placements other than the one(s) specified in this rule
+- For any new Placements added in the future
+- Or when getting the 'current' offering in any SDK version (e.g. the `getOfferings()` method), such as in older versions of your app, or areas of your app that are not fetching Offerings by Placement
+
+![Set a Placement for all other cases](/docs_images/offerings/targeting/for-all-other-cases.png)
+
+### Serving no Offering at a given Placement
+
+You can also choose to serve No Offering at a given Placement, such as when the paywalled feature is not yet available in some region, or when the targeted audience is not eligible to receive a given offer.
+
+Simply select **No Offering** for a given Placement in order to have a null value returned when your app requests Offerings for that Placement for customers matching that Targeting Rule.
+
+:::warning Handling a nil Offering identifier
+Be sure that your app is setup to expect and handle a nil value being returned when using the `getCurrentOffering(forPlacement: "string")` method if you expect to use Targeting in this way.
+:::
+
+If you've chosen to serve **No Offering** "for all other cases" in a Targeting Rule, then you'll also need to specify an Offering to serve "when not using Placements", so that any calls to getOfferings in your current app or prior app versions still have some Offering identifier returned in case they're not designed to handle a null value.
+
+## Fetching Offerings by Placement
+
+To use Placements in your app, after you have defined them in the Dashboard, you can use the `getCurrentOffering(forPlacement: "placementIdentifier")` method to fetch the Offering for a given Placement, where `placementIdentifier` must exactly match the value set in the Dashboard.
+
+The method will return the Offering for that customer at that Placement.
+
+```
+let placementOffering = offerings.getCurrentOffering(forPlacement: "onboarding_end")
+```
+
+![onboarding\_end Placement](/docs_images/offerings/targeting/create-a-placement-highlighted.png)
+
+The Offering returned will correspond to one of these three cases:
+
+**The Offering identifier (or nil value) specified for that customer at that Placement**
+
+This will occur if the customer matches a Targeting Rule, and the Placement is specified in that Targeting Rule.
+
+**The Offering identifier (or nil value) specified for that customer "in all other cases"**
+
+This will occur if the customer matches a Targeting Rule, and the Placement is not specified in that Targeting Rule.
+
+**The Offering identifier specified as the Default Offering for your Project when no Targeting Rules apply**
+
+This will occur if the customer does not match a Targeting Rule.
+
+*Interactive content is available in the web version of this doc.*
+
+:::tip Migrating Offerings calls to the new method
+`getCurrentOffering(forPlacement: "string")` should replace any `getOfferings()` calls in your app that you want to control independently through Placements.
+:::
+
+## FAQs
+
+| Question                                                                                                                        | Answer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Can I run an Experiment to test different Offerings to serve at a given Placement?                                              | Yes you can! When creating an Experiment, you'll have the same options to add Offerings per Placement like you can when creating Targeting Rules to A/B test the impact of changes made at any Placement in your app.                                                                                                                                                                                                                                                                                                                                                                  |
+| Can I still use the existing method to fetch Offerings in some places in my app?                                                | Absolutely. The existing method will continue to work as it does today, and will return the Offering "for all other cases" if you're using Placements in a Targeting Rule.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Can I delete a Placement identifier once I've created it?                                                                       | The list of available Placement identifiers to select from is sourced from your existing Targeting Rules, so if you delete all Targeting Rules referencing that Placement, it will no longer be listed in the Dashboard. However, keep in mind that any prior app versions fetching Offerings for that Placement will continue to do so, and the Offering set "for all other cases" will be served in its place.                                                                                                                                                                       |
+| What is the relationship between the Placement I set "for all other cases" and the Placement I set "when not using Placements"? | You'll only be asked to specify a Placement "when not using Placements" if you choose to serve "No Offering" "for all other cases". This is because the ability to return a nil Offering is only supported when requesting Offerings by Placement, and you may have old app versions or areas of your app that aren't using Placements where you still need to return some Offering for your paywall to behave correctly. If you choose to serve a specific Offering "for all other cases", then you'll never be asked to specify something else to serve "when not using Placements". |

@@ -1,0 +1,82 @@
+---
+id: "test-and-launch/sandbox/amazon-store-sandbox-testing"
+title: "Amazon Appstore"
+description: "This section assumes you've followed our Quickstart section of our Getting Started guide to install and configure our SDK."
+permalink: "/docs/test-and-launch/sandbox/amazon-store-sandbox-testing"
+slug: "amazon-store-sandbox-testing"
+version: "current"
+original_source: "docs/test-and-launch/sandbox/amazon-store-sandbox-testing.mdx"
+---
+
+:::info
+This section assumes you've followed our [Quickstart](/getting-started/quickstart) section of our Getting Started guide to install and configure our SDK.
+:::
+
+There are two options for sandbox testing: an Android device with the Amazon Appstore installed (which can be downloaded [here](https://www.amazon.com/gp/mas/get/amazonapp)), or on an Amazon device running Fire OS, like a Fire TV.
+
+There are three different testing environments in Amazon ([official docs](https://developer.amazon.com/docs/in-app-purchasing/iap-testing-overview.html)):
+
+- App Tester. There's an app called App Tester that can be installed in your testing device and configured with a JSON to load testing products.
+- Live App Testing. This is similar to a beta or TestFlight release. You create an APK, upload it to the Amazon Appstore, add testers and start the test.
+- Production.
+
+:::warning
+While Offerings will load in the App Tester environment, **RevenueCat will only validate purchases in the Live App Testing environment**.
+:::
+
+:::warning
+Amazon provides the option to accelerate timelines for sandbox testing. This is currently not supported by RevenueCat and it can cause wrong timestamps to appear in events.
+:::
+
+We recommend starting by configuring the App Tester with the same products configured in the RevenueCat dashboard, which will let you get offerings and test how your paywall screen looks.
+
+When you're ready to test purchasing the products, start a Live App test with a debug APK and download the app in the device via the Amazon Appstore. The installed app should be able to process the purchases and you can test the whole integration. You can also attach the Android Studio debugger to that debug APK downloaded from the Amazon Appstore if needed.
+
+## App Tester
+
+When using Amazon's App Tester app, you'll need to enable sandbox mode. You can enable sandbox mode by following Amazon's guide [here](https://developer.amazon.com/docs/in-app-purchasing/iap-app-tester-user-guide.html#installtester).
+
+## Live App Testing (LAT)
+
+Submit your app to the [App Testing Service](https://developer.amazon.com/apps-and-games/test).
+
+![App Testing](/docs_images/test/amazon/app-testing.png)
+
+Submit the APK for your app to LAT.
+
+![Drop APK](/docs_images/test/amazon/drop-apk.png)
+
+Have your group of testers test your app via LAT:
+Go back to your developer dashboard and select your app from the **'App List'**. Here you will select **'Live App Testing'**.
+
+![LAT](/docs_images/test/amazon/lat.png)
+
+![Start Test](/docs_images/test/amazon/start-test.png)
+
+![Confirm Test](/docs_images/test/amazon/confirm-test.png)
+
+Click on **'Live App Testing'** in the sidebar again, then click **'Manage testers'** to add your testers.
+
+![Manage Testers](/docs_images/test/amazon/manage-testers.png)
+
+![Add New Testers](/docs_images/test/amazon/add-new-testers.png)
+
+![Add Testers Button](/docs_images/test/amazon/add-testers-button.png)
+
+![New Tester](/docs_images/test/amazon/new-tester.png)
+
+Fill out the relevant details and click **'Save'**.
+
+Return to **'Live App Testing'** and select **'Edit Testers'**.
+
+![Edit Testers](/docs_images/test/amazon/edit-testers.png)
+
+Select the testers you want to test this app and hit **'Save'**.
+
+![Add Testers](/docs_images/test/amazon/add-testers.png)
+
+After adding testers, select the three dots, and then click **'Submit'**.
+
+![Submit Testing](/docs_images/test/amazon/submit-testing.png)
+
+Once this is completed, testers will receive an email containing a link to your app's test page with instructions on how to download and install your app.

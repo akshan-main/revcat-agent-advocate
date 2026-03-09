@@ -96,13 +96,16 @@ def export_batch(db_conn, config: Config, output_dir: str = "./site_output", sta
             f.write(md)
         paths.append(path)
 
-        # Try GitHub issue export
-        issue_url = export_to_github_issue(fb, config)
-        if issue_url:
-            update_row(db_conn, "product_feedback", row["id"], {
-                "status": "submitted",
-                "github_issue_url": issue_url,
-            })
+        # Try GitHub issue export (skip if already has a GitHub issue)
+        if not row.get("github_issue_url"):
+            issue_url = export_to_github_issue(fb, config)
+            if issue_url:
+                update_row(db_conn, "product_feedback", row["id"], {
+                    "status": "submitted",
+                    "github_issue_url": issue_url,
+                })
+            else:
+                update_row(db_conn, "product_feedback", row["id"], {"status": "exported"})
         else:
             update_row(db_conn, "product_feedback", row["id"], {"status": "exported"})
 

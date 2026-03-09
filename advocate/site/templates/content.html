@@ -12,7 +12,6 @@
         <div class="content-meta">
             <span>{{ piece.word_count }} words</span>
             <span>{{ piece.citations_count }} citations</span>
-            <span class="badge {% if piece.status == 'verified' %}badge-verified{% else %}badge-draft{% endif %}">{{ piece.status }}</span>
         </div>
         <time>{{ piece.created_at[:10] }}</time>
     </a>

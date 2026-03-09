@@ -63,6 +63,11 @@ class Config(BaseSettings):
 
     # Site
     site_base_url: str = ""  # e.g. "/revcat-agent-advocate" for GitHub Pages project sites
+    search_api_url: str = ""  # e.g. "https://rcagent-search.fly.dev" for live doc search
+
+    # Analytics (GoatCounter — free, privacy-friendly)
+    goatcounter_token: str | None = None
+    goatcounter_site: str | None = None
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
@@ -70,6 +75,7 @@ class Config(BaseSettings):
         "revenuecat_api_key", "anthropic_api_key", "github_token", "hf_token",
         "turso_database_url", "turso_auth_token", "chroma_api_key",
         "twitter_bearer_token", "reddit_client_id",
+        "goatcounter_token", "goatcounter_site",
         mode="before",
     )
     @classmethod
@@ -99,7 +105,13 @@ class Config(BaseSettings):
 
     @property
     def has_twitter(self) -> bool:
-        return self.twitter_bearer_token is not None
+        """Check for OAuth1 posting credentials, not just bearer token."""
+        return all([
+            self.twitter_api_key,
+            self.twitter_api_secret,
+            self.twitter_access_token,
+            self.twitter_access_secret,
+        ])
 
     @property
     def has_reddit(self) -> bool:

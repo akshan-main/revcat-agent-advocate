@@ -1,0 +1,49 @@
+---
+id: "service-credentials/itunesconnect-app-specific-shared-secret/app-store-connect-api-key-configuration"
+title: "App Store Connect API Key Configuration"
+description: "You may upload an App Store Connect API key for RevenueCat to import products and prices from App Store Connect."
+permalink: "/docs/service-credentials/itunesconnect-app-specific-shared-secret/app-store-connect-api-key-configuration"
+slug: "app-store-connect-api-key-configuration"
+version: "current"
+original_source: "docs/service-credentials/itunesconnect-app-specific-shared-secret/app-store-connect-api-key-configuration.mdx"
+---
+
+You may upload an App Store Connect API key for RevenueCat to import products and prices from App Store Connect.
+
+## 1. Create an App Store Connect API key
+
+On App Store Connect, [create a new App Store Connect API key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api) under *Users and Access â Integrations â App Store Connect API*:
+
+![](/docs_images/credentials/apple/ascapi-1.png)
+
+The newly created key needs to have at least the access level **App Manager**:
+
+![](/docs_images/credentials/apple/ascapi-access.png)
+
+Download the generated key. You will receive a .p8 key file. Also take note of the **Issuer ID** (shown above the "Active" table).
+
+*This key can only be downloaded once*, so make sure you store it in a safe location.
+
+![](/docs_images/credentials/apple/ascapi-download.png)
+
+## 2. Upload the App Store Connect API key to RevenueCat
+
+Once everything is set up in App Store Connect, you need to upload the App Store Connect API key from the previous step to RevenueCat.
+
+In the RevenueCat dashboard, select your iOS app from the Apps & providers page in the navigation.
+
+Within your app settings, under the tab App Store Connect API, you'll see an area to upload your App Store Connect .p8 file that you downloaded from App Store Connect.
+
+![](/docs_images/credentials/apple/ascapi-config.png)
+
+After uploading the App Store Connect API .p8 file, you will be prompted to input the **Issuer ID** you saved in Step 1.
+
+![](/docs_images/credentials/apple/ascapi-config-issuerid.png)
+
+You will also be prompted to input the **Vendor number**. This can be found in App Store Connect under *Payments and Financial Reports*, in the top left corner of the page.
+
+![](/docs_images/credentials/apple/ascapi-vendor.png)
+
+:::tip
+Remember to select 'Save Changes' in the RevenueCat Dashboard.
+:::

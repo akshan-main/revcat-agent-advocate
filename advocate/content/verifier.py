@@ -130,8 +130,10 @@ def full_verify(
     details = []
 
     # Citation reachability
+    network_skipped = False
     if skip_network:
         reachable, dead = [], []
+        network_skipped = True
         details.append("Network verification skipped (offline mode)")
     else:
         reachable, dead = verify_citations(body_md)
@@ -159,8 +161,11 @@ def full_verify(
     else:
         details.append(f"Citations found: {citation_count}")
 
+    # If network was skipped, we can't claim citations are reachable
+    citations_ok = (len(dead) == 0) and not network_skipped
+
     return VerificationResult(
-        citations_all_reachable=(len(dead) == 0),
+        citations_all_reachable=citations_ok,
         dead_links=dead,
         snippet_syntax_valid=(len(error_code) == 0),
         doc_sha256_matches=(len(sha_mismatches) == 0),

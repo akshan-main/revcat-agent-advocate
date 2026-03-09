@@ -48,10 +48,9 @@ def generate_seo_page(
         for s in r.snippets[:2]:
             snippets.append(s)
 
-    if config and config.has_anthropic:
-        body_md = _generate_seo_with_claude(keyword, template_type, search_results, sources_md, config, ledger_ctx)
-    else:
-        body_md = _generate_seo_from_template(keyword, template_type, snippets, sources_md)
+    if not config or not config.has_anthropic:
+        raise RuntimeError("Anthropic API key required for SEO page generation. Set ANTHROPIC_API_KEY.")
+    body_md = _generate_seo_with_claude(keyword, template_type, search_results, sources_md, config, ledger_ctx)
 
     return body_md, slug
 
@@ -91,33 +90,6 @@ def _generate_seo_with_claude(keyword, template_type, search_results, sources_md
     return message.content[0].text
 
 
-def _generate_seo_from_template(keyword, template_type, snippets, sources_md):
-    body = f"# {keyword}\n\n"
-
-    if template_type == "comparison":
-        body += "## Overview\n\n"
-        body += f"This article compares {keyword} to help developers choose the right subscription platform.\n\n"
-        body += "## Feature Comparison\n\n"
-        for s in snippets[:3]:
-            body += f"- {s}\n"
-        body += "\n## Why RevenueCat\n\n"
-        body += "RevenueCat provides a unified API for managing in-app subscriptions across platforms.\n\n"
-    elif template_type == "how_to":
-        body += "## What You'll Learn\n\n"
-        body += f"A step-by-step guide on {keyword.lower()}.\n\n"
-        body += "## Steps\n\n"
-        for i, s in enumerate(snippets[:5], 1):
-            body += f"{i}. {s}\n\n"
-    else:  # glossary
-        body += "## Definition\n\n"
-        body += f"{keyword} is a concept in subscription monetization.\n\n"
-        body += "## How It Works in RevenueCat\n\n"
-        for s in snippets[:3]:
-            body += f"- {s}\n"
-        body += "\n"
-
-    body += f"## Sources\n\n{sources_md}\n"
-    return body
 
 
 def bulk_generate(

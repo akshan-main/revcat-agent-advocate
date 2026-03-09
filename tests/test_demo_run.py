@@ -27,6 +27,8 @@ def test_demo_run_full_pipeline(tmp_path, monkeypatch):
     monkeypatch.setenv("TURSO_AUTH_TOKEN", "")
     monkeypatch.setenv("CHROMA_API_KEY", "")
     monkeypatch.setenv("HF_TOKEN", "")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("SITE_BASE_URL", "")
 
     # Set up fixtures as cached docs to avoid HTTP calls during ingest
     docs_dir = tmp_path / "docs"
@@ -80,7 +82,6 @@ def test_demo_run_full_pipeline(tmp_path, monkeypatch):
 
     # Verify site outputs exist
     assert os.path.exists(os.path.join(site_dir, "apply", "index.html")), "Apply page missing"
-    assert os.path.exists(os.path.join(site_dir, "ledger", "index.html")), "Ledger page missing"
     assert os.path.exists(os.path.join(site_dir, "content", "index.html")), "Content index missing"
     assert os.path.exists(os.path.join(site_dir, "experiments", "index.html")), "Experiments page missing"
     assert os.path.exists(os.path.join(site_dir, "feedback", "index.html")), "Feedback page missing"

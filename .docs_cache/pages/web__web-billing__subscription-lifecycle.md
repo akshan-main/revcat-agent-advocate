@@ -1,0 +1,117 @@
+---
+id: "web/web-billing/subscription-lifecycle"
+title: "Subscription Lifecycle"
+description: "This document explains the lifecycle of a Web Billing subscription, including the different states a subscription can be in and the events triggered during state transitions. The sections below provide more detailed information about each state and transition."
+permalink: "/docs/web/web-billing/subscription-lifecycle"
+slug: "subscription-lifecycle"
+version: "current"
+original_source: "docs/web/web-billing/subscription-lifecycle.mdx"
+---
+
+This document explains the lifecycle of a Web Billing subscription, including the different states a subscription can be in and the events triggered during state transitions. The sections below provide more detailed information about each state and transition.
+
+![](/docs_images/web/web-billing/subscription-lifecycle.png)
+
+## Starting a subscription
+
+The process to start a subscription is initiated by calling the [purchase method in the SDK](/web/web-billing/web-sdk#purchasing-a-package). The subscription starts only if and when the initial payment is confirmed âÂ if the customer cancels the checkout form, or if the initial payment for the subscription fails, no subscription is generated, and no events will be generated.
+
+When the subscription is successfully started, RevenueCat generates an `INITIAL_PURCHASE` [event](/integrations/webhooks/event-types-and-fields). An invoice is then generated and sent to the customer via email, along with a link to the [customer portal](./customer-portal).
+
+## Introductory offers
+
+Products can be [configured](./product-setup) with an introductory period, where a different price is offered to new customers. Introductory pricing is defined per-currency, and the period length and billing cycle can be customized. Introductory offer periods automatically convert to a base subscription unless the customer cancels before the period expires.
+
+## Free trials
+
+Products can be [configured](./product-setup) to start with a free trial. A subscription that starts with a free trial does not charge the customer until the free trial is over. Customers will still have to enter their credit card details to start the trial. Trials automatically convert to a paid subscription unless the customer cancels before the trial expires.
+
+## Offer & free trial eligibility
+
+The following eligibility options can be defined per product. The same eligibility applies to both free trials and introductory offers. If a customer is eligible either (or both), they will be applied automatically. If both are enabled, the free trial always precedes any introductory offer.
+
+- *Everyone*: Every customer will start a subscription to this product with a trial, even if they had a trial before. *Please note:* If you choose this option, it means that customers could continuously cancel their trial and start another trial to keep getting free access.
+- *Has never made any purchase*: Only customers that have never made any purchase in this Project (including non-subscription purchases and purchases in other Apps of this project) are eligible for a trial.
+- *Didn't have any subscription yet*: Only customers that have never had any subscription in this Project (including in other Apps of the project) are eligible for a trial.
+- *Didn't have this subscription yet*: Only customers that have never subscribed to this product are eligible for a trial.
+
+## Renewal
+
+RevenueCat will attempt to charge the payment method of a customer not more than 1 hour before the end of the current billing period, if the customer has not canceled their subscription. An invoice is generated for the renewal attempt.
+
+### Successful renewal
+
+If the renewal payment is successfully processed, RevenueCat will:
+
+- Generate a `RENEWAL` event.
+- Send a renewal confirmation email to the customer, including their invoice and a link to the customer portal.
+
+### Unsuccessful renewal
+
+If the renewal payment couldn't be charged successfully, RevenueCat will:
+
+- Generate a `CANCELLATION` and `BILLING_ISSUE` event.
+- Generate an `EXPIRATION` event, unless a grace period has been configured.
+- Send a notice of the billing issue to the customer via email, including their invoice and a link to the customer portal to fix their payment method.
+
+The subscription then enters the billing retry period.
+
+#### Billing retry
+
+After a renewal payment has failed, RevenueCat will retry charging the customer's payment method on file for up to 30 days.
+
+#### Grace period
+
+You can set up a grace period on a per-product basis. A grace period defines a period of time after a renewal payment has failed, during which the customer retains access to their entitlements. If the payment is recovered within the grace period, the subscription will continue as if the payment was never missed. If the payment is not recovered within the grace period, the subscription will expire.
+
+#### Billing recovery
+
+If one of the retry attempts is successful, RevenueCat will renew the subscription and generate a `RENEWAL` event. Unless the subscription was still in a grace period, the new billing cycle will start on the date that the payment was successfully recovered.
+
+As an example, consider a monthly subscription started on 1 January, for which the first renewal on 1 February failed, and no grace period was set up. If the payment gets recovered on 10 February, the next billing cycle will run from 10 February to 10 March.
+
+#### Overview of billing retry and recovery
+
+The following image illustrates the timelines and events sent for a successful billing recovery under different circumstances. If the billing retry period ends without being able to recover the payment, no further events get sent, and the subscription remains expired.
+
+![](/docs_images/web/web-billing/billing-retry-and-grace-period.png)
+
+In all three cases, a monthly subscription is shown that started on January 1st. The first renewal payment on February 1st failed.
+
+- **Case 1**: If a 14 day grace period was set up, the failed renewal payment on February 1st leads to `BILLING_ISSUE`, and `CANCELLATION` events. If the billing is later recovered within the grace period (eg. on February 10th), a `RENEWAL` event is sent. The subscription remains on its original billing cycle, ie. the next renewal will occur on March 1st.
+- **Case 2**: Like in case 1, the failed renewal with a 14 day grace period leads to `BILLING_ISSUE`, and `CANCELLATION` events. If the payment couldn't be recovered by the end of the grace period, an `EXPIRATION` event is sent because the customer should now lose access to their entitlement. If the payment is later recovered (eg. on February 20th), a `RENEWAL` event is sent. The next subscription cycle restarts from the time that the billing was recovered (eg. the next monthly billing period will run from February 20th to March 20th).
+- **Case 3**: If no grace period was set up, the failed payment leads to `BILLING_ISSUE`, `CANCELLATION`, and `EXPIRATION` events, since the customer in this case immediately loses access to their entitlements. If the billing is later recovered (eg. on February 20th), a `RENEWAL` event is sent. The next subscription cycle restarts from the time that the billing was recovered (eg. the next monthly billing period will run from February 20th to March 20th).
+
+## Subscription change (upgrade or downgrade)
+
+If configured, customers have the ability to change their subscription in the [customer portal](./customer-portal). A subscription change involves moving an existing active subscription to a different product, either as:
+
+- An **upgrade**, where the subscription change happens immediately (with a prorated refund for unused time on the existing product)
+- A **downgrade**, where the subscription change is scheduled for the end of the current billing cycle.
+
+Subscription change paths can be configured in the dashboard product catalog see [product setup](./product-setup#configure-subscription-changes) for details on how to do this.
+
+When a subscription change is processed, RevenueCat generates a `PRODUCT_CHANGE` event.
+
+## Cancelation
+
+The subscription can be canceled by the customer (via the [customer portal](./customer-portal)) or by the developer (via the [dashboard or API](./managing-customer-subscriptions)). If the subscription is cancelled, RevenueCat will generate a `CANCELLATION` event. The subscription will continue to be active until the end of the current period. At the end of the period, the subscription will expire.
+
+## Reverting a cancelation
+
+Customers can reactivate auto-renewal (via the [customer portal](./customer-portal)) for a subscription that was previously canceled but that didn't expire yet. When this happens, RevenueCat generates an `UNCANCELLATION` event. The subscription continues and renews without interruption and the customer maintains their entitlements throughout the process.
+
+## Refunds
+
+You can refund the most recent subscription period of a subscription [from the RevenueCat Dashboard](./managing-customer-subscriptions). Refunds will result in a `CANCELLATION` event with a `cancellation_reason` of `CUSTOMER_SUPPORT`. If a subscription is refunded, the customer immediately loses access to any associated entitlements.
+
+## Expiration
+
+A subscription can expire for one of several reasons:
+
+- The subscription has been cancelled and the billing period ended.
+- A renewal payment failed and no grace period was set up. Please note that in this case, if payment gets recovered at a later point, the subscription may become active again (and a `RENEWAL` event will be generated).
+- A grace period has ended. Please note that in this case, if payment gets recovered at a later point, the subscription may become active again (and a `RENEWAL` event will be generated).
+- The subscription was refunded.
+
+In all of these cases, an `EXPIRATION` event is generated.

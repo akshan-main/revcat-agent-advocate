@@ -1,0 +1,84 @@
+---
+id: "integrations/third-party-integrations/clevertap"
+title: "CleverTap"
+description: "CleverTap can be a useful integration tool for seeing all events and revenue that occur for your app even if itâs not active for a period of time. You can use CleverTapâs analytics and marketing tools to reach your goal of increasing user engagement and retention."
+permalink: "/docs/integrations/third-party-integrations/clevertap"
+slug: "clevertap"
+version: "current"
+original_source: "docs/integrations/third-party-integrations/clevertap.mdx"
+---
+
+CleverTap can be a useful integration tool for seeing all events and revenue that occur for your app even if itâs not active for a period of time. You can use CleverTapâs analytics and marketing tools to reach your goal of increasing user engagement and retention.
+
+With our CleverTap integration, you can:
+
+- Create a campaign that triggers when a user completes a certain event; ex. Send a notification with a discount code when they cancel their subscription.
+- Gather metrics on user purchases by tracking events over time.
+
+With accurate and up-to-date subscription data in CleverTap, you'll be set to turbo-charge your user engagement â¡ï¸
+
+### Integration at a Glance
+
+| Includes Revenue | Supports Negative Revenue |   Sends Sandbox Events   | Includes Customer Attributes | Sends Transfer Events |                      Optional Event Types                       |
+| :--------------: | :-----------------------: | :----------------------: | :--------------------------: | :-------------------: | :-------------------------------------------------------------: |
+|        â        |            â             | Requires ID and Passcode |              â              |          â           | `expiration_event` `billing_issue_event` `product_change_event` |
+
+## Events
+
+The CleverTap integration tracks the following events:
+
+| Event                     | Default Event Name                 | Description                                                                                                                                                                                                                                                                                                                                 | App Store | Play Store | Amazon | Stripe | Promo |
+| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- | ------ | ------ | ----- |
+| Initial Purchase          | rc\_initial\_purchase\_event          | A new subscription has been purchased.                                                                                                                                                                                                                                                                                                      | â        | â         | â     | â     | â    |
+| Trial Started             | rc\_trial\_started\_event             | The start of an auto-renewing subscription product free trial.                                                                                                                                                                                                                                                                              | â        | â         | â     | â     | â    |
+| Trial Converted           | rc\_trial\_converted\_event           | When an auto-renewing subscription product converts from a free trial to normal paid period.                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Trial Cancelled           | rc\_trial\_cancelled\_event           | When a user turns off renewals for an auto-renewing subscription product during a free trial period.                                                                                                                                                                                                                                        | â        | â         | â     | â     | â    |
+| Renewal                   | rc\_renewal\_event                   | An existing subscription has been renewed or a lapsed user has resubscribed.                                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Cancellation              | rc\_cancellation\_event              | A subscription or non-renewing purchase has been cancelled. See [cancellation reasons](/integrations/webhooks/event-types-and-fields#cancellation-and-expiration-reasons) for more details.                                                                                                                                                 | â        | â         | â     | â     | â    |
+| Uncancellation            | rc\_uncancellation\_event            | A non-expired cancelled subscription has been re-enabled.                                                                                                                                                                                                                                                                                   | â        | â         | â     | â     | â    |
+| Non Subscription Purchase | rc\_non\_subscription\_purchase\_event | A customer has made a purchase that will not auto-renew.                                                                                                                                                                                                                                                                                    | â        | â         | â     | â     | â    |
+| Expiration                | rc\_expiration\_event                | A subscription has expired and access should be removed. If you have [Platform Server Notifications](/platform-resources/server-notifications) configured, this event will occur as soon as we are notified (within seconds to minutes) of the expiration. If you do not have notifications configured, delays may be approximately 1 hour. | â        | â         | â     | â     | â    |
+| Billing Issues            | rc\_billing\_issue\_event             | There has been a problem trying to charge the subscriber. This does not mean the subscription has expired. Can be safely ignored if listening to CANCELLATION event + cancel\_reason=BILLING\_ERROR.                                                                                                                                          | â        | â         | â     | â     | â    |
+| Product Change            | rc\_product\_change\_event            | A subscriber has changed the product of their subscription. This does not mean the new subscription is in effect immediately. See [Managing Subscriptions](/subscription-guidance/managing-subscriptions) for more details on updates, downgrades, and crossgrades.                                                                         | â        | â         | â     | â     | â    |
+
+For events that have revenue, such as trial conversions and renewals, RevenueCat will automatically record this amount along with the event in CleverTap.
+
+## Setup
+
+### 1. Send CleverTap Identity to RevenueCat
+
+The CleverTap integration can send the CleverTap ID to CleverTap as the user identity. To do that, you will need to update the following [Attributes](/customers/customer-attributes) for the Customer.
+
+| Key            | Description                                                                                                              | Required |
+| :------------- | :----------------------------------------------------------------------------------------------------------------------- | :------- |
+| `$cleverTapId` | The [CleverTap ID](https://developer.clevertap.com/docs/concepts-user-profiles#section-identifying-a-user) for the user. | â       |
+
+This property can be set manually, like any other [Attribute](/customers/customer-attributes). If you do not set this property, the [App User ID](/customers/user-ids) will be sent as the user identity to CleverTap.
+
+*Interactive content is available in the web version of this doc.*
+
+### 2. Send RevenueCat Events to CleverTap
+
+After you've set up the *Purchases SDK* and CleverTap SDK to have the same user identity, you can "turn on" the integration and configure the event names from the RevenueCat dashboard.
+
+1. Navigate to your project settings in the RevenueCat dashboard and choose 'CleverTap' from the Integrations menu
+
+![Integration setup](/docs_images/integrations/setup-integrations.png)
+
+2. Add your [CleverTap Account ID and Passcode](https://developer.clevertap.com/docs/api-quickstart-guide).
+3. If you want to test in sandbox, also add your Sandbox Account ID and Passcode from your testing account.
+4. Enter the event names that RevenueCat will send or choose the default event names
+5. Select whether you want sales reported as gross revenue (before app store commission), or after store commission and/or estimated taxes.
+6. Choose your CleverTap region.
+
+:::info
+By default, RevenueCat sends data through CleverTap's EU data center. For CleverTap customers who have a regional data center configured, you can change your region in the dropdown selector under 'CleverTap Region'.
+:::
+
+## Sample Events
+
+Below are sample JSONs that are delivered to CleverTap for most event types.
+
+*Interactive content is available in the web version of this doc.*
+
+*Interactive content is available in the web version of this doc.*

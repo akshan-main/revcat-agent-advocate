@@ -1,0 +1,119 @@
+---
+id: "getting-started/installation/flutter"
+title: "Flutter"
+description: "What is RevenueCat?"
+permalink: "/docs/getting-started/installation/flutter"
+slug: "flutter"
+version: "current"
+original_source: "docs/getting-started/installation/flutter.mdx"
+---
+
+## What is RevenueCat?
+
+RevenueCat provides a backend and SDKs that wrap StoreKit, Google Play Billing, and [RevenueCat Web Billing](/web/web-billing/overview) to make implementing in-app and web purchases and subscriptions easy. With our SDK, you can build and manage your app business on any platform without having to maintain IAP infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/where-does-revenuecat-fit-in-your-app) or you can [sign up free](https://app.revenuecat.com/signup) to start building.
+
+## Requirements
+
+Xcode 13.3.1+
+Minimum target: iOS 11.0+
+
+## Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-flutter.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-flutter/releases)
+
+To use this plugin, add `purchases_flutter` as a [dependency in your pubspec.yaml file](https://flutter.io/platform-plugins/) (and run an implicit dart pub get):
+
+*Interactive content is available in the web version of this doc.*
+
+Alternatively run this command:
+
+```
+ $ flutter pub add purchases_flutter
+```
+
+### iOS Deployment Target
+
+RevenueCat is compatible with iOS 11.0 or higher. Flutter does not automatically set the iOS deployment target for your project. You need to make sure that the deployment target is set to 11.0 or higher. To do that, simply edit `ios/Podfile` and add the following line if it's not already there:
+
+```
+platform :ios, '11.0'
+```
+
+Set it to 11.0 or a higher version for RevenueCat to work.
+
+### iOS Swift Version
+
+RevenueCat requires Swift >= 5.0 to work. If the `Podfile` in your project's `ios` folder specifies a Swift version, make sure that it's at least 5.0, otherwise you may run into build issues.
+
+### Set the correct launchMode for Android
+
+Depending on your user's payment method, they may be asked by Google Play to verify their purchase in their (banking) app. This means they will have to background your app and go to another app to verify the purchase. If your Activity's `launchMode` is set to anything other than `standard` or `singleTop`, backgrounding your app can cause the purchase to get cancelled. To avoid this, set the `launchMode` of your Activity to `standard` or `singleTop` in your Android app's `android/app/src/main/AndroidManifest.xml` file:
+
+*Interactive content is available in the web version of this doc.*
+
+You can find Android's documentation on the various `launchMode` options [here](https://developer.android.com/guide/topics/manifest/activity-element#lmode).
+
+### Optional: Change MainActivity subclass
+
+If you plan to use [RevenueCat Paywalls](/tools/paywalls), your `MainActivity` needs to subclass `FlutterFragmentActivity` instead of `FlutterActivity`.
+
+*Interactive content is available in the web version of this doc.*
+
+## Import Purchases
+
+You should now be able to import `purchases_flutter`.
+
+*Interactive content is available in the web version of this doc.*
+
+:::info Enable In-App Purchase capability for iOS projects in Xcode
+Don't forget to enable the In-App Purchase capability for your iOS project under `Project Target -> Capabilities -> In-App Purchase`
+:::
+
+:::info Include BILLING permission for Android projects
+Don't forget to include the `BILLING` permission in your AndroidManifest.xml file
+:::
+
+*Interactive content is available in the web version of this doc.*
+
+:::warning
+If you're using other plugins like [mobx](https://pub.dev/packages/flutter_mobx), you may run into conflicts with types from other plugins having the same name as those defined in `purchases_flutter`.(Interactive content is available in the web version of this doc.)
+If this happens, you can resolve the ambiguity in the types by adding an import alias, for example:
+
+```dart
+import 'package:purchases_flutter/purchases_flutter.dart' as purchases;
+```
+
+After that, you can reference the types from `purchases_flutter` as `purchases.Foo`, like `purchases.CustomerInfo`.
+:::
+
+## Flutter Web Configuration
+
+RevenueCat's Flutter SDK supports web platforms, allowing you to manage subscriptions across Flutter web, mobile, and desktop apps using the same SDK.
+
+### Web Product Configuration
+
+To enable web purchases in your Flutter app, you'll need to configure products using a [RevenueCat Web Billing app](/web/web-billing/overview).
+
+1. **Create a Web Billing App** in your RevenueCat project dashboard
+2. **Configure your products** for web purchases
+
+For detailed instructions on setting up web products and configuring Web Billing, see the [Web Billing Overview](/web/web-billing/overview).
+
+:::info Web Billing vs In-App Purchases
+Web Billing is RevenueCat's billing engine for web purchases, which uses Stripe as the payment processor. This is separate from iOS/Android in-app purchases but integrates with the same RevenueCat entitlements system, allowing unified subscription management across platforms.
+:::
+
+### Current Limitations
+
+When using the Flutter SDK on web, keep in mind the following:
+
+- **Web Billing Required**: Web purchases require RevenueCat Web Billing setup. Native iOS/Android in-app purchases cannot be processed through the web platform.
+- **Payment Processing**: Web Billing purchases use Stripe as the payment processor through RevenueCat Web Billing.
+- **Customer Portal**: Users can manage their web subscriptions through the RevenueCat-provided customer portal.
+- **Platform Separation**: Web products must be configured separately from iOS/Android products in the RevenueCat dashboard, though entitlements can be shared across platforms.
+- **User Identity**: For unified cross-platform subscriptions, ensure you're using the same `appUserID` across web and mobile platforms.
+- **Unsupported operations**: There are some unsupported operations. Mainly operations `getProducts`, `purchaseProduct` or `restorePurchases` won't work on web environments.
+
+## Next Steps
+
+- Now that you've installed the Purchases SDK in Flutter, get started by [configuring an instance of Purchases â](/getting-started/quickstart#3-using-revenuecats-purchases-sdk)

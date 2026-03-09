@@ -10,9 +10,9 @@ def draft_response(
     ledger_ctx=None,
 ) -> str:
     """Draft a response to a community question using doc context."""
-    if config and config.has_anthropic:
-        return _draft_with_claude(question, search_results, config, ledger_ctx)
-    return _draft_from_results(question, search_results)
+    if not config or not config.has_anthropic:
+        raise RuntimeError("Anthropic API key required for drafting responses. Set ANTHROPIC_API_KEY.")
+    return _draft_with_claude(question, search_results, config, ledger_ctx)
 
 
 def _draft_with_claude(question, search_results, config, ledger_ctx):
@@ -66,17 +66,6 @@ def _draft_with_claude(question, search_results, config, ledger_ctx):
 
     return message.content[0].text
 
-
-def _draft_from_results(question, search_results):
-    lines = [f"Regarding your question about: {question}\n"]
-
-    for r in search_results[:3]:
-        if r.snippets:
-            lines.append(f"From the docs: {r.snippets[0]}")
-            lines.append(f"[Source]({r.url})\n")
-
-    lines.append("For more details, check the RevenueCat documentation.")
-    return "\n".join(lines)
 
 
 def queue_responses(

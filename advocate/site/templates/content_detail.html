@@ -5,10 +5,13 @@
         <span class="content-type">{{ piece.content_type | default(piece.template_type, true) }}</span>
         <h1>{{ piece.title }}</h1>
         <time>{{ piece.created_at[:10] }}</time>
-        {% if piece.get('status') %}
-        <span class="badge {% if piece.status == 'verified' %}badge-verified{% else %}badge-draft{% endif %}">{{ piece.status }}</span>
-        {% endif %}
     </header>
+
+    {% if piece.get('template_type') == 'comparison' or (piece.get('keyword') and ' vs ' in piece.get('keyword', '')) %}
+    <div class="disclaimer" style="background:#fff8e1;border:1px solid #ffe082;padding:0.75rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:0.85rem;">
+        <strong>Note:</strong> This comparison was generated from RevenueCat documentation only. Claims about competitor features may not be current or complete. Verify competitor details on their official sites.
+    </div>
+    {% endif %}
 
     <div class="article-body">
         {{ body_html }}
@@ -16,34 +19,29 @@
 
     {% if sources %}
     <section class="sources-section">
-        <h2>Verified Sources</h2>
+        <h2>Sources</h2>
         <ul>
             {% for source in sources %}
             <li>
                 <a href="{{ source.url | default(source) }}">{{ source.url | default(source) }}</a>
-                {% if source.doc_sha256 is defined and source.doc_sha256 %}
-                <code class="sha256" title="Document SHA256">{{ source.doc_sha256[:16] }}...</code>
-                {% endif %}
             </li>
             {% endfor %}
         </ul>
     </section>
     {% endif %}
 
-    {% if verification %}
-    <section class="verification-section">
-        <h2>Verification</h2>
-        <ul>
-            {% if verification.citations_all_reachable is defined %}
-            <li>Citations reachable: {% if verification.citations_all_reachable %}<span class="badge badge-verified">Yes</span>{% else %}<span class="badge badge-broken">No</span>{% endif %}</li>
-            {% endif %}
-            {% if verification.snippet_syntax_valid is defined %}
-            <li>Code syntax valid: {% if verification.snippet_syntax_valid %}<span class="badge badge-verified">Yes</span>{% else %}<span class="badge badge-broken">No</span>{% endif %}</li>
-            {% endif %}
-            {% if verification.doc_sha256_matches is defined %}
-            <li>Doc SHA256 matches: {% if verification.doc_sha256_matches %}<span class="badge badge-verified">Yes</span>{% else %}<span class="badge badge-broken">No</span>{% endif %}</li>
-            {% endif %}
-        </ul>
+    {% if doc_snippets %}
+    <section class="doc-evidence-section">
+        <h2>Documentation Evidence</h2>
+        <p class="evidence-intro">The documentation excerpts below were used to ground this article. Each snippet comes from an official RevenueCat doc page.</p>
+        {% for snippet in doc_snippets %}
+        <details class="doc-evidence">
+            <summary>
+                <a href="{{ snippet.url }}" target="_blank">{{ snippet.title }}</a>
+            </summary>
+            <div class="doc-snippet-content">{{ snippet.preview }}</div>
+        </details>
+        {% endfor %}
     </section>
     {% endif %}
 </article>

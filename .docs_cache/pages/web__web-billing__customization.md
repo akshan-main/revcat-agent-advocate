@@ -1,0 +1,43 @@
+---
+id: "web/web-billing/customization"
+title: "Customization"
+description: "Using the appearance editor in the RevenueCat Dashboard, you can customize the appearance of the Web Billing UIÂ to match your app's branding. This includes the colors and shapes of certain UI elements."
+permalink: "/docs/web/web-billing/customization"
+slug: "customization"
+version: "current"
+original_source: "docs/web/web-billing/customization.mdx"
+---
+
+Using the appearance editor in the RevenueCat Dashboard, you can customize the appearance of the Web Billing UIÂ to match your app's branding. This includes the colors and shapes of certain UI elements.
+
+This customization currently applies to:
+
+- The web checkout initiated from the Web SDK.
+- Web Purchase Links: the default package selection page, checkout and success pages.
+- [Lifecycle emails](/web/web-billing/lifecycle-emails) sent to customers.
+
+:::info
+If you're using a paywall instead of the default package selection page, customizations made here won't affect it. You should instead use the [paywall editor](../../tools/paywalls/creating-paywalls).
+:::
+
+To customize the appearance to your brand, go to the app settings for your Web Billing app in the RevenueCat dashboard, select to the **Appearance** tab and click **Open Editor**. Here you'll see a mobile preview of the checkout, with styling applied.
+
+![](/docs_images/web/web-billing/customization.png)
+
+:::warning Default styling changes for SDK v1.0.0
+The default (uncustomized) appearance changed with the release of SDK v1.0.0, and we recommend updating to the latest version to benefit from these design changes. You can use SDK version switcher on this page to preview the design for each version.
+
+If you want to restore the color scheme from v0.18.2 you can select the Classic theme in the editor and the colors will be applied to both versions seamlessly. This will allow you to migrate with no impact for your customers.
+:::
+
+You can customize the following elements:
+
+- **Theme**: Apply a preset collection of colors & styles
+- **Page background**: Used for the background of the page for [Web Purchase Links](/web/web-billing/web-purchase-links).
+- **Product info background**: Used for the panel showing information about the purchased product in the purchase flow.
+- **Form background**: Used for the background of the purchase form.
+- **Primary Buttons**: The primary color is used for buttons and other interactive elements.
+- **Accent**: Used for focused elements as well as some secondary UI elements.
+- **Error**: Used for error messages and other negative UI elements.
+- **Shapes**: The shape of the purchase modal dialog, buttons, form elements, and package cards in the purchase flow and Web Purchase Links.
+- **Show product description in checkout**: If set, the product description will be shown in the product info panel of the purchase flow.

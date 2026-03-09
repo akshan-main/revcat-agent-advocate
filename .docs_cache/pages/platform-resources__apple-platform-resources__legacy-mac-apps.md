@@ -1,0 +1,42 @@
+---
+id: "platform-resources/apple-platform-resources/legacy-mac-apps"
+title: "Legacy Mac Apps"
+description: "For newer Mac apps, in-app purchases can be shared across Mac and iOS apps. This is called Universal Purchases."
+permalink: "/docs/platform-resources/apple-platform-resources/legacy-mac-apps"
+slug: "legacy-mac-apps"
+version: "current"
+original_source: "docs/platform-resources/apple-platform-resources/legacy-mac-apps.mdx"
+---
+
+For newer Mac apps, in-app purchases can be shared across Mac and iOS apps. This is called [Universal Purchases](https://developer.apple.com/support/universal-purchase/).
+
+:::tip **Mac apps with Universal Purchases don't require this setup**
+
+If your Mac app uses Universal Purchases (meaning your Mac app is part of the same app record as your iOS app) or it was created after March 2020, you don't need to follow this guide. RevenueCat will just work for your app!
+:::
+
+![This Mac app is part of the same app record as the iOS app, which means it uses Universal Purchases. It also has the same bundle ID as the iOS app. No special setup is required in RevenueCat for this Mac app if you already have your iOS app set up.](/docs_images/platform-resources/apple/legacy-mac-1.png)
+
+:::info
+If you have an existing Mac app that you want to migrate to universal purchases, you will have to follow the steps found in [Apple's documentation](https://developer.apple.com/support/universal-purchase/).
+:::
+
+Since most Mac apps released today on RevenueCat's platform use universal purchases, by default the Mac configuration options on the dashboard are hidden. If you want to set up a Mac app in RevenueCat, follow the following steps:
+
+## 1. Contact RevenueCat support
+
+Contact RevenueCat support to enable legacy Mac app configuration for your app. Provide the name of your RevenueCat app. After RevenueCat support enables Mac app configuration options, your project will allow a new macOS Platform option.
+
+## 2. Enter your Mac App Store shared secret
+
+If you are going to add an iOS app, enter the iOS/universal Mac app's bundle ID and shared secret.
+
+## 3. Update your universal app code
+
+This step is only required if you have both a legacy Mac app and an iOS/universal Mac app. In the **universal Mac app**, add this line of code right before `Purchases.configure`:
+
+*Interactive content is available in the web version of this doc.*
+
+:::tip You're done ð
+You've successfully configured your Mac app in RevenueCat!
+:::

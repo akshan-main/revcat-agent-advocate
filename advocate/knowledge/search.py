@@ -239,8 +239,11 @@ def hybrid_search(query: str, cache_dir: str, db_conn=None, top_k: int = 10) -> 
         rag_index = build_rag_index(cache_dir, db_conn)
         if rag_index.chunks:
             return _hybrid(query, rag_index, bm25_index, cache_dir, top_k=top_k)
-    except Exception:
-        pass
+    except ImportError:
+        pass  # RAG dependencies not installed
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"RAG search failed, falling back to BM25: {e}")
 
     # Fall back to BM25
     return search(query, bm25_index, cache_dir, top_k=top_k)

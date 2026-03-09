@@ -1,0 +1,205 @@
+---
+id: "tools/paywalls/installation"
+title: "Installing the SDK"
+description: "RevenueCat Paywalls are included as part of the RevenueCatUI package in the RevenueCat SDK. You'll need to install the RevenueCatUI package in your project to use Paywalls."
+permalink: "/docs/tools/paywalls/installation"
+slug: "docs/tools/paywalls/installation"
+version: "current"
+original_source: "docs/tools/paywalls/installation.mdx"
+---
+
+RevenueCat Paywalls are included as part of the RevenueCatUI package in the RevenueCat SDK. You'll need to install the RevenueCatUI package in your project to use Paywalls.
+
+#### Supported SDK versions
+
+| RevenueCat SDK           | Minimum recommended version |
+| :----------------------- | :--------------------------------------------- |
+| purchases-ios             | 5.16.0 and up                 |
+| purchases-android         | 8.12.2 and up                  |
+| react-native-purchases | 8.6.1 and up                 |
+| purchases-flutter         | 8.5.0 and up                 |
+| purchases-kmp             | 1.5.1+13.18.1 and up                  |
+| purchases-capacitor       | 10.3.1 and up                         |
+| purchases-unity-ui           | 8.4.0 and up          |
+| purchases-js              | 0.19.0 and up                 |
+
+### Platforms (support for more coming)
+
+- â iOS 15.0 and higher
+- â Android 7.0 (API level 24) and higher
+- â Mac Catalyst 15.0 and higher
+- â macOS 12.0 and higher
+- â Web (modern browsers)
+- â visionOS
+- â watchOS
+- â tvOS
+
+## Web Installation
+
+Install `@revenuecat/purchases-js` in your project to access Paywalls on the web. Follow the [Web SDK installation guide](/web/web-billing/web-sdk#installation) to add the dependency and configure the SDK. Once configured, you can present your remotely managed paywall with `presentPaywall`.
+
+## Native iOS Installation
+
+### Using SPM:
+
+#### If you already have `RevenueCat` in your project:
+
+1. Open your project settings and select "Package Dependencies":
+
+![Change version](https://github.com/RevenueCat/purchases-ios/assets/685609/d317fd33-8270-4d9b-9b38-8f5f14342b04)
+
+2. Make sure version is at least `5.16.0`:
+
+![Configure version](/docs_images/paywalls/paywalls-check-version.png)
+
+3. Open your target settings and find "Frameworks, Libraries, and Embedded Content":
+
+![Find frameworks in your target](https://github.com/RevenueCat/purchases-ios/assets/685609/af078e9a-4b98-42c6-8ca7-6f79aebdf3e0)
+
+4. Add `RevenueCatUI`:
+
+![Add RevenueCatUI dependency](https://github.com/RevenueCat/purchases-ios/assets/685609/c2a3498c-b80d-405c-bdf6-75de927ea58e)
+
+#### First time integrating the RevenueCat SDK:
+
+1. Click File -> Add Packages...
+
+2. Search for `git@github.com:RevenueCat/purchases-ios.git` and make sure version is at least `5.16.0`:
+
+![Adding purchases-ios dependency](https://github.com/RevenueCat/purchases-ios/assets/685609/18291043-5710-4944-ba12-7d6d83bde240)
+
+3. Add `RevenueCat` and `RevenueCatUI` SPM dependency to your project:
+
+![Add paywall](/docs_images/customer-center/9140485-Screenshot_2023-08-04_at_12.08.07_78343500e565bc1fd0fceaac72486876.png)
+
+### Using CocoaPods:
+
+Add the following to your `Podfile`:
+
+```ruby
+pod 'RevenueCat'
+pod 'RevenueCatUI'
+```
+
+## Native Android Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-android.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-android/releases)
+
+1. Add `RevenueCatUI`:
+
+```groovy build.gradle
+implementation 'com.revenuecat.purchases:purchases:<latest version>'
+implementation 'com.revenuecat.purchases:purchases-ui:<latest version>'
+```
+
+## React Native Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/react-native-purchases.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/react-native-purchases/releases)
+
+- Update your `package.json` to include `react-native-purchases-ui`:
+
+```json
+{
+  "dependencies": {
+    "react-native-purchases": "<latest version>",
+    "react-native-purchases-ui": "<latest version>"
+  }
+}
+```
+
+## Flutter Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-flutter.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-flutter/releases)
+
+- Add `purchases-ui-flutter` in your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  purchases_flutter: <latest version>
+  purchases_ui_flutter: <latest version>
+```
+
+- For Android, you need to change your `MainActivity` to subclass `FlutterFragmentActivity` instead of `FlutterActivity`.
+
+*Interactive content is available in the web version of this doc.*
+
+## Kotlin Multiplatform Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-kmp.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-kmp/releases)
+
+Add the following Maven coordinates to your `libs.versions.toml`:
+
+```toml libs.versions.toml
+[versions] 
+purchases-kmp = "<latest version>"
+
+[libraries]
+purchases-core = { module = "com.revenuecat.purchases:purchases-kmp-core", version.ref = "purchases-kmp" }
+purchases-ui = { module = "com.revenuecat.purchases:purchases-kmp-ui", version.ref = "purchases-kmp" }
+```
+
+Then add the dependencies to the `commonMain` sourceset in your Compose Multiplatform module's `build.gradle.kts`:
+
+```kotlin build.gradle.kts
+kotlin {
+    // ...
+    sourceSets {
+        // ...
+        commonMain.dependencies {  
+            // Add the purchases-kmp dependencies.
+            implementation(libs.purchases.core)  
+            implementation(libs.purchases.ui)  
+        }
+    }
+}
+```
+
+Lastly, you'll need to make sure you link the `PurchasesHybridCommonUI` native iOS framework. If your iOS app uses Swift Package Manager, add the `PurchasesHybridCommonUI` library to your target in the same way you added the `PurchasesHybridCommon` library. If your iOS app uses CocoaPods, either update its `Podfile`, or update your Compose Multiplatform module's `build.gradle.kts`, depending on how your Multiplatform module is integrated with your iOS project.
+
+## Capacitor Installation
+
+- Update your `package.json` to include `@revenuecat/purchases-capacitor-ui`. Make sure it matches the version of `@revenuecat/purchases-capacitor`:
+
+```json
+{
+  "dependencies": {
+    "@revenuecat/purchases-capacitor": "<latest version>",
+    "@revenuecat/purchases-capacitor-ui": "<latest version>"
+  }
+}
+```
+
+## Unity Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-unity.svg?style=flat)](https://github.com/RevenueCat/purchases-unity/releases)
+
+RevenueCat UI for Unity is included as a separate package that works alongside the core RevenueCat Unity SDK.
+
+### Requirements
+
+- RevenueCat Unity SDK installed in your project
+- Unity Editor is not supported for displaying the paywall UI
+
+### Installation Steps
+
+We provide 2 ways to install RevenueCatUI: via Unity Package Manager (UPM) in the OpenUPM registry (recommended), or as a `.unitypackage`.
+
+#### Option 1 (recommended): Install using OpenUPM
+
+1. First, install the core RevenueCat Unity SDK (if not already installed) following the [Unity installation guide](/getting-started/installation/unity).
+
+2. Add the OpenUPM scoped registry (if not already added). Go to your project's settings â Package Manager, and add a new scoped registry with URL `https://package.openupm.com` and scopes: `com.openupm` and `com.revenuecat.purchases-ui-unity`.
+
+3. Go to the Package Manager and from "My Registries", select the RevenueCat UI package and click Install.
+
+:::info Using OpenUPM-CLI
+If you prefer, you can also use OpenUPM-CLI to add the package through the command line. Install the [OpenUPM-CLI](https://openupm.com/docs/getting-started.html) if you haven't already, then run `openupm add com.revenuecat.purchases-ui-unity`.
+:::
+
+#### Option 2: Import the RevenueCatUI Unity package
+
+1. First, install the core RevenueCat Unity SDK (if not already installed) following the [Unity installation guide](/getting-started/installation/unity).
+
+2. Download the latest version of [**PurchasesUI.unitypackage**](https://github.com/RevenueCat/purchases-unity/releases/latest/download/PurchasesUI.unitypackage).
+
+3. In Unity, import the downloaded `PurchasesUI.unitypackage` to your project.

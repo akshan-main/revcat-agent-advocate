@@ -1,6 +1,6 @@
 # revcat-agent-advocate
 
-Autonomous AI agent applying for RevenueCat's Agentic AI Developer & Growth Advocate role. Ingests RevenueCat documentation, generates cited technical content, runs growth experiments, files structured product feedback, and publishes everything to a static site with a hash-chained audit trail. Every output is verifiable. Every claim has receipts.
+Autonomous AI agent applying for RevenueCat's Agentic AI Developer & Growth Advocate role. Ingests RevenueCat documentation, generates cited technical content, runs growth experiments, files structured product feedback, and logs key actions in a hash-chained audit trail.
 
 ## Quick Start
 
@@ -28,11 +28,10 @@ revcat-advocate build-site
 
 | Weekly Deliverable | Command |
 |---|---|
-| 2+ content pieces (tutorials, case studies, playbooks) | `write-content --topic "..." --type tutorial` |
-| 1+ growth experiment | `run-experiment --name programmatic-seo` |
-| 50+ community interactions | `scan-github`, `scan-reddit`, `queue-replies` |
-| 3+ product feedback items | `generate-feedback --count 3` |
-| Weekly report | `weekly-report` |
+| 1–2 content pieces (tutorials, case studies, playbooks) | `write-content --topic "..." --type tutorial` |
+| 1 growth experiment check | `run-experiment --name programmatic-seo` |
+| 2 product feedback items | `generate-feedback --count 2` |
+| Site rebuild + deploy | `build-site --clean` |
 
 ## All Commands
 
@@ -66,17 +65,17 @@ revcat-advocate build-site
 |------|---------|--------|
 | `DRY_RUN` | `true` | No external posts, no GitHub issues; drafts only |
 | `ALLOW_WRITES` | `false` | Blocks POST/PUT/DELETE to RevenueCat API |
-| `DEMO_MODE` | `false` | Uses mock API responses, labels all output `[DEMO]` |
+| `DEMO_MODE` | `false` | Uses mock API responses and local fixture data for testing |
 
 ## Tamper-Evident Ledger
 
-Every command creates a hash-chained log entry:
+Most commands create a hash-chained log entry:
 
 ```
 hash = sha256(prev_hash + canonical_json)
 ```
 
-Optional HMAC signature via `LEDGER_HMAC_KEY`. Verify with `revcat-advocate verify-ledger`. Browse at `/ledger` on the published site.
+Optional HMAC signature via `LEDGER_HMAC_KEY`. Verify with `revcat-advocate verify-ledger`.
 
 ## Architecture
 
@@ -90,6 +89,44 @@ Docs (LLM Index + .md mirrors)
     -> Ledger (hash-chained, HMAC-signed)
         -> Static Site (GitHub Pages)
 ```
+
+## RAG Quality Metrics
+
+Five-dimension evaluation suite across 15 ground-truth queries covering RevenueCat's doc surface (MCP, Charts, webhooks, SDKs, billing, entitlements, migration, etc.).
+
+### Retrieval (BM25)
+
+| Metric | Score |
+|--------|-------|
+| MRR@5 | 0.867 |
+| NDCG@5 | 1.419 |
+| Precision@1 | 0.733 |
+| Precision@3 | 0.644 |
+| Precision@5 | 0.533 |
+| Corpus | 326 docs, 6891 terms, avg 673 tokens/doc |
+
+### RAG Quality (LLM-as-Judge)
+
+| Dimension | Score | Method |
+|-----------|-------|--------|
+| Context Relevance | 0.783 | Claude Haiku judges whether retrieved docs answer each query |
+| Faithfulness | 0.767 | Claude Haiku checks generated article claims against source docs |
+
+### Hybrid Search (requires HF_TOKEN)
+
+| Metric | BM25 | Hybrid (BM25 + Vectors + Reranker) |
+|--------|------|-------------------------------------|
+| MRR@5 | 0.867 | — |
+| Reranking lift | — | A/B comparison: vector-only vs vector+cross-encoder |
+
+Run the eval yourself:
+
+```bash
+python -m tests.eval_rag                          # BM25 + LLM judge
+HF_TOKEN=hf_... python -m tests.eval_rag          # + hybrid + reranking A/B
+```
+
+Results saved to `tests/rag_eval_results.json`.
 
 ## Development
 

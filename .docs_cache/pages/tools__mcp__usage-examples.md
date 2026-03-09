@@ -1,0 +1,98 @@
+---
+id: "tools/mcp/usage-examples"
+title: "RevenueCat MCP Usage Examples"
+description: "The RevenueCat MCP server supports natural language interactions. Here are common examples:"
+permalink: "/docs/tools/mcp/usage-examples"
+slug: "usage-examples"
+version: "current"
+original_source: "docs/tools/mcp/usage-examples.mdx"
+---
+
+The RevenueCat MCP server supports natural language interactions. Here are common examples:
+
+## Basic Project Information
+
+```
+Show me my project details
+```
+
+```
+List all my apps
+```
+
+```
+What products do I have in my iOS app?
+```
+
+## Creating Resources
+
+```
+Create a new iOS app called "Premium Photo Editor" with bundle ID com.company.photoeditor
+```
+
+```
+Create a monthly subscription product called "Premium Monthly" for my iOS app
+```
+
+```
+Create an entitlement called "premium_features" with display name "Premium Features"
+```
+
+## Managing Relationships
+
+```
+Attach the premium monthly product to the premium features entitlement
+```
+
+```
+Create a new offering called "main_offering" and add packages for monthly and annual subscriptions
+```
+
+```
+Show me which products are attached to the premium features entitlement
+```
+
+## Configuration Management
+
+```
+Get the App Store configuration for my iOS app
+```
+
+```
+Show me all the public API keys for my app
+```
+
+```
+List all packages in my main offering
+```
+
+## Batch Operations
+
+You can perform multiple operations in sequence:
+
+```
+Create a new iOS app called "Premium App", then create a monthly subscription product for it, and finally create an entitlement called "premium_access" and attach the product to it
+```
+
+## Configuration Queries
+
+Get comprehensive information about your setup:
+
+```
+Show me the complete configuration for my main offering including all packages and their attached products
+```
+
+## Cross-Platform Management
+
+Manage products across multiple platforms:
+
+```
+Create the same product "Premium Monthly" for both my iOS and Android apps
+```
+
+## Chat Interaction Tips
+
+- **Be specific**: Include IDs, names, or other identifiers in your requests
+- **Use proper terminology**: Use RevenueCat terminology (entitlements, offerings, packages)
+- **Check relationships**: Verify product-entitlement relationships after making changes
+- **Incremental changes**: Make small, incremental changes rather than large bulk operations

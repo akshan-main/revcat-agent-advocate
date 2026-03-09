@@ -108,7 +108,12 @@ def test_verify_code_snippets_non_python(tmp_path):
 def test_full_verify(sample_docs_cache, db_conn):
     body = "# Article\n\nSome text.\n\n## Sources\n\n"
     result = full_verify(body, [], [], sample_docs_cache, db_conn, skip_network=True)
-    assert result.citations_all_reachable is True
+    # skip_network=True means citations_all_reachable should be False (not verified)
+    assert result.citations_all_reachable is False
     assert result.snippet_syntax_valid is True
     assert result.doc_sha256_matches is True
     assert len(result.details) >= 3
+
+    # Without skip_network and no links, should be True
+    result2 = full_verify(body, [], [], sample_docs_cache, db_conn, skip_network=False)
+    assert result2.citations_all_reachable is True

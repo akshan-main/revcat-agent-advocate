@@ -1,0 +1,123 @@
+---
+id: "integrations/third-party-integrations/amplitude"
+title: "Amplitude"
+description: "Amplitude can be a useful integration tool for seeing all events and revenue that occur for your app even if itâs not active for a period of time. You can use Amplitudeâs product analytics to find patterns in customer behavior and inform marketing strategies."
+permalink: "/docs/integrations/third-party-integrations/amplitude"
+slug: "amplitude"
+version: "current"
+original_source: "docs/integrations/third-party-integrations/amplitude.mdx"
+---
+
+Amplitude can be a useful integration tool for seeing all events and revenue that occur for your app even if itâs not active for a period of time. You can use Amplitudeâs product analytics to find patterns in customer behavior and inform marketing strategies.
+
+With our Amplitude integration, you can:
+
+- Create a behavioral cohort of customers based on specific actions, such as watching a specific episode of a show after subscribing. Follow a cohort throughout their lifecycle to realize overarching trends.
+- Measure the path of a user from marketing material to the purchase of a subscription.
+
+With accurate and up-to-date subscription data in Amplitude, you'll be set to turbocharge your product analytics â¡ï¸
+
+### Integration at a Glance
+
+| Includes Revenue | Supports Negative Revenue | Sends Sandbox Events | Includes Customer Attributes | Sends Transfer Events |                                                                 Optional Event Types                                                                 |
+| :--------------: | :-----------------------: | :------------------: | :--------------------------: | :-------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------: |
+|        â        |            â             |   Requires API key   |              â              |          â           | `non_subscription_purchase_event` `uncancellation_event` `subscription_paused_event` `expiration_event` `billing_issue_event` `product_change_event` |
+
+## Events
+
+The Amplitude integration tracks the following events:
+
+| Event                     | Default Event Name                 | Description                                                                                                                                                                                                                                                                                                                                 | App Store | Play Store | Amazon | Stripe | Promo |
+| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- | ------ | ------ | ----- |
+| Initial Purchase          | rc\_initial\_purchase\_event          | A new subscription has been purchased.                                                                                                                                                                                                                                                                                                      | â        | â         | â     | â     | â    |
+| Trial Started             | rc\_trial\_started\_event             | The start of an auto-renewing subscription product free trial.                                                                                                                                                                                                                                                                              | â        | â         | â     | â     | â    |
+| Trial Converted           | rc\_trial\_converted\_event           | When an auto-renewing subscription product converts from a free trial to normal paid period.                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Trial Cancelled           | rc\_trial\_cancelled\_event           | When a user turns off renewals for an auto-renewing subscription product during a free trial period.                                                                                                                                                                                                                                        | â        | â         | â     | â     | â    |
+| Renewal                   | rc\_renewal\_event                   | An existing subscription has been renewed or a lapsed user has resubscribed.                                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Cancellation              | rc\_cancellation\_event              | A subscription or non-renewing purchase has been cancelled. See [cancellation reasons](/integrations/webhooks/event-types-and-fields#cancellation-and-expiration-reasons) for more details.                                                                                                                                                 | â        | â         | â     | â     | â    |
+| Uncancellation            | rc\_uncancellation\_event            | A non-expired cancelled subscription has been re-enabled.                                                                                                                                                                                                                                                                                   | â        | â         | â     | â     | â    |
+| Non Subscription Purchase | rc\_non\_subscription\_purchase\_event | A customer has made a purchase that will not auto-renew.                                                                                                                                                                                                                                                                                    | â        | â         | â     | â     | â    |
+| Subscription Paused       | rc\_subscription\_paused\_event       | A subscription has been paused.                                                                                                                                                                                                                                                                                                             | â        | â         | â     | â     | â    |
+| Expiration                | rc\_expiration\_event                | A subscription has expired and access should be removed. If you have [Platform Server Notifications](/platform-resources/server-notifications) configured, this event will occur as soon as we are notified (within seconds to minutes) of the expiration. If you do not have notifications configured, delays may be approximately 1 hour. | â        | â         | â     | â     | â    |
+| Billing Issues            | rc\_billing\_issue\_event             | There has been a problem trying to charge the subscriber. This does not mean the subscription has expired. Can be safely ignored if listening to CANCELLATION event + cancel\_reason=BILLING\_ERROR.                                                                                                                                          | â        | â         | â     | â     | â    |
+| Product Change            | rc\_product\_change\_event            | A subscriber has changed the product of their subscription. This does not mean the new subscription is in effect immediately. See [Managing Subscriptions](/subscription-guidance/managing-subscriptions) for more details on updates, downgrades, and crossgrades.                                                                         | â        | â         | â     | â     | â    |
+
+For events that have revenue, such as trial conversions and renewals, RevenueCat will automatically record this amount along with the event in Amplitude. Bear in mind that revenue will always be reported in USD. If it's been made with a different currency, we'll automatically convert it to USD. You can find the currency of the original transaction in the `currency` field of the event.
+
+## Setup
+
+### 1. Set Amplitude User Identity
+
+If you're using the Amplitude SDK, you can set the User Id to match the RevenueCat App User Id. This way, events sent from the Amplitude SDK and events sent from RevenueCat can be synced to the same user.
+
+Configure the Amplitude SDK with the same App User Id as RevenueCat or use the `.setUserId()` method on the Amplitude SDK.
+
+*Interactive content is available in the web version of this doc.*
+
+### Send Amplitude User Identifiers to RevenueCat (Optional)
+
+If your App User ID in RevenueCat is different than the User ID in Amplitude, you can use the Amplitude User ID and/or Amplitude Device ID to identify events by adding a key as an [Attributes](/customers/customer-attributes).
+
+| Key                  | Description                                                                                                      |
+| :------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| `$amplitudeDeviceId` | The Amplitude [Device ID](https://developers.amplitude.com/docs/http-api-deprecated#keys-for-the-event-argument) |
+| `$amplitudeUserId`   | The Amplitude [User ID](https://developers.amplitude.com/docs/http-api-deprecated#keys-for-the-event-argument)   |
+
+If both keys are present, RevenueCat will send both the User ID and Device ID to identify events into Amplitude. If only one of the keys are present, RevenueCat will only send the available key. If no keys are present, RevenueCat will send the current RevenueCat App User ID. This property can be set and removed manually, like any other [Attribute](/customers/customer-attributes). For more information how Amplitude tracks unique users, view their docs [here](https://help.amplitude.com/hc/en-us/articles/115003135607-Tracking-unique-users).
+
+### 2. Send RevenueCat Events to Amplitude
+
+After you've set up the *Purchases SDK* and Amplitude SDK to have the same user identity, you can "turn on" the integration and configure the event names from the RevenueCat dashboard.
+
+1. Navigate to your project settings in the RevenueCat dashboard and choose 'Amplitude' from the Integrations menu
+
+![Integration setup](/docs_images/integrations/setup-integrations.png)
+
+2. Add your Amplitude API key
+3. Enter the event names that RevenueCat will send or choose the default event names
+4. Select whether you want sales reported as gross revenue (before app store commission), or after store commission and/or estimated taxes.
+
+### Set Amplitude Region (Optional)
+
+If your Amplitude account is hosted on EU servers, toggle the Amplitude Region field to `EU` in the Amplitude integration settings. The region defaults to `US`.
+
+### Attach next cycle estimates for initial purchases and trial starts (Optional)
+
+If you want to attach estimated next-cycle values to initial purchase and trial started events, enable the `Send next cycle price for initial purchases and trials` field in the integration.
+
+When available, RevenueCat includes these event properties:
+
+- `next_cycle_price`: estimated gross next-cycle renewal price, always reported in USD.
+- `next_cycle_reporting_revenue`: estimated next-cycle revenue after applying your Revenue Reporting Mode, always reported in USD.
+
+Please note that these estimates are based on the latest price we've observed for the purchased product in the country and currency of the purchase, which is then converted to USD. Price changes, accepted promotional offers, upgrades/downgrades, and brand new products being used may all result in these estimates being absent or inaccurate.
+
+## Sample Event
+
+Below are sample JSONs that are delivered to Amplitude for each event type.
+
+*Interactive content is available in the web version of this doc.*
+
+*Interactive content is available in the web version of this doc.*
+
+## Subscription Status Attribute
+
+Whenever RevenueCat sends an event to Amplitude, we'll update the `rc_subscription_status` user attribute with any applicable changes, using one of the following values:
+
+| Status              | Description                                                                                                                                |
+| :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| active              | The customer has an active, paid subscription which is set to renew at their next renewal date.                                            |
+| intro               | The customer has an active, paid subscription through a paid introductory offer.                                                           |
+| cancelled           | The customer has a paid subscription which is set to expire at their next renewal date.                                                    |
+| grace\_period        | The customer has a paid subscription which has entered a grace period after failing to renew successfully.                                 |
+| trial               | The customer is in a trial period which is set to convert to paid at the end of their trial period.                                        |
+| cancelled\_trial     | The customer is in a trial period which is set to expire at the end of their trial period.                                                 |
+| grace\_period\_trial  | The customer was in a trial period and has now entered a grace period after failing to renew successfully.                                 |
+| expired             | The customer's subscription has expired.                                                                                                   |
+| promotional         | The customer has access to an entitlement through a RevenueCat [Granted Entitlement](/dashboard-and-metrics/customer-profile#entitlements) |
+| expired\_promotional | The customer previously had access to an entitlement through a RevenueCat Granted Entitlement that has since expired.                      |
+| paused              | The customer has a paid subscription which has been paused and is set to resume at some future date.                                       |
+
+For customers with multiple active subscriptions, this attribute will represent the status of only the subscription for which the most recent event occurred. Therefore, we recommend using `rc_active_entitlements` to understand whether your customers have multiple active subscriptions to be accounted for.
+
+Please note that since this attribute is set and updated when events are delivered, subscribers with events prior to our release of this attribute (during November 2023) will not have this attribute set until/unless a future event (renewal, cancellation, etc) occurs.

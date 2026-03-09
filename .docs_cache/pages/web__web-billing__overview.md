@@ -1,0 +1,99 @@
+---
+id: "web/web-billing/overview"
+title: "Integrate RevenueCat Web"
+description: "RevenueCat Web provides a set of tools that allow you to easily start selling subscriptions and one-time purchases on the web, and connect them with the same subscriptions and entitlements on mobile âÂ either using RevenueCat's own billing engine (RC Web Billing) or by connecting 3rd party billing engines."
+permalink: "/docs/web/web-billing/overview"
+slug: "overview"
+version: "current"
+original_source: "docs/web/web-billing/overview.mdx"
+---
+
+RevenueCat Web provides a set of tools that allow you to easily start selling subscriptions and one-time purchases on the web, and connect them with the same subscriptions and entitlements on mobile âÂ either using RevenueCat's own billing engine (RC Web Billing) or by connecting 3rd party billing engines.
+
+## Features & use cases
+
+RevenueCat Web includes the following features:
+
+- **[Web SDK](web-sdk):** A JavaScript SDK to integrate web purchases into your web app.
+- **[Web Purchase Links](web-purchase-links):** A hosted, customizable purchase flow provided by RevenueCat, to enable web purchases with no code.
+- **[Web Purchase Button](../../tools/paywalls/creating-paywalls/web-purchase-button):** A component available in RevenueCat's [paywalls](/tools/paywalls) to link to a web checkout from in-app (app to web).
+- **[Web Paywalls](paywalls):** RevenueCat's component-based dynamic paywalls, rendered on the web and available through both Web Purchase Links and the Web SDK.
+- **[Redemption Links](redemption-links):** A mechanism for allowing anonymous (non-logged in) users to purchase on the web, and redeem their purchase in-app using app deep linking.
+
+These features enable use cases such as:
+
+- Running paid acquisition campaigns linked to a web purchase flow.
+- Running web-based win-back campaigns with special offers tailored to customers with churned subscriptions.
+- Collecting web payments from an existing audience, without the need to install the app first or create an account.
+- Offering a unified experience for your app across mobile and web, with the same set of entitlements.
+
+:::info April 2025 U.S. District Court Ruling on External Payment Options
+A recent U.S. District Court ruling found Apple in violation of a 2021 injunction meant to allow developers to direct users to external payment options, like Web Billing. As a result, iOS developers are now permitted to guide users to web-based payment flows without additional Apple fees or restrictive design requirements. You can [find more details on the RevenueCat blog](https://revenuecat.com/blog/growth/introducing-web-paywall-buttons).
+
+For apps available outside the U.S. App Store, Apple still requires that digital goods and subscriptions be purchased through in-app purchases. Promoting or linking to alternative payment methods within the app for non-U.S. users may lead to app review rejection or removal. Always ensure external payment links are shown only to eligible U.S. users.
+:::
+
+## Supported billing engines
+
+Billing engines are the subscription management layer responsible for configuring products, orchestrating subscriptions and renewals, managing pricing, etc. RevenueCat Web currently integrates with the following billing engines:
+
+| Billing engine         | Web SDK              | Web Purchase Links                       | External purchases sync             |
+| ---------------------- | -------------------- | ---------------------------------------- | ----------------------------------- |
+| RevenueCat Web Billing | [Supported](web-sdk) | [Supported](web-purchase-links)          | n/a                                 |
+| Stripe Billing         | Not supported        | Not supported                            | [Supported](../integrations/stripe) |
+| Paddle Billing         | Not supported        | [Supported](../guides/paddle-app-to-web) | [Supported](../integrations/paddle) |
+
+### RevenueCat Web Billing
+
+Web Billing is RevenueCat's own billing engine, making it simple to sell and manage subscriptions and one-time purchases on the web without the need to configure products and prices in a separate system. It uses Stripe as a payment processor, and therefore RevenueCat does not directly handle or store credit card information. If you're getting started with web billing for your apps, it's recommended to use Web Billing for a deeper integration with the RevenueCat platform.
+
+- It takes care of the end-to-end purchase UI, in a way that can be customized to your brand
+- It manages the complete subscription lifecycle, including the recurring billing logic (instead of Stripe Billing)
+- It provides a customizable customer-facing portal to manage subscriptions
+
+You can integrate Web Billing in two ways:
+
+**[Web SDK](web-sdk):** If you run a dynamic web app and have access to the code, you should consider integrating the Web SDK, as a way to initialize purchases (similarly to RevenueCat's mobile SDKs).
+
+**[Web Purchase Links](web-purchase-links):** If you want a low-code way to collect payments from customers, you can use Web Purchase Links, which provide a customizable purchase flow hosted by RevenueCat. This is useful if you need to distribute payment links from static systems such as emails, social media, or a static landing page.
+
+#### Current limitations
+
+Web Billing currently has the following limitations:
+
+- There is no support for coupon codes for discounts ([introductory offers](product-setup#introductory-period) are supported).
+- Localization: There is no support for translated content in [lifecycle emails](lifecycle-emails) (english-only) and [web purchase links](web-purchase-links).
+- We do not collect and store the customer's name, shipping address or full billing address. Consequently, Web Billing cannot currently be used in India and in other countries that have this requirement.
+
+### Stripe Billing integration
+
+The Stripe Billing integration allows you to use Stripe Billing to sell products and subscriptions, and sync them to RevenueCat. It is currently not supported in our Web SDK or Web Purchase Links âÂ instead, you should use Stripe's payment links or Stripe Checkout to handle purchases.
+
+If you already have a Stripe Billing implementation with active subscriptions and customers, you can use this integration to track those purchases in RevenueCat and unlock entitlements for your customers.
+
+See [Stripe Billing](/web/integrations/stripe)
+
+### Paddle Billing integration
+
+Similarly to Stripe Billing, the Paddle Billing integration allows you to sell products and subscriptions directly in Paddle Billing, and sync those to RevenueCat. It is currently not supported in our Web SDK or Web Purchase Links, so requires you to use one of Paddle's checkout solutions to handle purchases.
+
+If you already have a Paddle Billing implementation with active subscriptions and customers, you can use this integration to track those purchases in RevenueCat and unlock entitlements for your customers.
+
+See [Paddle Billing](/web/integrations/paddle)
+
+### Fee comparison
+
+RevenueCat Web is included in [RevenueCat's price](https://www.revenuecat.com/pricing); there are no additional RevenueCat fees to support subscriptions and purchases on the web.
+
+If you use Web Billing, the following additional Stripe fees apply (US pricing):
+
+- Stripe transaction fee: 2.9% + 30Â¢
+- (optional) Stripe Tax fee: 50Â¢ per transaction in tax-registered locations
+
+If you use Stripe Billing and the RevenueCat Stripe Billing integration, the following additional fees apply (US pricing):
+
+- Stripe transaction: fee 2.9% + 30Â¢
+- Stripe Billing fee: 0.7% of volume or $620.00 per month
+- (optional) Stripe Tax fee: 50Â¢ per transaction in tax-registered locations
+
+Note that Stripe fees vary per country and pricing plan, and are subject to change âÂ refer to [Stripe's Pricing page](https://stripe.com/pricing) for the latest fees.

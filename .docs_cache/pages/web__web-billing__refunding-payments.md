@@ -1,0 +1,21 @@
+---
+id: "web/web-billing/refunding-payments"
+title: "Refunding Payments"
+description: "You can refund a one-time or non-subscription purchase made by a customer, or the most recent payment of a customer's subscription."
+permalink: "/docs/web/web-billing/refunding-payments"
+slug: "refunding-payments"
+version: "current"
+original_source: "docs/web/web-billing/refunding-payments.mdx"
+---
+
+You can refund a one-time or non-subscription purchase made by a customer, or the most recent payment of a customer's subscription.
+
+Refunding returns the funds to the customer's payment method (it can take a few days for the payment to be returned, depending on the payment method and the customer's bank). When a refund is made, the customer immediately loses access to any entitlements associated with their subscription, or purchased item.
+
+:::info No refund for subscriptions with billing issues
+For subscriptions where the most recent invoice failed to be collected, you can't refund the payment (since no payment was made). You can still cancel the subscription.
+:::
+
+To refund a payment, click on the "..." menu on the subscription in the "Entitlements" card of the customer profile and then select "Refund".
+
+![](/docs_images/web/web-billing/refunding-payments.png)

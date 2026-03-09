@@ -1,0 +1,314 @@
+---
+id: "subscription-guidance/subscription-offers/ios-subscription-offers"
+title: "iOS Subscription Offers"
+description: "This guide assumes you already have your iOS products set up in App Store Connect."
+permalink: "/docs/subscription-guidance/subscription-offers/ios-subscription-offers"
+slug: "ios-subscription-offers"
+version: "current"
+original_source: "docs/subscription-guidance/subscription-offers/ios-subscription-offers.mdx"
+---
+
+:::info
+This guide assumes you already have your iOS products set up in App Store Connect.
+:::
+
+Subscription Offers allow developers to apply custom pricing and trials to new customers and to existing and lapsed subscriptions.
+
+Subscription Offers are supported in the *Purchases SDK*, but require some additional setup first in App Store Connect and the RevenueCat dashboard.
+
+## Types of Subscription Offers
+
+| Offer Type                                                                                                           | Applies To                | Subscription Key Required  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Auto-Renewal |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Introductory Offers                                                                                                  | New Users                 | ð Required (in StoreKit2) | Applied by Apple to eligible purchases automatically. You can check the [customer's eligibility for the offer](/subscription-guidance/subscription-offers#checking-eligibility) to determine if Apple will apply it.                                                                                                                                                                                                                                                                    | â           |
+| Promotional Offers                                                                                                   | Existing and Lapsed Users | ð Required                | Not applied automatically, see implementation guide below                                                                                                                                                                                                                                                                                                                                                                                                                               | â           |
+| Offer Codes                                                                                                          | New and Existing Users    | ð Required                | Requires iOS SDK 3.8.0+, see implementation guide below                                                                                                                                                                                                                                                                                                                                                                                                                                 | â           |
+| Win-Back Offers                                                                                                      | Lapsed Users              | ð Required                | Win-Back Offers are only available to users on iOS18.0+.                                                                                                                                                                                                                                                                                                                                                                                                                                | â           |
+| â ï¸ **Not recommended** (Interactive content is available in the web version of this doc.) [In-App Purchase Promo Codes](https://help.apple.com/app-store-connect/#/dev50869de4a) | New and Existing Users    | Not Required               | Treated as a regular purchase, revenue will not be accurate in [Charts](/dashboard-and-metrics/charts) and [Integrations](/integrations/webhooks) due to Apple/StoreKit limitations. Codes don't auto-renew, aren't compatible with `presentCodeRedemptionSheet`, restricted to non-commercial use, and restricted to [1,000 codes every 6 months](https://help.apple.com/app-store-connect/#/dev50869de4a). New promo codes cannot be created after March 26, 2026. Any existing promo codes created before then can be redeemed until they expire.  | â           |
+
+## In-App Purchase Keys
+
+For RevenueCat to securely authenticate and validate a Subscription Offer request with Apple, you'll need to upload an In-App Purchase Key following our [guide](/service-credentials/itunesconnect-app-specific-shared-secret/in-app-purchase-key-configuration).
+
+## Promotional Offers
+
+In iOS 12.2, Apple announced a new feature for subscription developers called âPromotional Offers.â
+
+### 1. Configure the Offer in App Store Connect
+
+Promotional Offers are created from within App Store Connect and are included as a pricing option to an existing subscription product. When you click the "+" option next to Subscription Prices, you'll see an option to Create Promotional Offer.
+
+![Subscription Offers are created as new pricing options in App Store Connect](/docs_images/products/ios/offers/create-promo-offer.png)
+
+To create the offer there are two fields that you need to specify: Reference Name, which is just used for your reference, and the Promotional Offer Product Code, which is what you will actually use to activate a specific offer in your app.
+
+![](/docs_images/products/ios/offers/create-promo-offer-2.png)
+
+On the next screen you'll select the type of offer you wish to provide. Just like introductory offers, there are three types of Promotional Offers:
+
+1. Pay-up-front â The customer pays once for a period of time, e.g. $0.99 for 3 months. Allowed durations are 1, 2, 3, 6 and 12 months.
+2. Pay-as-you-go â The customer pays a reduced rate, each period, for a number of periods, e.g. $0.99 per month for 3 months. Allowed durations are 1-12 months. Can only be specified in months.
+3. Free â This is analogous to a free trial, the user receives 1 of a specified period free. The allowed durations are 3 days, 1 week, 2 weeks, 1 month, 2 months, 3 months, 6 months, and 1 year.
+
+![](/docs_images/products/ios/offers/create-promo-offer-3.png)
+
+:::tip
+Don't forget to click Save in the upper right after you configure the offer.
+:::
+
+### 2. Show the Promotional Offer to Desired Users
+
+#### Display via Customer Center
+
+You can display a Promotional Offer to a user via Customer Center. Read more in our guide on [displaying promotional offers via Customer Center](/tools/customer-center/customer-center-promo-offers-apple).
+
+#### Display manually
+
+When displaying a Promotional Offer manually, it's up to you to decide which users you want to present the offer to. The only eligibility requirements are that the user had (or currently has) an active subscription. Apple automatically enforces this requirement for you - if it's not met users will be shown the regular product regardless of the offer you try to present.
+
+##### Fetch the PromoOffer
+
+Before you can present a Promotional Offer to a user, you first need to fetch the `PromoOffer`. This is done by passing the `StoreProduct` and a `StoreProductDiscount` to the `.getPromotionalOffer` method, which uses the Subscription Key from above to validate the discount and to provide a valid `PromoOffer`:
+
+*Interactive content is available in the web version of this doc.*
+
+##### Purchase the Product with the Promotional Offer
+
+After successfully fetching the `PromoOffer`, you can now display the Promotional Offer to the user however you'd like. If the user chooses to purchase, pass a `Package` and `PromoOffer` to the `.purchase(package:promotionalOffer:)` method.
+
+*Interactive content is available in the web version of this doc.*
+
+## Offer Codes
+
+With iOS 14, Apple announced a new feature for subscription developers called âOffer Codes.â Offer Codes allow developers to offer custom pricing and trials, in the form of a redeemable code, to their customers.
+
+### 1. Configuring an Offer Code
+
+Offer Codes are configured similarly to Subscription Offers in App Store Connect.
+
+![Create offer code](/docs_images/products/ios/offers/create-offer.png)
+
+### 2. Redeeming an Offer Code
+
+#### Option 1: In-app Redemption Sheet
+
+:::danger
+Since launch, Apple's in-app Offer Code redemption sheet has proven to be extremely unstable. For example, the sheet may not connect, may not dismiss after a successful redemption, and may not accept valid codes. Additionally, sandbox and TestFlight behavior has been seen to be inconsistent.
+
+A workaround may be to instead redirect customers to the App Store app to redeem codes as described below.
+:::
+
+To allow your users to redeem Offer Codes, you'll need to present the Offer Code redemption sheet. In *Purchases SDK* 3.8.0, you can call the `presentCodeRedemptionSheet` method.
+
+*Interactive content is available in the web version of this doc.*
+
+Apple does not provide a callback to determine if the code redemption was successful. Since the Purchases SDK will automatically pick up on new transactions that enter the underlying transaction queue, you should implement the `receivedUpdated` [delegate or listener](/getting-started/configuring-sdk) to respond to changes in `CustomerInfo`. Once we sync the Offer Code transaction, we'll automatically refresh CustomerInfo.
+
+:::warning
+The Offer Code redemption sheet may not display on a device if you haven't yet launched the App Store app and accepted the terms agreement.
+:::
+
+#### Option 2: Redirect to App Store app
+
+You can link to the App Store with a prefilled code for redemption with the following URL format:
+`https://apps.apple.com/redeem?ctx=offercodes&id={apple_app_id}&code={code}`
+
+You can find your Apple App ID in your app settings in App Store Connect (General -> App Information).
+
+When users click your link within your app to redeem the offer code, it will take them outside of the app to complete the purchase. It is important to call [syncPurchases](/getting-started/restoring-purchases#syncpurchases) when the user returns back to your app to retrieve their purchase. This may be done by recording when the user leaves the app due to the link, and calling `syncPurchases` when the user returns to the app. If not, the user may need to [trigger a restore](/getting-started/restoring-purchases) within your app when they come back.
+
+### Considerations
+
+- In order for RevenueCat to accurately track revenue for offer codes, you will need to upload an in-app purchase key. See our guide on [In-App Purchase Key Configuration](/service-credentials/itunesconnect-app-specific-shared-secret/in-app-purchase-key-configuration) for step-by-step instructions.
+
+## Win-Back Offers
+
+Apple introduced win-back offers with iOS 18, which allow developers to provide custom pricing and trials to subscribers who have canceled a subscription and meet specific eligibility criteria set by the developer.
+
+### 1. Configuring a Win-Back Offer
+
+:::warning
+Win-Back Offers can only be configured for subscription products that have been approved by App Review. Please ensure that your subscription product has been approved by App Review before setting up a Win-Back offer for it.
+:::
+
+Navigate to your subscription's page under *Apps* â *Your App* â *Subscriptions* (in the left sidebar) â *Your Subscription Group* â *Your Subscription Product* and click the "+" button by "Subscription Prices". If your subscription product has been approved by App Review, you'll see the option "Create Win-Back Offer". Select it.
+
+![configure\_winback\_offer\_1.png](/docs_images/products/ios/win-back-offers/configure_winback_offer_1.png)
+
+To create the win-back offer there are two fields that you need to specify: Reference Name, which is just used for your reference, and the Offer Identifier, which is a distinct ID for the win-back offer.
+
+![configure\_winback\_offer\_2.png](/docs_images/products/ios/win-back-offers/configure_winback_offer_2.png)
+
+Next, youâll be asked to provide the specifics of your win-back offer, including:
+
+- **Offer Publish Date**: The date interval that the win-back offer will be available to churned subscribers. ([More Info](https://developer.apple.com/help/app-store-connect/reference/app-store-pricing-and-availability-start-times-by-country-or-region))
+- **Offer Priority**: Determines if this win-back offer takes precedence over other offers available for its product.
+  - If a subscriber is eligible for multiple offers on the same subscription product, offers with a with a *high* priority will be displayed instead of offers with a *normal* priority in StoreKit views.
+- **Customer Eligibility**: Developer-provided eligibility criteria that determines whether a churned subscriber can purchase a win-back offer.
+  - *Minimum Paid Duration*: The time that a subscriber must have been subscribed to that product to be eligible for the offer.
+  - *Time Since Last Subscribed*: A time interval describing how long a subscriber must have been lapsed to be eligible for the offer.
+  - *Wait Between Offers*: The required time a subscriber must wait after a win-back offer ends before redeeming the same offer again. This does not prevent a subscriber from redeeming a different win-back offer. Optional.
+
+![configure\_winback\_offer\_3.png](/docs_images/products/ios/win-back-offers/configure_winback_offer_3.png)
+
+### 2. Redeeming a Win-Back Offer
+
+Subscribers can redeem a win-back offer in several ways, detailed in the chart below:
+
+| Win-Back Offer Purchasing Method                                                                                                                                                                                                                      | Notes                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Through the App Store with Streamlined Purchasing Enabled](https://www.revenuecat.com/docs/subscription-guidance/subscription-offers/ios-subscription-offers#redeeming-a-win-back-offer-through-the-app-store-with-streamlined-purchasing-enabled)   | Should not be used if you require a subscriber to perform an action before purchasing (e.g. signing in). Requires iOS SDK version 5.0.0+                       |
+| [Through Your App From a StoreKit Message](https://www.revenuecat.com/docs/subscription-guidance/subscription-offers/ios-subscription-offers#redeeming-a-win-back-offer-in-your-app-from-a-storekit-message)                                          | Requires iOS SDK version 5.6.0+                                                                                                                                |
+| [Through the App Store with Streamlined Purchasing Disabled](https://www.revenuecat.com/docs/subscription-guidance/subscription-offers/ios-subscription-offers#redeeming-a-win-back-offer-through-the-app-store-with-streamlined-purchasing-disabled) | Requires iOS SDK version 5.9.0+                                                                                                                                |
+| [With a Unique Win-Back Offer URL](https://www.revenuecat.com/docs/subscription-guidance/subscription-offers/ios-subscription-offers#redeeming-a-win-back-offer-with-a-unique-win-back-offer-url)                                                     | Requires iOS SDK version 5.9.0+                                                                                                                                |
+| [Through Your Paywall](https://www.revenuecat.com/docs/subscription-guidance/subscription-offers/ios-subscription-offers#redeeming-a-win-back-offer-on-your-paywall)                                                                                  | Requires iOS SDK version 5.10.0+                                                                                                                               |
+| [Through a StoreKit StoreView](https://www.revenuecat.com/docs/subscription-guidance/subscription-offers/ios-subscription-offers#redeeming-a-win-back-offer-in-a-storekit-storeview)                                                                  | Requires iOS SDK version 5.0.0+                                                                                                                                |
+| Through Your App with Your Own IAP Code                                                                                                                                                                                                               | Supported, you can find more info on using your own IAP code [here](https://www.revenuecat.com/docs/migrating-to-revenuecat/sdk-or-not/finishing-transactions) |
+
+#### Redeeming a Win-Back Offer Through the App Store with Streamlined Purchasing Enabled
+
+:::warning
+Use this method only if you do not require subscribers to perform an action, like signing in before purchasing. If you do require such actions, disable Streamlined Purchasing (instructions [here](https://developer.apple.com/help/app-store-connect/manage-subscriptions/manage-streamlined-purchasing)). By default, Streamlined Purchasing is enabled for all apps.
+:::
+
+Purchasing win-back offers through the App Store uses Streamlined Purchasing by default, meaning that subscribers can complete the entire win-back offer redemption flow in the App Store. In addition to the steps mentioned above to configure your win-back offer, we recommend doing the following:
+
+1. Mandatory: Upload an image for your win-back offer in App Store Connect ([instructions](https://developer.apple.com/help/app-store-connect/manage-in-app-purchases/view-and-edit-in-app-purchase-information#add-or-remove-an-image)).
+2. Enable [Apple App Store Notifications](https://www.revenuecat.com/docs/platform-resources/server-notifications/apple-server-notifications) so that RevenueCat can be notified of win-back offers redeemed through the App Store, even if the user does not open your app.
+
+Please note that win-back offers redeemed through the Manage Subscriptions page in user's Apple account always behave as if Streamline Purchasing is on, so your app should be prepared to handle this flow even if you disable Streamline Purchasing in App Store Connect.
+
+##### Testing Win-Back Offers Redeemed Through the App Store with Streamlined Purchasing Enabled
+
+Testing win-back offers redeemed through the App Store with Streamlined Purchasing enabled can only be performed in the sandbox environment on a physical device. To test win-back offers redeemed this way:
+
+1. [Create a sandbox test account](https://www.revenuecat.com/docs/test-and-launch/sandbox/apple-app-store#create-a-sandbox-test-account)
+2. [Add the sandbox test account to your device](https://www.revenuecat.com/docs/test-and-launch/sandbox/apple-app-store#add-the-sandbox-test-account-to-your-device)
+3. Configure a win-back offer on a subscription product in App Store Connect as described above.
+4. Make note of the product ID and the win-back offer ID. You'll need it later!
+5. Cancel any subscriptions that are from the same subscription group as the win-back offerâs subscription.
+6. Open your app and purchase the subscription product that contains the win-back offer.
+7. Cancel the subscription. This can be done easily in the Settings app by navigating to your sandbox test account's page:
+   - On iOS \< 18.1: (*Settings* â *App Store* â *Sandbox Account* â *Manage* â *Subscriptions* â *Cancel Subscription*)
+   - On iOS 18.1+: (*Settings* â *Developer* â *Sandbox Apple Account* â *Manage* â *Subscriptions* â *Cancel Subscription*)
+8. Close your app.
+9. Wait for your subscription to expire.
+10. In your sandbox test account's Account Settings page, turn off the "Display Win-back Offer Sheet" toggle
+
+![disable\_winback\_offer\_sheet.jpg](/docs_images/products/ios/win-back-offers/disable_winback_offer_sheet.jpg)
+
+11. Select "Test Transactions"
+
+![select\_test\_transactions.jpg](/docs_images/products/ios/win-back-offers/select_test_transactions.jpg)
+
+12. Enter the product ID of the product you're testing, your app's bundle ID, and the win-back offer's identifier. These values *must* be valid IDs entered into App Store Connect.
+
+![test\_transactions.jpg](/docs_images/products/ios/win-back-offers/test_transactions.jpg)
+
+13. Tap the "Test Transactions" button at the bottom of the page.
+14. The system presents the App Store \[Sandbox] payment sheet for the sandbox environment. Confirm the purchase.
+15. Open your app.
+16. Check that your subscriber receives the proper entitlements from RevenueCat, and that the purchase appears in your RevenueCat dashboard with "Sandbox data" enabled.
+
+Repeat steps 5-16 to test redeeming win-back offers multiple times.
+
+#### Redeeming a Win-Back Offer In Your App from a StoreKit Message
+
+In iOS 18+, StoreKit will send your app a message when a subscriber is eligible to redeem a win-back offer. When this message is received, our SDK will automatically present the associated StoreKit win-back offer sheet to the subscriber, which allows them to redeem the win-back offer:
+
+![win\_back\_offer\_sk\_message.png](/docs_images/products/ios/win-back-offers/win_back_offer_sk_message.png)
+
+If you'd like to defer displaying the win-back offer sheet until a later time, you can do so in iOS SDK versions 5.6.0 and above by setting the `showStoreMessagesAutomatically` flag to `false` in the `Purchases.configure` function. When this flag is set to `false`, the win-back offer sheet will not be displayed automatically, and you will need to manually display the offer sheet by calling the `showStoreMessages` function when you'd like it to be displayed:
+
+*Interactive content is available in the web version of this doc.*
+
+If you're running other win-back campaigns on non-iOS stores, we recommend deferring displaying the win-back offer message until after you've checked the subscriber's entitlements. If the subscriber has entitlements, then we'd recommend not displaying the message to avoid the subscriber signing up for multiple win-back offers at the same time.
+
+##### Testing Win-Back Offers Redeemed In Your App from a StoreKit Message
+
+1. [Create a sandbox test account](https://www.revenuecat.com/docs/test-and-launch/sandbox/apple-app-store#create-a-sandbox-test-account)
+2. [Add the sandbox test account to your device](https://www.revenuecat.com/docs/test-and-launch/sandbox/apple-app-store#add-the-sandbox-test-account-to-your-device)
+3. Configure a win-back offer on a subscription product in App Store Connect as described above.
+4. Make note of the product ID and the win-back offer ID. You'll need it later!
+5. Cancel any subscriptions that are from the same subscription group as the win-back offerâs subscription.
+6. Open your app and purchase the subscription product that contains the win-back offer.
+7. Cancel the subscription. This can be done easily in the Settings app by navigating to your sandbox test account's page (*Settings* â *App Store* â *Sandbox Account* â *Manage* â *Subscriptions* â *Cancel Subscription*)
+8. Close your app.
+9. Wait for your subscription to expire.
+10. In your sandbox test account's Account Settings page, turn on the "Display Win-back Offer Sheet" toggle:
+
+![enable\_winback\_offer\_sheet.jpg](/docs_images/products/ios/win-back-offers/enable_winback_offer_sheet.jpg)
+
+11. Select "Test Transactions":
+
+![select\_test\_transactions.jpg](/docs_images/products/ios/win-back-offers/select_test_transactions.jpg)
+
+12. Enter the product ID of the product you're testing, your app's bundle ID, and the win-back offer's identifier. These values *must* be valid IDs entered into App Store Connect.
+
+![test\_transactions.jpg](/docs_images/products/ios/win-back-offers/test_transactions.jpg)
+
+13. **DO NOT** tap the "Test Transactions" button at the bottom of the page. Instead, background the Settings app (do not force close it).
+14. Open your app.
+15. If the Purchases SDK is configured to show StoreKit messages automatically, the win-back offer redemption sheet will be displayed. If not, you can call `showStoreMessages()` to display the offer sheet.
+
+![enable\_winback\_offer\_sheet.jpg](/docs_images/products/ios/win-back-offers/enable_winback_offer_sheet.jpg)
+
+16. Redeem the win-back offer.
+17. Check that your subscriber receives the proper entitlements from RevenueCat, and that the purchase appears in your RevenueCat dashboard with "Sandbox data" enabled.
+
+Repeat steps 5-17 to test redeeming win-back offers multiple times.
+
+#### Redeeming a Win-Back Offer Through the App Store with Streamlined Purchasing Disabled
+
+Purchasing win-back offers through the App Store uses Streamlined Purchasing by default, meaning that subscribers can complete the entire win-back offer redemption flow in the App Store. If you require users to perform an action in your app before making a purchase, like signing in, you can disable Streamlined Purchasing. When Streamlined Purchasing is disabled, subscribers will start the win-back redemption flow in the App Store, but will complete the flow in your app. Support for redeeming win-back offers from the App Store with Streamlined Purchasing disabled is available in the iOS SDK versions 5.9.0+.
+
+You can disable Streamlined Purchasing in App Store Connect under *Apps* â *Your App* â *Subscriptions* â *Streamlined Purchasing*.
+
+![disable\_streamlined\_purchasing.png](/docs_images/products/ios/win-back-offers/disable_streamlined_purchasing.png)
+
+After a user starts a win-back redemption flow on the App Store and opens your app, the RevenueCat SDK will call the `PurchasesDelegate.purchases(readyForPromotedProduct:startPurchase)` delegate function to let your app know that the user has started a redemption flow. Your app should then perform any actions it needs to do before the redemption flow continues. When your app is ready for the user to complete the redemption flow, you should call the `startPurchase` callback provided in the `readyForPromotedProduct` function.
+
+*Interactive content is available in the web version of this doc.*
+
+In addition to the steps mentioned above to configure your win-back offer, we recommend doing the following:
+
+1. Mandatory: Upload an image for your win-back offer in App Store Connect ([instructions](https://developer.apple.com/help/app-store-connect/manage-in-app-purchases/view-and-edit-in-app-purchase-information#add-or-remove-an-image)).
+2. Enable [Apple App Store Notifications](https://www.revenuecat.com/docs/platform-resources/server-notifications/apple-server-notifications) so that RevenueCat can be notified of win-back offers redeemed through the App Store, even if the user does not open your app.
+
+#### Redeeming a Win-Back Offer With a Unique Win-Back Offer URL
+
+Apple generates a unique URL for your win-back offer upon creation, which you can find on the offer's page in App Store Connect. This URL uses the format `https://apps.apple.com/win-back/{win_back_offer_id}`. Eligible subscribers can use this URL to redeem the win-back offer in your app.
+
+![Win-Back Offer URL in App Store Connect](/docs_images/products/ios/win-back-offers/win-back-offer-url-app-store-connect.png)
+
+When a user redeems a win-back offer using a custom URL, the win-back offer will use the Streamlined Purchase setting used by your app (either enabled or disabled).
+
+#### Redeeming a Win-Back Offer on your Paywall
+
+You can display win-back offers to subscribers on your paywall for users to redeem using iOS SDK versions 5.10+. After configuring your win-back offers, you can use our SDK to fetch the win-back offers that a subscriber is eligible for for a given product:
+
+*Interactive content is available in the web version of this doc.*
+
+:::info âï¸
+Note: The `eligibleWinBackOffers` function only returns the win-back offers that the current subscriber is eligible for, not all of the win-back offers that you've created for a product. It will return an empty array when the subscriber is not eligible for any win-back offers.
+:::
+
+Once the user has selected a win-back offer that they'd like to redeem, you can purchase it with the SDK:
+
+*Interactive content is available in the web version of this doc.*
+
+For more information on displaying and purchasing products on your paywall, check out our [Displaying Products](https://www.revenuecat.com/docs/getting-started/displaying-products) and [Making Purchases](https://www.revenuecat.com/docs/getting-started/making-purchases) guides.
+
+#### Redeeming a Win-Back Offer in a StoreKit StoreView
+
+You can also redeem win-back offers in a [StoreKit StoreView](https://developer.apple.com/documentation/storekit/storeview) with the following SwiftUI code:
+
+*Interactive content is available in the web version of this doc.*
+
+### Considerations
+
+- Since win-back offers use StoreKit 2 under the hood, you must upload an in-app purchase key to RevenueCat to use win-back offers. See our guide on [In-App Purchase Key Configuration](/service-credentials/itunesconnect-app-specific-shared-secret/in-app-purchase-key-configuration) for step-by-step instructions.
+
+## Next Steps
+
+- For a guided walkthrough of implementing Subscription Offers into a Swift app [check out our blog â](https://www.revenuecat.com/blog/signing-ios-subscription-offers)

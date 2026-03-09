@@ -1,0 +1,85 @@
+---
+id: "tools/offering-metadata/offering-metadata-examples"
+title: "Offering metadata example use cases"
+description: "Offering Metadata can be utilized to create more flexible paywall experiences, target specific users with particular offerings, or make updates on the fly.  Below, we'll show some basic and advanced examples of how you can utilize offering metadata to change out the copy and button color, change the paywall description based on device language, and show a completely different paywall to customers who opened your app via a deeplink."
+permalink: "/docs/tools/offering-metadata/offering-metadata-examples"
+slug: "offering-metadata-examples"
+version: "current"
+original_source: "docs/tools/offering-metadata/offering-metadata-examples.mdx"
+---
+
+[Offering Metadata](/tools/offering-metadata) can be utilized to create more flexible paywall experiences, target specific users with particular offerings, or make updates on the fly.  Below, we'll show some basic and advanced examples of how you can utilize offering metadata to change out the copy and button color, change the paywall description based on device language, and show a completely different paywall to customers who opened your app via a deeplink.
+
+With the right setup, you can utilize this feature to make changes dynamically without having to push out a new app release every time youâd like to change something!
+
+## Dynamic copy and display changes
+
+One basic use case for this metadata is to change copy or graphic features on your paywall. This could be as simple as changing part of your header or the appearance of a button, or more significant appearance changes like swapping out a background. In this example, weâre swapping copy and button colors to see if a variation on our default appearance will result in more subscriptions.
+
+Our control for our paywall is shown below.
+
+![Our control paywall using default values](/docs_images/offerings/offering-metadata-usecases/default-values.png)
+
+In our current offerings, we add the metadata for the new button color and our description.
+
+![Color Experiment Metadata](/docs_images/offerings/offering-metadata-usecases/metadata-color-experiment.png)
+
+In our app, we set up our code to modify the appearance of our paywall if these keys are present, or fall back to our defaults if an active offering doesnât contain these values.
+
+*Interactive content is available in the web version of this doc.*
+
+:::info Default values
+Always have default values set when utilizing offerings metadata to avoid errors and ensure a good user experience.
+:::
+
+With this update live and our metadata set in our current offering, our paywall now looks like the below.
+
+![Updated paywall using the new description and colors fed in via offering metadata](/docs_images/offerings/offering-metadata-usecases/updated-values.png)
+
+While this is a fairly simple and straightforward change, this methodology can be used to change copy or visuals on the fly, or set up visual differences that can be used in conjunction with [Experiments](/tools/experiments-v1) to see which versions are more effective! Similarly, values passed in this fashion can be used to swap otherwise hard-coded experiences within the app; if you have multiple paywalls coded into your app, you could include a value with the offering to indicate which should be used, like `paywall: 1` for one setup and `paywall: 2` for another to ensure that the experience a user is getting in-app most appropriately fits the offering they will be shown.
+
+## Localization
+
+Rather than changing copy or appearance for all users, you may instead want to change things only for some users, such as in the case of wanting to localize the copy used. This still allows you to change the copy on the fly, but do so to account for elements like language.
+
+Using the same base paywall as above, weâll add some dynamic details for users who have their primary device language set to English or Spanish, with the default on the device itself used as the fallback, should a user have set a language not supported by our metadata.
+
+In our metadata, we have set up keys and values for the languages and copy we want to use.
+
+![Language Metadata](/docs_images/offerings/offering-metadata-usecases/localization-values.png)
+
+:::info Character limit
+Keep in mind that there is a limit of 500 characters in your metadata block, so for dynamic copy like this, itâs best to keep it to shorter headlines or blurbs of dynamic text, with longer copy hard coded as needed.
+:::
+
+Within our app, we handle the logic to check the primary language set on the device, and look to see if we find a matching metadata key. Otherwise, we fall back to our default text.
+
+*Interactive content is available in the web version of this doc.*
+
+With this in place, a user whose device is set to English will see the below.
+
+![Paywall with an overridden English description](/docs_images/offerings/offering-metadata-usecases/localization-default-values.png)
+
+Meanwhile, a user whose device is set to Spanish will see this variation.
+
+![Paywall with an overridden Spanish description](/docs_images/offerings/offering-metadata-usecases/localization-updated-values.png)
+
+This used in tandem with onboard localization options can ensure that your experiments or variations on offerings can be used in different regions or localizations based on user settings.
+
+## Dynamic offering selection
+
+There may be cases where you want to offer a specific set of products to a user or display a variation on your paywall based on user location, where the user came from, or other on-device information. Setting metadata in the desired offering and determining which to use based on this data will allow you to set up an offering on the fly and get it rolled out to users based on the values youâre already looking for within the app!
+
+In this example case, weâre using a coupon code that was present on a deeplink that the user used to access the app, as you might use in a promotional email to a user who had signed up for an account but not subscribed yet. For this particular sale, we set our metadata to use the corresponding coupon code that would be passed into our app via this deeplink, along with corresponding copy.
+
+![Coupon Deeplink Metadata](/docs_images/offerings/offering-metadata-usecases/coupon-default-values.png)
+
+In the app, we set up the logic to look for any offerings that have a matching coupon code.
+
+*Interactive content is available in the web version of this doc.*
+
+When we run the app and open it with a deeplink that contains the coupon code Summer2023, instead of our current offering that contains standard priced subscriptions, theyâll see the below paywall that includes our discounted ones.
+
+![Paywall with a discounted offering set and altered description for the promotional offerings](/docs_images/offerings/offering-metadata-usecases/coupon-in-use.png)
+
+This sort of logic can be used to target users in a particular geo or audience for special offers, or could be used with any other qualifiers to ensure eligible users see the right offering set!

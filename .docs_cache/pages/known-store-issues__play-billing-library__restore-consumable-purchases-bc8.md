@@ -1,0 +1,65 @@
+---
+id: "known-store-issues/play-billing-library/restore-consumable-purchases-bc8"
+title: "[SOLVED] Restoring consumable purchases won't work in Google's Billing Client 8"
+description: "Resolved"
+permalink: "/docs/known-store-issues/play-billing-library/restore-consumable-purchases-bc8"
+slug: "docs/known-store-issues/play-billing-library/restore-consumable-purchases-bc8"
+version: "current"
+original_source: "docs/known-store-issues/play-billing-library/restore-consumable-purchases-bc8.mdx"
+---
+
+## Resolved
+
+As of [purchases-android 9.16.0](https://github.com/RevenueCat/purchases-android/releases/tag/9.16.0), this issue has been resolved for the Android SDK. We've added support for querying consumed one-time purchases using Google Play's AIDL service interface, which works around the Billing Client 8 limitation.
+
+:::info Upgrade Recommendation
+**If you're using purchases-android 9.0.0-9.15.x**, we strongly recommend upgrading to 9.16.0 or later to benefit from this fix.
+:::
+
+### Minimum Versions with Fix
+
+| RevenueCat SDK         | Minimum Version with Fix |
+| :--------------------- | :----------------------- |
+| purchases-android      | 9.16.0                   |
+| react-native-purchases | 9.6.12                   |
+| purchases-flutter      | 9.10.2                   |
+| purchases-unity        | 8.4.12                   |
+| purchases-capacitor    | 11.3.2                   |
+| purchases-kmp          | 2.2.15+17.25.0           |
+
+## Issue Description
+
+Starting on Billing Client 8, Google removed the ability to query consumed one-time purchases through Google's Billing Client library. This means that our SDKs using that version of Billing Client won't be able to restore these purchases. This affects the following versions:
+
+| RevenueCat SDK           | Version using Billing Client 8+ |
+| :----------------------- | :------------------------------ |
+| purchases-android        | 9.0.0 and up                    |
+| react-native-purchases   | 9.0.0 and up                    |
+| purchases-flutter        | 9.0.0 and up                    |
+| cordova-plugin-purchases | 7.0.0 and up                    |
+| purchases-unity          | 8.0.0 and up                    |
+| purchases-capacitor      | 11.0.0 and up                   |
+| purchases-kmp            | 2.0.0 and up                    |
+
+This situation can cause problems if **both** of the following are true:
+
+1. **Your app DOESN'T have an account system**
+   Your app relies on RevenueCatâs anonymous user system, so users can't log in to recover their purchases.
+
+2. **Your app uses (or has ever used) one-time products that were consumed**\
+   RevenueCat automatically consumes purchases for products that are configured as consumables in the RevenueCat dashboard.
+
+In this scenario, these users will have anonymous user ids that won't be easily recoverable and won't be able to recover their purchases through the Billing Client, so those purchases can not be recovered.
+
+## Workarounds
+
+We found there is no good way to recover these purchases with Billing client 8. Currently the only way to lower the number of times users will run into issues restoring purchases is by being able to recover the RevenueCat anonymous user id used in previous installations. In order to do that, we recommend that you make sure you have configured backups correctly for your apps. We have written some documentation on the topic [here](https://www.revenuecat.com/docs/getting-started/restoring-purchases#issues-restoring-one-time-purchases-with-googles-billing-client-8-when-using-anonymous-users).
+
+So right now, for everyone affected by this issue we would recommend to:
+
+- Stay in major 8 of our SDK which uses Billing client 7. We will continue to bring important fixes to the major 8 until Billing client 8 is mandatory next year.
+- Make sure backups for your app work and include the RevenueCat Shared Preferences file as mentioned in the [docs](https://www.revenuecat.com/docs/getting-started/restoring-purchases#issues-restoring-one-time-purchases-with-googles-billing-client-8-when-using-anonymous-users)
+
+For users that have a backup performed in this situation and have a device compatible with backups, they would recover the RevenueCat anonymous user id, effectively recovering all their purchases as well.
+
+Note that this solution won't fix all cases, since there are situations and devices where backups won't work. For those, the only solution right now is a manual approach by asking them for proof of purchase to obtain the Order ID of their purchase (Starting in `GPA.....`), then search the user for that orderId in the RevenueCat dashboard, which will allow you to find the user that did that purchase, then, from the RevenueCat dashboard itself, transfer those purchases to the new anonymous user the user is using. So for this manual approach you would need both the Order ID of the purchase and the anonymous user ID that the customer is using.

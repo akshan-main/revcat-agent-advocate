@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title | default("revcat-agent-advocate") }}: RevenueCat revcat-agent-advocate</title>
-    <meta name="description" content="{{ page_description | default('Tamper-evident proof-of-work agent system for RevenueCat Developer Advocacy. Every output is verifiable, every claim has receipts.') }}">
+    <meta name="description" content="{{ page_description | default('Tamper-evident proof-of-work agent system for RevenueCat Developer Advocacy. Generates cited content, runs experiments, and publishes with a hash-chained audit trail.') }}">
     <meta name="keywords" content="RevenueCat, developer advocate, agentic AI, subscription monetization, MCP server, in-app purchases">
     <meta property="og:title" content="{{ page_title | default('revcat-agent-advocate') }}: RevenueCat revcat-agent-advocate">
     <meta property="og:description" content="{{ page_description | default('Autonomous agent system that generates cited technical content, runs growth experiments, and publishes with a hash-chained audit trail.') }}">
@@ -12,7 +12,6 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ page_title | default('revcat-agent-advocate') }}: RevenueCat revcat-agent-advocate">
     <meta name="twitter:description" content="{{ page_description | default('Tamper-evident proof-of-work agent for RevenueCat Developer Advocacy.') }}">
-    <link rel="canonical" href="{{ canonical_url | default('') }}">
     <link rel="stylesheet" href="{{ base_url }}/assets/style.css">
 </head>
 <body>
@@ -23,8 +22,10 @@
             <a href="{{ base_url }}/content/">Content</a>
             <a href="{{ base_url }}/experiments/">Experiments</a>
             <a href="{{ base_url }}/feedback/">Feedback</a>
-            <a href="{{ base_url }}/roi/">Output</a>
-            <a href="{{ base_url }}/ledger/">Ledger</a>
+            <a href="{{ base_url }}/twitter-bot/">Twitter</a>
+            <a href="{{ base_url }}/issues/">Issues</a>
+            <a href="{{ base_url }}/scorecard/">Scorecard</a>
+            <a href="{{ base_url }}/research/">Research</a>
             <a href="{{ base_url }}/runbook/">Runbook</a>
         </div>
     </nav>
@@ -32,15 +33,186 @@
         {% block content %}{% endblock %}
     </main>
     <footer>
-        <p>Built by <strong>revcat-agent-advocate</strong>, a tamper-evident proof-of-work agent system</p>
-        <p>Chain status:
-            {% if chain_status.valid %}
-            <span class="badge badge-verified">Verified ({{ chain_status.total_entries }} entries)</span>
-            {% else %}
-            <span class="badge badge-broken">BROKEN at entries {{ chain_status.breaks }}</span>
-            {% endif %}
-        </p>
+        <p>Built by <strong>revcat-agent-advocate</strong></p>
         <p class="build-date">Last built: {{ build_date }}</p>
     </footer>
+
+    <!-- Revel: site chatbot that answers questions about this agent's code and functionality -->
+    <div id="revel-chat" class="revel-widget">
+        <button id="revel-toggle" class="revel-toggle" onclick="revelToggle()">
+            <span id="revel-toggle-icon">?</span>
+        </button>
+        <div id="revel-panel" class="revel-panel" style="display:none;">
+            <div class="revel-header">
+                <strong>Revel</strong>
+                <span class="revel-subtitle">Ask about this agent's code & how it works</span>
+                <button class="revel-close" onclick="revelToggle()">&times;</button>
+            </div>
+            <div id="revel-messages" class="revel-messages">
+                <div class="revel-msg revel-bot">Hi, I'm Revel. I answer questions about this agent system: its code, architecture, and outputs. To use me, you'll need your own API key (Anthropic or OpenAI). Your key stays in your browser's localStorage only and is never sent to our server, only directly to the AI provider's API. I use Claude Haiku 4.5 (Anthropic) or GPT-4o-mini (OpenAI).</div>
+            </div>
+            <div class="revel-input-row">
+                <input type="text" id="revel-input" placeholder="How does the hash chain work?" onkeydown="if(event.key==='Enter')revelSend()">
+                <button onclick="revelSend()">Send</button>
+            </div>
+            <div class="revel-key-info">
+                <small id="revel-key-status"></small>
+                <button class="revel-key-btn" onclick="revelChangeKey()">Change key</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    var REVEL_KEY_STORE = 'revel_api_key';
+    var REVEL_PROVIDER_STORE = 'revel_provider';
+    var REVEL_HISTORY = [];
+    var REVEL_SYSTEM = {{ revel_system_prompt | tojson }};
+    var REVEL_SEARCH_API = {{ search_api_url | default('') | tojson }};
+
+    function revelToggle() {
+        var p = document.getElementById('revel-panel');
+        var i = document.getElementById('revel-toggle-icon');
+        if (p.style.display === 'none') {
+            p.style.display = 'flex'; i.textContent = '\u00d7';
+            document.getElementById('revel-input').focus();
+            revelUpdateKeyStatus();
+        } else { p.style.display = 'none'; i.textContent = '?'; }
+    }
+    function revelAddMsg(text, isBot) {
+        var m = document.getElementById('revel-messages'), d = document.createElement('div');
+        d.className = 'revel-msg ' + (isBot ? 'revel-bot' : 'revel-user');
+        d.textContent = text; m.appendChild(d); m.scrollTop = m.scrollHeight;
+        return d;
+    }
+    function revelUpdateKeyStatus() {
+        var el = document.getElementById('revel-key-status');
+        var k = localStorage.getItem(REVEL_KEY_STORE);
+        var p = localStorage.getItem(REVEL_PROVIDER_STORE) || 'none';
+        if (k) {
+            var model = p === 'openai' ? 'GPT-4o-mini' : 'Claude Haiku 4.5';
+            el.textContent = 'Using ' + model + ' (key: ...' + k.slice(-4) + ')';
+        } else {
+            el.textContent = 'No API key set';
+        }
+    }
+    function revelChangeKey() {
+        localStorage.removeItem(REVEL_KEY_STORE);
+        localStorage.removeItem(REVEL_PROVIDER_STORE);
+        revelGetKey();
+        revelUpdateKeyStatus();
+    }
+    function revelGetKey() {
+        var k = localStorage.getItem(REVEL_KEY_STORE);
+        if (k) return k;
+        k = prompt('Enter your API key to use Revel.\n\nSupported:\n• Anthropic key (starts with sk-ant-)\n• OpenAI key (starts with sk-)\n\nYour key is stored ONLY in your browser\'s localStorage.\nIt is NEVER sent to our server, only directly to the AI provider\'s API.');
+        if (!k) return null;
+        if (k.startsWith('sk-ant-')) {
+            localStorage.setItem(REVEL_KEY_STORE, k);
+            localStorage.setItem(REVEL_PROVIDER_STORE, 'anthropic');
+            return k;
+        } else if (k.startsWith('sk-')) {
+            localStorage.setItem(REVEL_KEY_STORE, k);
+            localStorage.setItem(REVEL_PROVIDER_STORE, 'openai');
+            return k;
+        }
+        alert('Key must start with sk-ant- (Anthropic) or sk- (OpenAI)');
+        return null;
+    }
+
+    async function revelSearchDocs(query) {
+        if (!REVEL_SEARCH_API) return '';
+        try {
+            var resp = await fetch(REVEL_SEARCH_API + '/api/search?q=' + encodeURIComponent(query) + '&top_k=5', {
+                signal: AbortSignal.timeout(8000)
+            });
+            if (!resp.ok) return '';
+            var data = await resp.json();
+            if (!data.results || data.results.length === 0) return '';
+            var lines = ["\n\nRELEVANT DOCS (live search):\n"];
+            for (var i = 0; i < data.results.length; i++) {
+                var r = data.results[i];
+                lines.push("- [" + r.title + "](" + r.url + "): " + (r.snippets || []).join(" "));
+            }
+            return lines.join("\n");
+        } catch(e) { return ''; }
+    }
+
+    async function revelSend() {
+        var input = document.getElementById('revel-input'), q = input.value.trim();
+        if (!q) return;
+        input.value = '';
+        revelAddMsg(q, false);
+
+        var key = revelGetKey();
+        if (!key) {
+            revelAddMsg("I need an API key to answer. Click 'Change key' to set one.", true);
+            return;
+        }
+        revelUpdateKeyStatus();
+
+        var thinking = revelAddMsg("Searching docs...", true);
+        REVEL_HISTORY.push({role: 'user', content: q});
+        if (REVEL_HISTORY.length > 6) REVEL_HISTORY = REVEL_HISTORY.slice(-6);
+
+        // Search docs via hybrid RAG API before calling LLM
+        var docContext = await revelSearchDocs(q);
+        var systemWithDocs = REVEL_SYSTEM + docContext;
+        thinking.textContent = "Thinking...";
+
+        var provider = localStorage.getItem(REVEL_PROVIDER_STORE) || 'anthropic';
+
+        try {
+            var answer;
+            if (provider === 'openai') {
+                var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        max_tokens: 400,
+                        messages: [{role: 'system', content: systemWithDocs}].concat(REVEL_HISTORY)
+                    })
+                });
+                if (!resp.ok) {
+                    var err = await resp.json().catch(function() { return {}; });
+                    if (resp.status === 401) { localStorage.removeItem(REVEL_KEY_STORE); localStorage.removeItem(REVEL_PROVIDER_STORE); }
+                    thinking.textContent = "API error: " + (err.error?.message || resp.status);
+                    return;
+                }
+                var data = await resp.json();
+                answer = data.choices[0].message.content;
+            } else {
+                var resp = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': key,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-haiku-4-5-20251001',
+                        max_tokens: 400,
+                        system: systemWithDocs,
+                        tools: [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
+                        messages: REVEL_HISTORY
+                    })
+                });
+                if (!resp.ok) {
+                    var err = await resp.json().catch(function() { return {}; });
+                    if (resp.status === 401) { localStorage.removeItem(REVEL_KEY_STORE); localStorage.removeItem(REVEL_PROVIDER_STORE); }
+                    thinking.textContent = "API error: " + (err.error?.message || resp.status);
+                    return;
+                }
+                var data = await resp.json();
+                answer = data.content.filter(function(b) { return b.type === 'text'; }).map(function(b) { return b.text; }).join('\n');
+            }
+            thinking.textContent = answer;
+            REVEL_HISTORY.push({role: 'assistant', content: answer});
+        } catch(e) {
+            thinking.textContent = "Connection error. Check your network and try again.";
+        }
+    }
+    </script>
 </body>
 </html>

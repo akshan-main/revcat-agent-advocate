@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Growth Experiments</h1>
+<p class="page-intro">
+    Each experiment starts with a hypothesis, runs autonomously, and concludes with measured results.
+    The agent designed and executed these, including the "agentic" experiment where it autonomously
+    researched the landscape, identified an opportunity, and created content to fill the gap.
+</p>
 
 {% if experiments %}
 <div class="experiment-grid">
@@ -12,20 +17,85 @@
         </div>
         <div class="experiment-body">
             <p><strong>Hypothesis:</strong> {{ exp.hypothesis }}</p>
-            <p><strong>Metric:</strong> {{ exp.metric }}</p>
-            <p><strong>Channel:</strong> {{ exp.channel }}</p>
-            <p><strong>Tactic:</strong> {{ exp.tactic }}</p>
-            {% if exp.outputs_json %}
-            <details>
-                <summary>Outputs</summary>
-                <pre><code>{{ json.dumps(exp.outputs_json, indent=2) if exp.outputs_json is mapping else exp.outputs_json }}</code></pre>
+
+            <div class="exp-meta-row">
+                <span><strong>Metric:</strong> {{ exp.metric }}</span>
+                <span><strong>Channel:</strong> {{ exp.channel }}</span>
+            </div>
+
+            {% if exp.tactic %}
+            <details class="exp-tactic">
+                <summary><strong>Tactic</strong></summary>
+                <p>{{ exp.tactic }}</p>
             </details>
             {% endif %}
-            {% if exp.results_json %}
-            <details>
-                <summary>Results</summary>
-                <pre><code>{{ json.dumps(exp.results_json, indent=2) if exp.results_json is mapping else exp.results_json }}</code></pre>
-            </details>
+
+            {% if exp.outputs_json and exp.outputs_json is mapping %}
+                {# Show artifacts/links from output #}
+                {% if exp.outputs_json.pages_generated is defined %}
+                <div class="exp-result-block">
+                    <strong>Output:</strong> {{ exp.outputs_json.pages_generated }} pages generated
+                    {% if exp.outputs_json.get('slugs') %}
+                    <ul>
+                        {% for slug in exp.outputs_json.get('slugs', []) %}
+                        <li><a href="{{ base_url }}/content/{{ slug }}/">{{ slug_titles.get(slug, slug | replace('-', ' ') | title) }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% elif exp.outputs_json.posts_published is defined %}
+                <div class="exp-result-block">
+                    <strong>Output:</strong> {{ exp.outputs_json.posts_published }} posts published
+                    {% if exp.outputs_json.get('slugs') %}
+                    <ul>
+                        {% for slug in exp.outputs_json.get('slugs', []) %}
+                        <li><a href="{{ base_url }}/content/{{ slug }}/">{{ slug_titles.get(slug, slug | replace('-', ' ') | title) }}</a></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% elif exp.outputs_json.artifacts is defined %}
+                <div class="exp-result-block">
+                    <strong>Artifacts:</strong>
+                    <ul>
+                        {% for slug in exp.outputs_json.artifacts %}
+                        <li><a href="{{ base_url }}/content/{{ slug }}/">{{ slug_titles.get(slug, slug | replace('-', ' ') | title) }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {# Show findings if present (agentic experiments) #}
+                {% if exp.outputs_json.findings is defined %}
+                <details class="exp-findings">
+                    <summary><strong>Findings</strong></summary>
+                    <div class="findings-content">{{ exp.outputs_json.findings | nl2br }}</div>
+                </details>
+                {% endif %}
+            {% endif %}
+
+            {% if exp.results_json and exp.results_json is mapping %}
+                {# Show only non-redundant result fields #}
+                {% set skip_keys = ['hypothesis', 'tactic'] %}
+                {% set result_items = [] %}
+                {% for key, value in exp.results_json.items() %}
+                    {% if key not in skip_keys %}
+                        {% if result_items.append({'key': key, 'value': value}) %}{% endif %}
+                    {% endif %}
+                {% endfor %}
+                {% if result_items %}
+                <div class="exp-result-block">
+                    <strong>Results:</strong>
+                    <table class="exp-results-table">
+                        {% for item in result_items %}
+                        <tr>
+                            <td>{{ item.key | replace('_', ' ') | title }}</td>
+                            <td>{{ item.value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% endif %}
             {% endif %}
         </div>
         <div class="experiment-footer">

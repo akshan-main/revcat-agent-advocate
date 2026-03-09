@@ -1,0 +1,29 @@
+---
+id: "revenuecat-support/support-first-steps"
+title: "Support First Steps"
+description: "Our documentation (you're already here!) answers a lot of questions about Charts, the dashboard, Customer Lists, and SDK setup. Try looking through here first, as well as our community where other developers may have already asked your question."
+permalink: "/docs/revenuecat-support/support-first-steps"
+slug: "support-first-steps"
+version: "current"
+original_source: "docs/revenuecat-support/support-first-steps.mdx"
+---
+
+Our documentation (you're already here!) answers a lot of questions about Charts, the dashboard, Customer Lists, and SDK setup. Try looking through here first, as well as our community where other developers may have already asked your question.
+
+*Interactive content is available in the web version of this doc.*
+
+*Interactive content is available in the web version of this doc.*
+
+## Common Issues
+
+For troubleshooting common issues, view our troubleshooting guide [here](/revenuecat-support/general-troubleshooting)!
+
+## Contacting Support
+
+When contacting support, it's extremely important that you provide enough information for the team to help out. This includes:
+
+1. **App User IDs.** If you don't provide example [user IDs](/customers/user-ids), but you're asking about a specific user, we aren't going to be able to be of much help. Please provide this to reduce the need for us to ask (and we *will* ask! ð)
+2. **Debug logs.** If you have an SDK-related issue, it's critical we have the [logs](/test-and-launch/debugging) that our SDK prints **from the start of your app, through the end of the issue you're experiencing**.
+3. **Be descriptive.** We need you to be as descriptive as possible about the issue you're facing. We receive a lot of questions, and if we don't have enough information we're going to be requesting more. This causes unnecessary back and forth, and delays the answer you're looking for.
+
+Finally, be sure to check the [status page](https://status.revenuecat.com) before creating a ticket if you're concerned about potential downtime.

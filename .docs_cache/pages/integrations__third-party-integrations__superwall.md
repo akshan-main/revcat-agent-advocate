@@ -1,0 +1,86 @@
+---
+id: "integrations/third-party-integrations/superwall"
+title: "Superwall"
+description: "Superwall can be a helpful integration for optimizing pricing and understanding which paywalls are producing customers with the highest LTV. RevenueCat can automatically send billing, subscription, and revenue metrics to Superwall, a paywall SDK that lets you remotely update every aspect of your paywall."
+permalink: "/docs/integrations/third-party-integrations/superwall"
+slug: "superwall"
+version: "current"
+original_source: "docs/integrations/third-party-integrations/superwall.mdx"
+---
+
+Superwall can be a helpful integration for optimizing pricing and understanding which paywalls are producing customers with the highest LTV. RevenueCat can automatically send billing, subscription, and revenue metrics to Superwall, a paywall SDK that lets you remotely update every aspect of your paywall.
+
+With our Superwall integration, you can:
+
+- Create paywalls on-the-fly without shipping app updates
+- Determine which paywalls have high trial conversion rates
+- Find which product & paywall combinations have the highest LTVs
+- Offer discounts to users who churn
+
+### Integration at a Glance
+
+| Includes Revenue | Supports Negative Revenue | Sends Sandbox Events | Includes Customer Attributes | Sends Transfer Events | Optional Event Types |
+| :--------------: | :-----------------------: | :------------------: | :--------------------------: | :-------------------: | :------------------: |
+|        â        |            â             |          â          |              â              |          â           |          â          |
+
+## Events
+
+The Superwall integration tracks the following events:
+
+| Event Type                | Default Event Name      | Description                                                                                                                                                                                                                                                                                                                                 | App Store | Play Store | Amazon | Stripe | Promo |
+| ------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- | ------ | ------ | ----- |
+| Initial Purchase          | `INITIAL_PURCHASE`      | A new subscription has been purchased.                                                                                                                                                                                                                                                                                                      | â        | â         | â     | â     | â    |
+| Renewal                   | `RENEWAL`               | An existing subscription has been renewed or a lapsed user has resubscribed.                                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Cancellation              | `CANCELLATION`          | A subscription or non-renewing purchase has been cancelled. See [cancellation reasons](/integrations/webhooks/event-types-and-fields#cancellation-and-expiration-reasons) for more details.                                                                                                                                                 | â        | â         | â     | â     | â    |
+| Uncancellation            | `UNCANCELLATION`        | A non-expired cancelled subscription has been re-enabled.                                                                                                                                                                                                                                                                                   | â        | â         | â     | â     | â    |
+| Non Subscription Purchase | `NON_RENEWING_PURCHASE` | A customer has made a purchase that will not auto-renew.                                                                                                                                                                                                                                                                                    | â        | â         | â     | â     | â    |
+| Subscription Paused       | `SUBSCRIPTION_PAUSED`   | A subscription has been paused.                                                                                                                                                                                                                                                                                                             | â        | â         | â     | â     | â    |
+| Expiration                | `EXPIRATION`            | A subscription has expired and access should be removed. If you have [Platform Server Notifications](/platform-resources/server-notifications) configured, this event will occur as soon as we are notified (within seconds to minutes) of the expiration. If you do not have notifications configured, delays may be approximately 1 hour. | â        | â         | â     | â     | â    |
+| Billing Issue             | `BILLING_ISSUE`         | There has been a problem trying to charge the subscriber. This does not mean the subscription has expired. Can be safely ignored if listening to CANCELLATION event + cancel\_reason=BILLING\_ERROR.                                                                                                                                          | â        | â         | â     | â     | â    |
+| Product Change            | `PRODUCT_CHANGE`        | A subscriber has changed the product of their subscription. This does not mean the new subscription is in effect immediately. See [Managing Subscriptions](/subscription-guidance/managing-subscriptions) for more details on updates, downgrades, and crossgrades.                                                                         | â        | â         | â     | â     | â    |
+
+## Setup
+
+### 1. Set Superwall User Identity
+
+In order to associate RevenueCat subscription data with Superwall paywall events, the RevenueCat app user ID must match the Superwall app user ID. You can read more about how Superwall handles user IDâs in their documentation [here](https://docs.superwall.me/docs/user-management). You can set up a custom app user ID in RevenueCat by following the instructions in our [Identifying Users](/customers/user-ids#provided-app-user-id) documentation.
+
+### 2. Send RevenueCat events to Superwall
+
+After you've set up the Purchases SDK and Superwall SDK to have the same user identity, you can "turn on" the integration from the RevenueCat dashboard.
+
+1. Navigate to your project settings in the RevenueCat dashboard and choose 'Superwall' from the Integrations menu
+
+![Integration setup](/docs_images/integrations/setup-integrations.png)
+
+2. Add your Superwall Token (found in Superwall settings > Revenue Tracking, then configure the RevenueCat option)
+
+## Testing the Superwall integration
+
+### Make a sandbox purchase with a new user
+
+Simulate a new user installing your app, and go through your app flow to complete the sandbox purchase.
+
+### Check that the Superwall event delivered successfully
+
+While still on the Customer View, select the purchase event in the [Customer History](/dashboard-and-metrics/customer-profile) page and make sure that the Superwall integration event exists and was delivered successfully.
+
+![](/docs_images/integrations/third-party-integrations/superwall/successful-event.png)
+
+### Check Superwall dashboard for the delivered event
+
+Navigate to your Superwall dashboard > Users and search for the created app user ID. You will see events RevenueCat has dispatched to the Superwall under 'Recent Events'.
+
+![](/docs_images/integrations/third-party-integrations/superwall/superwall-recent-events.png)
+
+## Sample Events
+
+Below are sample JSONs that are delivered to Superwall for each event type.
+
+*Interactive content is available in the web version of this doc.*
+
+*Interactive content is available in the web version of this doc.*
+
+:::success You've done it!
+You should start seeing subscription data from RevenueCat appear in Superwall.
+:::

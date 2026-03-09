@@ -3,7 +3,7 @@ import pytest
 from advocate.config import Config
 from advocate.feedback.collector import (
     create_feedback, save_feedback, list_feedback,
-    _generate_placeholder_feedback,
+    generate_feedback_from_docs,
 )
 from advocate.feedback.exporter import export_to_markdown, export_to_github_issue, export_batch
 from advocate.models import ProductFeedback, Severity, FeedbackArea
@@ -100,10 +100,10 @@ def test_export_to_github_issue_no_github():
     assert result is None  # No github config
 
 
-def test_placeholder_feedback():
-    """Without LLM, no feedback is generated (honest about capabilities)."""
-    items = _generate_placeholder_feedback(3)
-    assert len(items) == 0
+def test_feedback_requires_api_key():
+    """Without API key, feedback generation raises RuntimeError."""
+    with pytest.raises(RuntimeError, match="Anthropic API key required"):
+        generate_feedback_from_docs(None, None, None, count=3)
 
 
 def test_export_batch(db_conn, tmp_path):

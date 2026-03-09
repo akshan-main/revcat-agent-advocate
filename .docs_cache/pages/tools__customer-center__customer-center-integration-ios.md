@@ -1,0 +1,104 @@
+---
+id: "tools/customer-center/customer-center-integration-ios"
+title: "Integrating Customer Center on iOS"
+description: "Installation"
+permalink: "/docs/tools/customer-center/customer-center-integration-ios"
+slug: "customer-center-integration-ios"
+version: "current"
+original_source: "docs/tools/customer-center/customer-center-integration-ios.mdx"
+---
+
+## Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-ios.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-ios/releases)
+
+Before integrating the Customer Center in iOS, you need to add the RevenueCatUI SDK (Interactive content is available in the web version of this doc.) or higher to your app.
+
+### Using SPM
+
+#### If you already have `RevenueCat` in your project:
+
+1. Open your project settings and select "Package Dependencies":
+
+![Change version](https://github.com/RevenueCat/purchases-ios/assets/685609/d317fd33-8270-4d9b-9b38-8f5f14342b04)
+
+2. Double-click and make sure version is at least (Interactive content is available in the web version of this doc.):
+
+![Configure version](https://github.com/RevenueCat/purchases-ios/assets/685609/f537a1e1-a1ab-4e6f-986c-05abdcf1dd9f)
+
+3. Open your target settings and find "Frameworks, Libraries, and Embedded Content":
+
+![Find frameworks in your target](https://github.com/RevenueCat/purchases-ios/assets/685609/af078e9a-4b98-42c6-8ca7-6f79aebdf3e0)
+
+4. Add `RevenueCatUI`:
+
+![Add RevenueCatUI dependency](https://github.com/RevenueCat/purchases-ios/assets/685609/c2a3498c-b80d-405c-bdf6-75de927ea58e)
+
+#### First time integrating the RevenueCat SDK:
+
+1. Click File -> Add Packages...
+
+2. Search for `git@github.com:RevenueCat/purchases-ios.git` and make sure version is at least (Interactive content is available in the web version of this doc.):
+
+![Adding purchases-ios dependency](https://github.com/RevenueCat/purchases-ios/assets/685609/18291043-5710-4944-ba12-7d6d83bde240)
+
+3. Add `RevenueCat` and `RevenueCatUI` SPM dependency to your project:
+
+![Add paywall](/docs_images/customer-center/9140485-Screenshot_2023-08-04_at_12.08.07_78343500e565bc1fd0fceaac72486876.png)
+
+### Using CocoaPods
+
+Add the following to your `Podfile`:
+
+```ruby
+pod 'RevenueCat'
+pod 'RevenueCatUI'
+```
+
+## Integration
+
+The CustomerCenterView can be integrated in a few different ways depending on how you want to present it within your app.
+
+The simplest way to present the CustomerCenterView is using a modal sheet:
+
+*Interactive content is available in the web version of this doc.*
+
+If you prefer a more declarative and reusable approach, you can use the provided view modifier:
+
+*Interactive content is available in the web version of this doc.*
+
+For apps already using NavigationStack or NavigationView, CustomerCenterView can be pushed onto your stack:
+
+*Interactive content is available in the web version of this doc.*
+
+### Listening to events
+
+We've added a way to listen to events that occur within the `CustomerCenterView`:
+
+*Interactive content is available in the web version of this doc.*
+
+### Custom Actions
+
+:::info Custom Actions support
+The minimum supported version is iOS SDK version 5.34.0.
+:::
+
+Custom Actions allow you to add your own custom management options to the Customer Center. When a customer taps on a custom action, your app receives a callback with the custom action identifier, allowing you to execute your own code.
+
+To handle custom actions, use the `.onCustomerCenterCustomActionSelected` modifier:
+
+*Interactive content is available in the web version of this doc.*
+
+Custom actions are configured in the RevenueCat dashboard under Customer Center settings, where you can:
+
+- Set a custom identifier for the action
+- Configure the display text and localization
+- Position the action within the management options
+
+## Setup promotional offers
+
+Promotional Offers allow developers to apply custom pricing and trials to new customers and to existing and lapsed subscriptions. Unique promotional offers can be assigned to different paths and survey responses in the Customer Center, but first they must be set up in App Store Connect.
+
+The Customer Center will automatically show offers based on specific user actions. By default we have defined it for cancellations but it can be modified to any of the defined paths. Refer to [configuring App Store Connect promotional offers](/tools/customer-center/customer-center-promo-offers-apple) for detailed instructions.
+
+Learn more about configuring the Customer Center in the [configuration guide](/tools/customer-center/customer-center-configuration).

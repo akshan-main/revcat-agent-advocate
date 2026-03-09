@@ -1,4 +1,4 @@
-"""Metrics Sink: closed-loop impact measurement for every action.
+"""Metrics Sink: closed-loop impact measurement for agent actions.
 
 The difference between "I posted content" and "I drove growth" is measurement.
 This module tracks real outcomes tied to agent actions:
@@ -80,7 +80,8 @@ def measure_github_engagement(config: Config, since_days: int = 7) -> list[Metri
 
     for repo in repos:
         try:
-            # Issues we commented on: check for reactions/replies
+            # Recent repo comment activity (all authors — agent-specific
+            # filtering requires a known GitHub username, not available here)
             resp = session.get(
                 f"https://api.github.com/repos/{repo}/issues/comments",
                 params={"sort": "created", "direction": "desc", "per_page": 30},
@@ -93,7 +94,7 @@ def measure_github_engagement(config: Config, since_days: int = 7) -> list[Metri
                     if upvotes > 0:
                         events.append(MetricEvent(
                             source="github",
-                            metric_name="comment_upvotes",
+                            metric_name="repo_comment_upvotes",
                             value=upvotes,
                             dimensions={"repo": repo, "comment_id": comment["id"]},
                             timestamp=comment.get("created_at", ""),
@@ -190,8 +191,8 @@ def measure_site_analytics(config: Config) -> list[MetricEvent]:
     API: https://www.goatcounter.com/help/api
     """
     events = []
-    goatcounter_token = getattr(config, 'goatcounter_token', None)
-    goatcounter_site = getattr(config, 'goatcounter_site', None)
+    goatcounter_token = config.goatcounter_token
+    goatcounter_site = config.goatcounter_site
 
     if not goatcounter_token or not goatcounter_site:
         return events
@@ -357,25 +358,35 @@ def generate_impact_report(db_conn, config: Config, experiment_id: int | None = 
         where_clause = ""
         params = []
 
+    # Snapshot metrics use latest value; cumulative metrics use SUM
+    SNAPSHOT_METRICS = {"total_pageviews", "total_unique_visitors", "repo_stars", "repo_forks"}
+
     rows = db_conn.execute(
-        f"SELECT metric_name, SUM(value) as total, COUNT(*) as count "
+        f"SELECT metric_name, SUM(value) as total, COUNT(*) as count, MAX(value) as latest "
         f"FROM metric_events {where_clause} GROUP BY metric_name",
         params,
     ).fetchall()
 
-    metrics = {row["metric_name"]: row["total"] for row in rows}
+    metrics = {}
+    for row in rows:
+        name = row["metric_name"]
+        if name in SNAPSHOT_METRICS:
+            metrics[name] = row["latest"]
+        else:
+            metrics[name] = row["total"]
 
     # Count actions
     actions = 0
     try:
-        actions = db_conn.execute("SELECT COUNT(*) FROM run_log").fetchone()[0]
+        row = db_conn.execute("SELECT COUNT(*) as cnt FROM run_log").fetchone()
+        actions = row["cnt"] if isinstance(row, dict) else row[0]
     except Exception:
         pass
 
     # Generate learnings
     learnings = []
-    if metrics.get("comment_upvotes", 0) > 0:
-        learnings.append(f"GitHub comments received {metrics['comment_upvotes']:.0f} upvotes; community finds responses valuable")
+    if metrics.get("repo_comment_upvotes", 0) > 0:
+        learnings.append(f"GitHub comments received {metrics['repo_comment_upvotes']:.0f} upvotes; community finds responses valuable")
     if metrics.get("repo_views", 0) > 0:
         learnings.append(f"Repository received {metrics['repo_views']:.0f} views; content is driving discovery")
     if metrics.get("total_pageviews", 0) > 0:
@@ -385,7 +396,7 @@ def generate_impact_report(db_conn, config: Config, experiment_id: int | None = 
 
     # Next actions
     next_actions = []
-    if metrics.get("comment_upvotes", 0) < 5:
+    if metrics.get("repo_comment_upvotes", 0) < 5:
         next_actions.append("Increase GitHub response quality; target 5+ upvoted replies per week")
     if not metrics.get("repo_views"):
         next_actions.append("Configure GitHub repo traffic tracking (requires push access)")

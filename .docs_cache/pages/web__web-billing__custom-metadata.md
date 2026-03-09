@@ -1,0 +1,60 @@
+---
+id: "web/web-billing/custom-metadata"
+title: "Custom Metadata"
+description: "Web Billing supports custom metadata that you can include when making purchases. The metadata will be propagated to webhook events and the Stripe customer object to enable its use in other systems, such as marketing or attribution tools."
+permalink: "/docs/web/web-billing/custom-metadata"
+slug: "custom-metadata"
+version: "current"
+original_source: "docs/web/web-billing/custom-metadata.mdx"
+---
+
+Web Billing supports custom metadata that you can include when making purchases. The metadata will be propagated to webhook events and the Stripe customer object to enable its use in other systems, such as marketing or attribution tools.
+
+## Metadata support
+
+If you're using the Web SDK:
+
+- Custom metadata (key-value pairs) with `string`, `number`, `boolean` or `null` values can be included with the purchase call.
+- Any [UTM parameters](https://en.wikipedia.org/wiki/UTM_parameters) present in the URL are collected automatically.
+
+If you're using Web Purchase Links:
+
+- [UTM parameters](https://en.wikipedia.org/wiki/UTM_parameters) that are present in the URL are collected automatically.
+
+### Supported UTM parameters
+
+Any of the following parameters' values will be stored if they're present in the URL where the purchase is initialized:
+
+- `utm_source`
+- `utm_medium`
+- `utm_campaign`
+- `utm_term`
+- `utm_content`
+
+Here's an example Web Purchase Link URL, including all UTM parameters: `https://pay.rev.cat/wlzoigfbnthvjcaw/?utm_source=google&utm_medium=ppc&utm_campaign=black_friday&utm_term=cat+food&utm_content=emailcta`
+
+## How to send custom metadata when invoking purchase() in the Web SDK:
+
+When invoking `purchase()`, you can provide a `metadata` object using the `PurchaseParams` interface:
+
+*Interactive content is available in the web version of this doc.*
+
+The `metadata` property accepts a key-value object with any custom data you want to send along with the purchase.
+The accepted values are `string`, `number`, `boolean` and `null`.
+
+`purchases-js` will also automatically collect any `utm` parameters in the URL and send it as metadata when invoking `purchase()`.
+
+## How to use the collected metadata
+
+After receiving purchases with metadata included, it can be accessed in the `INITIAL_PURCHASE` and `NON_RENEWING_PURCHASE` [webhook events](/integrations/webhooks/event-types-and-fields). The same values are also sent to the [Stripe Customer object metadata](https://docs.stripe.com/api/customers/object#customer_object-metadata).
+
+You can see how to use the webhook integration to trigger automations and workflows [here](/integrations/webhooks).
+
+![](/docs_images/web/web-billing/metadata-in-initial-purchase-event.png)
+
+## Opt out of the automatic collection of UTM parameters
+
+You can opt-out of the automatic collection of UTM parameters in the Web SDK by setting the `autoCollectUTMAsMetadata` flag to `false` in the `configure` method.
+Here's an example:
+
+*Interactive content is available in the web version of this doc.*

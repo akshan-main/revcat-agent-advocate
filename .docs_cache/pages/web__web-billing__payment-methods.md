@@ -1,0 +1,51 @@
+---
+id: "web/web-billing/payment-methods"
+title: "Payment Methods"
+description: "Web Billing (formerly RevenueCat Billing) currently supports the following payment methods for charging subscription and one-time purchases:"
+permalink: "/docs/web/web-billing/payment-methods"
+slug: "payment-methods"
+version: "current"
+original_source: "docs/web/web-billing/payment-methods.mdx"
+---
+
+Web Billing (formerly RevenueCat Billing) currently supports the following payment methods for charging subscription and one-time purchases:
+
+- **Credit card:** Enabled by default, supports for all major card networks, and 3D Secure authentication (via Stripe)
+- **Apple Pay:** A low-friction wallet payment method for customers with stored credit cards on iOS or macOS devices (via Stripe)
+- **Google Pay:** A low-friction wallet payment method with the ability to use stored credit cards from Google Play, YouTube, Chrome and Android (via Stripe).
+
+:::info RevenuCat Billing manages payment methods
+In general, Web Billing manages the payment methods that are shown to customers. Other than the additional required configuration below, you do not need to manage or enable payment methods in your Stripe account.
+:::
+
+## Configuring credit cards
+
+There is nothing you need to do to configure to accept credit card payments, which are enabled by default.
+
+## Configuring Apple Pay & Google Pay
+
+### How to configure Apple Pay & Google Pay
+
+To use Apple Pay and Google Pay, you need to register the domain where the payment takes place in the Stripe dashboard:
+
+- If you're taking payments through [Web Purchase Links](/web/web-billing/web-purchase-links/), you should add the `pay.rev.cat` domain.
+- If you're initiating purchases with the [Web SDK](/web/web-billing/overview), you should add your own domain where payments take place.
+
+### How to add payment domains
+
+:::info Payment domains and testing
+Payment domains added in Stripe Test mode can be used in Sandbox, using real cards (no charges will be made). You need to add domains in Stripe Live mode to allow production purchases on those domains. If your test environment uses a different subdomain, you'll need to add that (full domain with subdomain) as an additional payment domain in Stripe to be able to test payments.
+:::
+
+1. Go to the [Payment Method Domains](https://dashboard.stripe.com/settings/payment_method_domains) page in your Stripe Dashboard.
+2. Click "Add a new domain", enter `pay.rev.cat`, and click "Save".
+3. (Web SDK only) Click "Add a new domain", and enter the domain where purchases take place on your website, including the subdomain. Click "Save".
+
+You should see the added domains in the list next to a green "Enabled" tag.
+
+Once enabled, Apple Pay and Google Pay will be displayed next to the credit card payment method in the checkout form, when available to the customer. There are no further steps required to handle payments with these methods.
+
+![Apple Pay in checkout](/docs_images/web/web-billing/web-billing-apple-pay.png)
+
+:::info Troubleshooting
+In order to use Apple Pay and Google Pay make sure you are following Stripe's requirements such as using a [supported browser](https://docs.stripe.com/elements/express-checkout-element#supported-browsers) and their testing practices for both [Apple Pay](https://docs.stripe.com/apple-pay?platform=web#test-apple-pay) and [Google Pay](https://docs.stripe.com/google-pay?platform=web#test-google-pay).

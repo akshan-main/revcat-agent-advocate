@@ -1,0 +1,102 @@
+---
+id: "dashboard-and-metrics/taxes-and-commissions"
+title: "Taxes and Commissions"
+description: "RevenueCat can optionally report revenue after store commissions, or after taxes and commissions through various features like integrations, webhooks, and our Revenue chart; but there's some context you should be aware of when using RevenueCat's tax estimation to see your net revenue from a transaction."
+permalink: "/docs/dashboard-and-metrics/taxes-and-commissions"
+slug: "taxes-and-commissions"
+version: "current"
+original_source: "docs/dashboard-and-metrics/taxes-and-commissions.md"
+---
+
+RevenueCat can optionally report revenue after store commissions, or after taxes and commissions through various features like integrations, webhooks, and our Revenue chart; but there's some context you should be aware of when using RevenueCat's tax estimation to see your net revenue from a transaction.
+
+## How we estimate commissions
+
+The factors we take into account to accurately estimate commissions vary by store, as each store has its own rates and policies for determining the percentage they take on a given transaction.
+
+**App Store**
+
+To determine the commission of a given transaction, we look at both the original purchase date of the transaction and your presence in the App Store Small Business Program to determine whether a 15% or 30% commission will be charged.
+
+For more information on the App Store Small Business Program, [click here](/platform-resources/apple-platform-resources/app-store-small-business-program).
+
+**Google Play Store**
+
+To determine the commission of a given transaction, we look at both the original purchase date of the transaction and the year-to-date sales for your application to determine the commission rate to apply, due to Googleâs reduced service fee of 15% on the first $1M in sales for a given app in a calendar year.
+
+For more information on Googleâs reduced service fee for the first $1M in sales, [click here](/platform-resources/google-platform-resources/15-reduced-service-fee).
+
+**Amazon Appstore**
+
+We apply a 30% store commission to all transactions from the Amazon Appstore.
+
+**Stripe**
+
+Stripeâs API provides the necessary details to calculate the various fees which might be charged in a transaction, and we sum these fees to calculate the commission charged by Stripe for a given transaction.
+
+## How we estimate taxes
+
+### Transaction country identification
+
+In order to calculate an accurate tax rate for each store, we need to know the country that the transaction occurs in and the applicable taxes for the store in that country.
+
+In some cases (for example, USD or EUR transactions on the Google Play Store), we may have to estimate the country based on the customer's IP address, but in the vast majority of the cases the store country of a transaction is deterministic and known by RevenueCat, especially for transactions occurring in 2024 or later.
+
+:::info
+We do not take your location as a developer into account when estimating taxes to be withheld, though some stores & countries may withhold differently on transactions in the country you're operating in.
+:::
+
+### Calculating taxes for the mobile stores
+
+The App Store, Google Play Store, and Amazon Appstore stores appear to charge both [Value-Added Tax](https://taxfoundation.org/tax-basics/value-added-tax-vat/#:~:text=A%20Value%2DAdded%20Tax%20\(VAT\)%20is%20a%20consumption%20tax,a%20tax%20on%20final%20consumption.) (VAT) and the [digital services taxes](https://taxfoundation.org/digital-tax-europe-2020/) (DST) that have been put in place by several countries. However, they do not apply identical tax rates for each country, so we:
+
+1. Find the proceeds quoted by the store for a given price in a given country
+2. Use that to determine the tax rate being charged to yield proceeds
+
+To then calculate the portion of a given transaction that was deducted for taxes, we:
+
+1. Use the found tax rate to determine what was deducted from the customer price due to taxes: `price / (1 + [tax rate]) = [amount deducted for taxes]`
+2. Divide the amount deducted due to taxes from the customer price to get the `tax_percentage` that's provided in events, used to calculate Charts, etc: `[amount deducted for taxes] / price = tax_percentage`
+
+:::info June 2024 App Store Updates
+Previously, we calculated taxes deducted from App Store transactions after commission had been deducted. In June 2024 we updated this behavior to deduct taxes first to better match Apple's behavior. Though the yielded Proceeds are not affected by this ordering, the portion deducted for taxes and commission respectively are changed by this. The Revenue chart and Scheduled Data Exports have been updated to reflect this improved definition, but please keep in mind that prior events dispatched by RevenueCat will still contain the old values.
+:::
+
+### Calculating taxes for Stripe
+
+If you have enabled Stripe Tax in your Stripe developer account, we will retrieve the precise tax amounts directly from your Stripe invoices, making estimation unnecessary.
+
+To learn more about enabling Stripe Tax in your Stripe developer account, [click here](https://stripe.com/tax).
+
+:::info VAT handling in different stores
+Keep in mind that not all stores handle VAT the same way. Apple applies VAT to the post-commission revenue from a transaction, while Google applies VAT to the full amount, yielding different tax percentages (e.g. different values for the `tax_percentage` field).
+:::
+
+## How to report revenue after commissions and/or taxes in RevenueCat
+
+### Revenue chart
+
+Our Revenue chart offers the following measures to understand your net revenue:
+
+- **Revenue (net of taxes)**: Revenue generated in a given period (as defined above), minus our estimate of revenue deducted from the stores for taxes (e.g. VAT, DST, etc).
+- **Proceeds**: Revenue generated in a given period (as defined above), minus our estimate of revenue deducted from the stores for taxes and commission.
+
+### Integrations
+
+For integrations which report revenue youâll see the option to select a **Sales reporting** mode for the integration. Selecting either âRevenue after store commissionâ or âRevenue after store commission and taxesâ will apply the respective calculations to your data so that your sales are reported in a format that is most appropriate for your use case.
+
+![](/docs_images/charts/sales-reporting.png)
+
+To learn more about using integrations through RevenueCat, [click here](/integrations/integrations).
+
+### Webhooks
+
+In our webhooks you will find a tax\_percentage and commission\_percentage field, which specify what percentage of your gross revenue (price and price\_in\_purchased\_currency fields) we estimate to be deducted from your proceeds as taxes and commission. For example, you could calculate your proceeds in USD from the webhook payload as price \* (1 - tax\_percentage - commission\_percentage).
+
+To learn more about using our webhooks, [click here](/integrations/webhooks).
+
+### Scheduled Data Exports
+
+Our Scheduled Data Exports offer the same two fields, tax\_percentage and commission\_percentage, which can be use for estimating proceeds in the same manner through these exports.
+
+To learn more about using our Scheduled Data Exports, [click here](/integrations/scheduled-data-exports).

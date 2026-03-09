@@ -1,0 +1,118 @@
+---
+id: "getting-started/installation/reactnative"
+title: "React Native"
+description: "What is RevenueCat?"
+permalink: "/docs/getting-started/installation/reactnative"
+slug: "reactnative"
+version: "current"
+original_source: "docs/getting-started/installation/reactnative.mdx"
+---
+
+## What is RevenueCat?
+
+RevenueCat provides a backend and SDKs that wrap StoreKit, Google Play Billing, and [RevenueCat Web Billing](/web/web-billing/overview) to make implementing in-app and web purchases and subscriptions easy. With our SDK, you can build and manage your app business on any platform without having to maintain IAP infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/where-does-revenuecat-fit-in-your-app) or you can [sign up free](https://app.revenuecat.com/signup) to start building.
+
+## Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/react-native-purchases.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/react-native-purchases/releases)
+
+Make sure that the deployment target for iOS is at least 13.4 and Android is at least 6.0 (API 23) [as defined here](https://github.com/facebook/react-native#-requirements).
+
+### React Native package
+
+Purchases for React Native can be installed either via npm or yarn.
+
+We recommend using the latest version of React Native, or making sure that the version is at least greater than 0.64.
+
+#### Option 1.1: Using auto-linking
+
+Recent versions of React Native will automatically link the SDK, so all that's needed is to install the library.
+
+*Interactive content is available in the web version of this doc.*
+
+#### Option 1.2: Manual linking
+
+*Interactive content is available in the web version of this doc.*
+
+After that, you should link the library to the native projects by doing:
+
+*Interactive content is available in the web version of this doc.*
+
+### Using Expo
+
+Use Expo to rapidly iterate on your app by using JavaScript/TypeScript exclusively, while letting Expo take care of everything else.
+
+See [Using RevenueCat with Expo](/getting-started/installation/expo) to get started.
+
+### Set the correct launchMode for Android
+
+Depending on your user's payment method, they may be asked by Google Play to verify their purchase in their (banking) app. This means they will have to background your app and go to another app to verify the purchase. If your Activity's `launchMode` is set to anything other than `standard` or `singleTop`, backgrounding your app can cause the purchase to get cancelled. To avoid this, set the `launchMode` of your Activity to `standard` or `singleTop` in your Android app's `AndroidManifest.xml` file, like so:
+
+*Interactive content is available in the web version of this doc.*
+
+You can find Android's documentation on the various `launchMode` options [here](https://developer.android.com/guide/topics/manifest/activity-element#lmode).
+
+## Import Purchases
+
+You should now be able to import `Purchases`.
+
+*Interactive content is available in the web version of this doc.*
+
+:::info Include BILLING permission for Android projects
+Don't forget to include the `BILLING` permission in your AndroidManifest.xml file
+:::
+
+*Interactive content is available in the web version of this doc.*
+
+:::info Enable In-App Purchase capability for your iOS project
+Don't forget to enable the In-App Purchase capability for your project under `Project Target -> Capabilities -> In-App Purchase`
+:::
+
+## Android Build Issues
+
+### R8 Dependencies Conflict
+
+If you encounter build failures related to R8 (Android's code shrinker) when using `react-native-purchases-ui`, you may see errors like:
+
+```
+Execution failed for task ':app:mergeExtDexDevDebug'.
+> Could not resolve all files for configuration ':app:devDebugRuntimeClasspath'.
+```
+
+This issue occurs due to a bug in earlier versions of Android Gradle Plugin (AGP) that affects R8 dependency resolution. To fix this, add the following to your project-level `build.gradle` file (not `app/build.gradle`):
+
+*Interactive content is available in the web version of this doc.*
+
+This solution forces the use of a specific R8 version that resolves the dependency conflicts. For more details, see the [Google Issue Tracker](https://issuetracker.google.com/issues/342522142#comment8).
+
+## React Native Web Configuration
+
+RevenueCat's React Native SDK supports web platforms, allowing you to manage subscriptions across React Native web, mobile, and desktop apps using the same SDK.
+
+### Web Product Configuration
+
+To enable web purchases in your React Native app, you'll need to configure products using a [RevenueCat Web Billing app](/web/web-billing/overview).
+
+1. **Create a Web Billing App** in your RevenueCat project dashboard
+2. **Configure your products** for web purchases
+
+For detailed instructions on setting up web products and configuring Web Billing, see the [Web Billing Overview](/web/web-billing/overview).
+
+:::info Web Billing vs In-App Purchases
+Web Billing is RevenueCat's billing engine for web purchases, which uses Stripe as the payment processor. This is separate from iOS/Android in-app purchases but integrates with the same RevenueCat entitlements system, allowing unified subscription management across platforms.
+:::
+
+### Current Limitations
+
+When using the React Native SDK on web, keep in mind the following:
+
+- **Web Billing Required**: Web purchases require RevenueCat Web Billing setup. Native iOS/Android in-app purchases cannot be processed through the web platform.
+- **Payment Processing**: Web Billing purchases use Stripe as the payment processor through RevenueCat Web Billing.
+- **Customer Portal**: Users can manage their web subscriptions through the RevenueCat-provided customer portal.
+- **Platform Separation**: Web products must be configured separately from iOS/Android products in the RevenueCat dashboard, though entitlements can be shared across platforms.
+- **User Identity**: For unified cross-platform subscriptions, ensure you're using the same `appUserID` across web and mobile platforms.
+- **Unsupported operations**: There are some unsupported operations. Mainly operations `getProducts`, `purchaseProduct` or `restorePurchases` won't work on web environments.
+
+## Next Steps
+
+- Now that you've installed the Purchases SDK in your React Native app, get started by [initializing an instance of Purchases â](/getting-started/quickstart#3-using-revenuecats-purchases-sdk)

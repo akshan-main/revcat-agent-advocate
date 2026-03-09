@@ -1,0 +1,170 @@
+---
+id: "tools/mcp/setup"
+title: "RevenueCat MCP Server Setup"
+description: "Authentication Overview"
+permalink: "/docs/tools/mcp/setup"
+slug: "setup"
+version: "current"
+original_source: "docs/tools/mcp/setup.mdx"
+---
+
+## Authentication Overview
+
+RevenueCat MCP Server offers two authentication methods depending on your client:
+
+- **OAuth Authentication**: Available for VS Code and Cursor - provides seamless authentication without managing API keys
+- **API v2 Secret Key**: Supported by all MCP clients - requires a RevenueCat API v2 secret key
+
+Choose the method that works best for your client setup.
+
+## Cloud MCP Server Setup
+
+### Using with Claude Code
+
+Add the server via the `claude` CLI command:
+
+```
+claude mcp add --transport http revenuecat https://mcp.revenuecat.ai/mcp --header "Authorization: Bearer YOUR_API_V2_SECRET_KEY"
+```
+
+### Using with Cursor
+
+You can add the MCP server to Cursor by clicking the button below:
+
+*Interactive content is available in the web version of this doc.*
+
+Or you can also add it manually by adding the following to your `mcp.json` file:
+
+```json
+{ 
+    "servers": {
+        "revenuecat": {
+            "url": "https://mcp.revenuecat.ai/mcp",
+            "headers": {
+                "Authorization": "Bearer {your API v2 token}"
+            }
+        }
+    }
+}
+```
+
+### Using with VS Code Copilot
+
+Add to your Visual Studio Code `mcp.json`:
+
+```json
+{
+	"servers": {
+		"revenuecat-mcp": {
+			"url": "https://mcp.revenuecat.ai/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}
+```
+
+### Using with Claude Desktop
+
+Add to your Claude Desktop configuration:
+
+```json
+{
+    "mcpServers": {
+        "revenuecat": {
+            "command": "npx",
+            "args": [
+                "mcp-remote",
+                "https://mcp.revenuecat.ai/mcp",
+                "--header",
+                "Authorization: Bearer ${AUTH_TOKEN}"
+            ],
+            "env": {
+                "AUTH_TOKEN": "YOUR_API_V2_SECRET_KEY"
+            }
+        }
+    }
+}
+```
+
+### Using with OpenAI Codex CLI
+
+Add to your Codex CLI configuration file (`~/.codex/config.toml`):
+
+**macOS/Linux:**
+
+```toml
+[mcp_servers.revenuecat]
+command = "npx"
+args = ["mcp-remote", "https://mcp.revenuecat.ai/mcp", "--header", "Authorization: Bearer ${AUTH_TOKEN}"]
+env = { AUTH_TOKEN = "YOUR_API_V2_SECRET_KEY" }
+type = "stdio"
+startup_timeout_ms = 20_000
+```
+
+**Windows:**
+
+```toml
+[mcp_servers.revenuecat]
+command = 'C:\Program Files\nodejs\npx.cmd'
+args = ["mcp-remote", "https://mcp.revenuecat.ai/mcp", "--header", "Authorization: Bearer ${AUTH_TOKEN}"]
+env = {
+    APPDATA = 'C:\Users\USERNAME\AppData\Roaming',
+    LOCALAPPDATA = 'C:\Users\USERNAME\AppData\Local',
+    HOME = 'C:\Users\USERNAME',
+    SystemRoot = 'C:\Windows',
+    AUTH_TOKEN = "YOUR_API_V2_SECRET_KEY"
+}
+type = "stdio"
+startup_timeout_ms = 20_000
+```
+
+> **ð¡ Note**: On Windows, replace `USERNAME` with your actual Windows username.
+
+### Using with MCP Inspector
+
+For testing and development:
+
+```bash
+npx @modelcontextprotocol/inspector@latest
+```
+
+Configure the inspector with:
+
+- **Transport Type**: Streamable HTTP
+- **URL**: `https://mcp.revenuecat.ai/mcp`
+- **Authentication**: Bearer Token with your RevenueCat API v2 secret key
+
+## Authentication Methods
+
+RevenueCat Cloud MCP Server supports two authentication methods:
+
+### OAuth Authentication (Recommended)
+
+OAuth provides a seamless authentication experience without needing to manage API keys manually. Currently supported clients:
+
+- **Visual Studio Code** - Automatic OAuth flow for seamless authentication
+- **Cursor** - Automatic OAuth flow for seamless authentication
+
+We'll extend this list as more clients add OAuth support.
+
+### API v2 Secret Key Authentication
+
+All MCP clients support API v2 secret key authentication. This method requires manually providing your RevenueCat API v2 secret key in the client configuration.
+
+#### Getting Your API Key
+
+1. Open your [RevenueCat dashboard](https://app.revenuecat.com/)
+2. Navigate to your project's **API Keys** page
+3. **Create a new API v2 secret key** and copy it
+
+> **ð¡ Tip**: Create a dedicated API key for the MCP server to keep your credentials organized.
+
+> **â ï¸ Permissions**:
+>
+> - Use a **write-enabled key** if you plan to create/modify resources
+> - A **read-only key** works if you only need to view data
+
+> **ð§ Third-Party Integration**:
+
+If you'd like to integrate your services with RevenueCat MCP Server, please contact us at [RevenueCat Support](mailto:support@revenuecat.com) so we can set up OAuth clients for your application.

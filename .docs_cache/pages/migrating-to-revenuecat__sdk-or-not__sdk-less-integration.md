@@ -1,0 +1,39 @@
+---
+id: "migrating-to-revenuecat/sdk-or-not/sdk-less-integration"
+title: "Using RevenueCat without the SDK"
+description: "Using RevenueCat without the SDK is a great way to get started with populating your data in RevenueCat, or to migrate to RevenueCat without the need to update your app."
+permalink: "/docs/migrating-to-revenuecat/sdk-or-not/sdk-less-integration"
+slug: "sdk-less-integration"
+version: "current"
+original_source: "docs/migrating-to-revenuecat/sdk-or-not/sdk-less-integration.mdx"
+---
+
+Using RevenueCat without the SDK is a great way to get started with populating your data in RevenueCat, or to migrate to RevenueCat without the need to update your app.
+
+:::info Adding the SDK later
+You can always start with a no-code integration, and add the SDK later. In the case where purchases are made through the SDK and also sent on the server side, RevenueCat will automatically deduplicate them, so there is no risk in this approach.
+:::
+
+## No-code, or server-side integration
+
+RevenueCat can automatically detect purchases by enabling "Track new purchases" in your RevenueCat app settings after enabling [Server Notifications](/platform-resources/server-notifications). This will automatically start tracking purchases that we receive from a connected store or app, with no SDK implementation required. Read more about [how to connect to a store](/projects/connect-a-store) and start tracking new purchases from Server Notifications.
+
+If you want to manually send purchases to RevenueCat, you can do so by sending receipts and/or purchase tokens to the `POST /receipts` [REST API endpoint](/api-v1#tag/transactions/operation/receipts). This will create the customer in RevenueCat, RevenueCat will validate the purchase and keep the purchase status up-to-date.
+
+## Using RevenueCat without the SDK
+
+### Data and Integration Features
+
+All RevenueCat data and integration features, including [charts](/dashboard-and-metrics/charts), [customer history](/dashboard-and-metrics/customer-profile), [purchase lifecycle events](/integrations/integrations), [webhooks](/integrations/webhooks), [integrations with third party tools](/integrations/third-party-integrations), and [scheduled data exports](/integrations/scheduled-data-exports) work without integrating the SDK. RevenueCat's data features provide data at a higher level of granularity than the reports available from the app stores directly, allow tying data directly to your customer's profiles, and allow syncing this data to your own backend or data warehouse or to third party tools.
+
+One important factor to decide before integrating RevenueCat is what to use as the customer identity, also referred to as App User ID. If you are already using a unique app user ID in your backend, it is often best to use this for RevenueCat as well. Otherwise, RevenueCat can generate anonymous App User IDs for you; however, you won't be able to link customer identity across different tools that way.
+
+If you are planning on using RevenueCat integrations with third party tools, please note that some of them require special customer identifiers. These are generally using specific RevenueCat [customer attributes](/customers/customer-attributes) that will need to be set [via the REST API](/api-v1#tag/customers/operation/update-subscriber-attributes). You can find information about the required customer attributes in the documentation for the respective [third-party integration](/integrations/third-party-integrations).
+
+[Read more about identifying customers â](/customers/user-ids)
+
+### Subscription and Entitlement Status
+
+Even if you don't use the SDK, you can use RevenueCat as your source of the truth for subscription and entitlement status. To do so, start by setting up [products and entitlements in RevenueCat](/getting-started/entitlements), and then use the `GET /subscribers/{app_user_id}` [REST API endpoint](/api-v1#tag/customers) to access information about a customer's subscriptions, purchases, and entitlements.
+
+Alternatively, if you prefer to keep a copy of a customer's purchase and entitlement status in your own database, you can also listen to RevenueCat's [webhooks](/integrations/webhooks) to update your database whenever there is a new or updated purchase.

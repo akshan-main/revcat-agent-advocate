@@ -1,0 +1,76 @@
+---
+id: "tools/paywalls/change-log"
+title: "Changelog"
+description: "Notable releases & fixes related to Paywalls."
+permalink: "/docs/tools/paywalls/change-log"
+slug: "change-log"
+version: "current"
+original_source: "docs/tools/paywalls/change-log.mdx"
+---
+
+Notable releases & fixes related to Paywalls.
+
+| Date | Description |
+| :----------------- | :---------- |
+| January 13, 2026 | Figma import documentation moved to its own section and updated with implementation details for all currently supported components. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/importing-from-figma) |
+| January 12, 2026 | Reapplied exit offers support to hybrid platforms. |
+| January 8, 2026 | Revert adding exit offers support |
+| January 7, 2026 | React Native 9.6.12, Flutter 9.10.1, KMP 2.2.14+17.25.0, Capacitor 11.3.2, Unity 8.4.12: Added support for exit offers in hybrid SDKs. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/displaying-paywalls#exit-offers) |
+| December 24, 2025 | iOS 5.52.0, Android 9.18.0: Added support for exit offers, allowing you to present an alternative offer when users attempt to dismiss a paywall. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/displaying-paywalls#exit-offers) |
+| November 20, 2025 | Added validation for button action types when importing from Figma. Invalid action types now default to `navigate_back` to prevent paywall validation errors. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/importing-from-figma) |
+| November 19, 2025 | Added support for importing paywalls from Figma. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/importing-from-figma) |
+| November 18, 2025 | Added preview support for additional iPhone and iPad sizes in the paywall editor. |
+| November 14, 2025 | iOS 5.48.0, Android 9.14.0: Added the Countdown component. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#countdown) |
+| November 13, 2025 | Updated dark mode to be an optional setting for paywalls. |
+| November 10, 2025 | iOS 5.47.0, Android 9.13.0: Added support for videos as backgrounds. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#video-component) |
+| November 10, 2025 | iOS 5.47.0, Android 9.13.0: Added support for intercepting an initiated purchase. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/displaying-paywalls#intercepting-an-initiated-purchase) |
+| November 1, 2025 | Paywalls are available on the web via Web Purchase Links. [Learn more](https://www.revenuecat.com/docs/web/web-billing/paywalls) |
+| October 29, 2025 | Added support for Web Purchase Buttons on the Play Store. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/web-purchase-button) |
+| October 23, 2025 | iOS 5.44.1, Android 8.25.0, React Native 9.6.0, Flutter 9.9.0, KMP 2.2.3+17.11.0: Added the Video component, allowing you to upload and display videos on your paywalls. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#video-component) |
+| October 17, 2025 | iOS 5.41.0, Android 8.20.0, React Native 9.5.2, Flutter 9.7.1, KMP 2.2.1+17.9.0: Added support for buttons to open a sheet that can be used to display additional content, like a "View all plans" button. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#navigate-to-sheet) |
+| October 7, 2025 | iOS 5.34.0, Android 9.8.0, React Native 9.5.2: Tabs & Switches now allow any tab or switch state to be selected as the default. |
+| October 1, 2025 | Added support for text to be colored with a gradient. |
+| September 12, 2025 | iOS 5.39.0: Added support for native macOS paywalls and improved image caching for instant image loading. |
+| September 8, 2025 | iOS 5.37.0, Android 9.4.0 (8.24.0 for backwards compatibility), React Native 9.4.0, Flutter 9.3.0, KMP 2.2.0+16.6.0: Added support for delayed close button on paywalls, allowing developers to configure a delay before the close/back button becomes visible to users. |
+| September 8, 2025 | iOS 5.37.0, Android 8.24.0, React Native 9.4.0: Added support for setting preferred locale for paywalls. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/displaying-paywalls#setting-preferred-locale) |
+| August 21, 2025 | iOS 5.34.0, React Native 9.2.0, Flutter 9.2.0, KMP 2.1.0+16.2.0, Capacitor 11.1.1: Added support for promotional offers and offer code redemption on iOS. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/supporting-offers) |
+| August 19, 2025 | Fixed badge text changes in its selected state not applying correctly. |
+| August 4, 2025 | Added support for placing purchase buttons within packages on all platforms.
+| July 29, 2025 | Added the Switch component. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#switch-component) |
+| July 8, 2025 | Paywall templates can now be filtered by purchase method, number of tiers, or number of packages to make it easier to find the templates that suit your business model. |
+| June 25, 2025 | iOS 5.30.0, React Native 8.11.8, Flutter 8.10.5, KMP 1.8.6+14.0.2: Fix to improve the accuracy of locale matching. |
+| June 25, 2025 | Paywalls can now be copied between Projects that you own for easier reuse. |
+| June 18, 2025 | Error messages are now displayed in a unified list at the top of the editor and can be clicked on to open the relevant component with an issue to resolve. |
+| June 6, 2025 | Paywalls is now out of beta, see minimum recommended SDK versions [here](/tools/paywalls#required-sdk-versions). |
+| June 6, 2025 | iOS 5.26.1, React Native 8.11.3, Flutter 8.10.1, KMP 1.8.2+13.35.0, Capacitor 10.3.3: Fixed a bug causing some image components to extend beyond the width of the device in some conditions. |
+| June 5, 2025 | Added the Tabs component, which can be used to display different package groups in different tabs when offering multiple tiers of service, product types, etc. [Learn more](/tools/paywalls/creating-paywalls/components#tabs-component)|
+| June 5, 2025 | Introduced styled components, individual pre-styled components from RevenueCat that can be added to a paywall and modified as needed. |
+| June 4, 2025 | Added the option to open a Custom Purchase URL via deep link. |
+| June 3, 2025 | Added an option to preview a paywall as a sheet view instead of a full screen view through the preview settings of the paywall editor. |
+| May 28, 2025 | Paywalls are now supported on Capacitor 10.3.1 and up. |
+| May 27, 2025 | Added a safe area preview to the paywall editor to more accurately reflect how paywalls will be displayed on device. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls#safe-area-preview) |
+| May 20, 2025 | iOS 5.24.0, React Native 8.10.1, Flutter 8.8.1, KMP 1.7.8+13.32.0: Updated Web Purchase Buttons to support linking directly to the checkout flow of a selected package, and added support for Custom Purchase Buttons. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/web-purchase-button) |
+| May 1, 2025 | iOS 5.22.2, React Native 8.9.6, Flutter: 8.7.5, KMP: 1.7.7+13.29.1: Added support for Web Purchases as a button destination. |
+| April 4, 2025 | Localizations can now be exported and re-imported to update localizations through your existing workflows. |
+| April 4, 2025 | Variables now support case modifiers for `uppercase`, `lowercase`, and `capitalize`. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/variables#variable-modifiers) |
+| April 3, 2025 | Added the carousel component. Update to the latest SDK versions to get all fixes and improvements related to this component. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#carousel-component)|
+| April 3, 2025 | Added the timeline component. Update to the latest SDK versions to get all fixes and improvements related to this component. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#timeline-component)|
+| March 27, 2025 | [iOS 5.20.2](https://github.com/RevenueCat/purchases-ios/pull/4920) Fixed background image fit mode always behaving as `fill` even if set to `fit`. |
+| March 27, 2025 | [Android 8.15.1](https://github.com/RevenueCat/purchases-android/pull/2295): Fixed language matching logic even when region is missing.
+| March 25, 2025 | You can now create Paywalls without attaching them to an Offering. Useful for duplicating an existing Paywall and attaching it to an Offering you've already created, or creating your own "repo" of Paywalls to duplicate and modify for each Offering you want to serve them with. (An Offering must still be attached to the Paywall to be able to publish it and serve it to customers) |
+| March 21, 2025 | [iOS 5.20.1](https://github.com/RevenueCat/purchases-ios/pull/4907): Fixes overridden badge values for a selected package state not being applied. |
+| March 20, 2025 | Color hex codes can now be pasted in with the leading `#` symbol and will be converted to a color correctly. |
+| March 19, 2025 | [Android 8.15.0](https://github.com/RevenueCat/purchases-android/pull/2273): Fixes overridden badge values for a selected package state not being applied. |
+| March 15, 2025 | Fixed `{{ product.period }}` variable preview (and related variables) in the dashboard to use "Year" instead of "Annual". |
+| March 5, 2025 | [iOS 5.19.0](https://github.com/RevenueCat/purchases-ios/pull/4854): Add restore button activity indicator, fixed Space Between/Evenly/Around distribution being used when it was not applicable, improve gradient angle consistency, add support for shadows in image components, fixed badge background not being present in some cases. |
+| March 5, 2025 | [Android 8.14.0](https://github.com/RevenueCat/purchases-android/pull/2223):  Add progress indicator to all buttons. |
+| February 26, 2025 | Paywalls can now be previewed through the RevenueCat iOS app in version 1.2 and above. |
+| February 22, 2025 | [iOS 5.18.0](https://github.com/RevenueCat/purchases-ios/pull/4815): Add purchase button activity indicator, fixed `onRestoreComplete` callback not being called. |
+| February 21, 2025 | Added support for background images in stacks (including buttons, packages, etc). |
+| February 19, 2025 | Editor shortcuts added to undo, redo, and save changes. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls#modifying-components) |
+| February 18, 2025 | Custom font support added. [Learn more](https://www.revenuecat.com/docs/tools/paywalls/creating-paywalls/components#custom-fonts)  |
+| February 18, 2025 | Fixed footer rendering issues in the editor on Safari. |
+| February 17, 2025 | Beta launch of Paywalls v2 on Android, React Native, Flutter, and KMP |
+| February 13, 2025 | Updated the editor phone preview size to match 6.1" iPhones. |
+| February 12, 2025 | [iOS 5.17.0](https://github.com/RevenueCat/purchases-ios/pull/4783): Fixed abbreviated variables for periods of >1 unit (e.g. 3 months), fixed locale lookup issues with `zh-Hans` and `zh-Hant`, fix purchase event callbacks not being executed. |
+| January 30, 2025 | Beta launch of Paywalls v2 on iOS |

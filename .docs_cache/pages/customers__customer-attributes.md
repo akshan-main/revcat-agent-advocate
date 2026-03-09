@@ -1,0 +1,224 @@
+---
+id: "customers/customer-attributes"
+title: "Setting Attributes"
+description: "Attributes are useful for storing additional, structured information on a customer that can be used elsewhere in the system."
+permalink: "/docs/customers/customer-attributes"
+slug: "customer-attributes"
+version: "current"
+original_source: "docs/customers/customer-attributes.mdx"
+---
+
+Attributes are useful for storing additional, structured information on a customer that can be used elsewhere in the system.
+
+For example, you could store your customer's email address or additional system identifiers through the applicable reserved attributes, or store arbitrary facts like onboarding survey responses, feature usage, or other dimensions as custom attributes -- all directly in RevenueCat. Attributes will not be seen by your users unless you choose to explicitly show them yourself.
+
+:::info Attribute synchronization
+By default, attributes are only synced with RevenueCat servers when Purchases.configure() is called, app backgrounded, and when purchases are made or restored. The `syncAttributesAndOfferingsIfNeeded()` method should be used if custom attributes are being used for Targeting to ensure immediate syncing. [Learn more here.](/tools/targeting/custom-attributes)
+:::
+
+## How Attributes can be used
+
+1. Attributes can be fetched via the REST API for individual customers, or reviewed in their Customer Profile in the Dashboard.
+2. Custom attributes can be used via Targeting to define business-specific audiences and deliver them unique Offerings. [Learn more.](/tools/targeting/custom-attributes)
+3. Attributes are provided in Scheduled Data Exports for use in custom analyses (e.g. to measure [Active Subscriptions by Custom Attribute](/integrations/scheduled-data-exports#sample-queries-for-customized-measures))
+
+:::warning Attributes cannot be fetched from the SDK
+For security reasons, attributes cannot be fetched from the SDK. To read attributes, use the REST API with a private API key.
+:::
+
+## Setting Attributes
+
+Attributes for a Customer can be set through the SDK by passing a dictionary of strings to the `setAttributes()` method on the shared Purchases instance.
+
+*Interactive content is available in the web version of this doc.*
+
+:::warning Attributes are not secure storage
+Since attributes are writable using a [public key](/projects/authentication) they should not be used for managing secure or sensitive information such as subscription status, coins, etc.
+:::
+
+### Custom attributes
+
+Custom attributes can be set to track any app-specific fact you want to capture about your customers; like their response to an onboarding survey, whether they've engaged with a certain feature, or the deep link they installed your app from.
+
+:::info Targeting by Custom Attribute
+You can display unique paywalls to different customer segments based on custom attributes. [Learn more here.](/tools/targeting/custom-attributes)
+:::
+
+You can specify up to 50 unique custom attributes per subscriber, with key names up to 40 characters long and values up to 500 characters long. Keys cannot start with `$`, since that prefix is withheld for reserved attributes (see below).
+
+**Custom attribute key checklist:**\
+â Key does not contain whitespace\
+â Key must start with a letter for non-reserved attributes or "$" for reserved attributes\
+â Key does not include any non-alphanumeric characters except `-` and `_`\
+â Key is not more than 40 characters\
+â Value is not more than 500 characters\
+â No more than 50 custom attributes
+
+### Reserved attributes
+
+Attribute keys beginning with `$` are reserved for RevenueCat. The current list of reserved keys are below:
+
+#### General
+
+| Key                              | Description                                                                                                                                                                                 |
+| :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `$displayName`                   | Name that should be used to reference the user                                                                                                                                              |
+| `$apnsTokens`                    | Apple push notification tokens for the user.                                                                                                                                                |
+| `$fcmTokens`                     | Google push notification tokens for the user.                                                                                                                                               |
+| `$attConsentStatus`              | Apple App Tracking Transparency consent status for the user.                                                                                                                                |
+| `$clevertapId `                  | Clever Tap ID for the user.                                                                                                                                                                 |
+| `$idfa`                          | iOS advertising identifier UUID.                                                                                                                                                            |
+| `$idfv`                          | iOS vendor identifier UUID.                                                                                                                                                                 |
+| `$gpsAdId`                       | The advertising ID that is provided by Google Play services.                                                                                                                                |
+| `$androidId`                     | The advertising ID that is provided by Google Play services. This ID is deprecated, read more [here](/customers/customer-attributes#reserved-attributes:~:text=ANDROID%20ID%20DEPRECATION). |
+| `$amazonAdId`                    | Amazon Advertising ID.                                                                                                                                                                      |
+| `$adjustId`                      | The unique Adjust identifier for the user.                                                                                                                                                  |
+| `$amplitudeDeviceId`             | The Amplitude Device ID.                                                                                                                                                                    |
+| `$amplitudeUserId`               | The Amplitude User ID.                                                                                                                                                                      |
+| `$appsflyerId`                   | Appsflyer Id. The unique Appsflyer identifier for the user.                                                                                                                                 |
+| `$brazeAliasName`                | The Braze 'alias\_name' in User Alias Object.                                                                                                                                                |
+| `$brazeAliasLabel`               | The Braze 'alias\_label' in User Alias Object.                                                                                                                                               |
+| `$fbAnonId`                      | The Facebook Anonymous ID for the user.                                                                                                                                                     |
+| `$mparticleId`                   | The unique mParticle user identifier (mpid).                                                                                                                                                |
+| `$onesignalId`                   | The OneSignal Player Id for the user.                                                                                                                                                       |
+| `$airshipChannelId`              | The Airship channel ID for the user.                                                                                                                                                        |
+| `$iterableUserId`                | The Iterable ID for the user.                                                                                                                                                               |
+| `$iterableCampaignId`            | The Iterable campaign ID.                                                                                                                                                                   |
+| `$iterableTemplateId`            | The Iterable template ID.                                                                                                                                                                   |
+| `$firebaseAppInstanceId`         | The Firebase instance identifier.                                                                                                                                                           |
+| `$mixpanelDistinctId`            | The Mixpanel user identifier.                                                                                                                                                               |
+| `$kochavaDeviceId`               | The unique Kochava device identifier.                                                                                                                                                       |
+| `$tenjinId`.                     | The Tenjin identifier.                                                                                                                                                                      |
+| `$ip`                            | The IP address of the device.                                                                                                                                                               |
+| `$email`                         | Email address for the user.                                                                                                                                                                 |
+| `$phoneNumber`                   | Phone number for the user.                                                                                                                                                                  |
+| `$posthogUserId`                 | The PostHog User ID                                                                                                                                                                         |
+| `$deviceVersion`                 | Device, platform and version information.                                                                                                                                                   |
+| `$appleRefundHandlingPreference` | The [App Store refund preference](/platform-resources/apple-platform-resources/handling-refund-requests#overriding-refund-preference) to override for the user.                             |
+| `$customerioId`                  | The Customer.io person's identifier (`id`)                                                                                                                                                  |
+
+:::warning attConsentStatus is populated regardless of requesting any permission
+
+The RevenueCat SDK sends the current ATT status for the `$attConsentStatus` attribute regardless of if you are or aren't requesting any ATT permission. So just as a heads-up, you can expect to see this attribute filled.
+
+Note: The RevenueCat SDK reads the current App Tracking Transparency Consent Status for the user, but will not modify it or request for further permission.
+
+You may see the following as a response from this attribute:
+
+- `restricted` - Can be returned if the user is using a mobile device management profile that disallows some aspects of tracking regardless of consent. This might be returned even if you never ask for permissions.
+- `denied` - Can be returned if the userâs phone has set âAsk Apps Not To Trackâ in OS Settings or denied access for the specific app.
+- `authorized` - Returned if you ask for permission and the permission gets accepted by the user.
+- `unknown` - The user hasnât set âAsk Apps Not to Trackâ in OS Settings, and you have never asked the user for consent to track activity.
+  :::
+
+#### Device Identifiers
+
+| Key        | Description                   |
+| :--------- | :---------------------------- |
+| `$idfa`    | Apple advertising identifier  |
+| `$idfv`    | Apple vendor identifier       |
+| `$gpsAdId` | Google advertising identifier |
+| `$ip`      | IP Address                    |
+
+:::info Device identifiers can't be changed once set
+
+Once a device identifier is set for a subscriber, it can't be changed in order to keep these identifiers associated with the original installation. This allows RevenueCat to send events generated by a particular device to downstream integrations with a consistent identifier unaffected by uninstalls and reinstalls.
+:::
+
+:::warning Android ID deprecation
+Due to policy changes from the Play Store, Android ID is no longer collected by RevenueCat's Android SDKs starting on versions 6.9.8+, 7.11.1+, and later major versions.
+
+Therefore, Google's Advertising ID acts as the primary device identifier for Android devices in RevenueCat and when connecting with third-party integrations.
+:::
+
+#### Third-party Identifiers
+
+| Key                      | Description                                                                                   |
+| :----------------------- | :-------------------------------------------------------------------------------------------- |
+| `$adjustId`              | [Adjust](https://www.adjust.com/) user identifier                                             |
+| `$amplitudeDeviceId`     | [Amplitude](https://amplitude.com/) device identifier                                         |
+| `$amplitudeUserId`       | [Amplitude](https://amplitude.com/) user identifier                                           |
+| `$appsflyerId`           | [Appsflyer](https://www.appsflyer.com/) user identifier                                       |
+| `$fbAnonId`              | [Facebook SDK](https://developers.facebook.com/docs/apis-and-sdks/) anonymous user identifier |
+| `$firebaseAppInstanceId` | [Firebase](/integrations/third-party-integrations/firebase-integration) instance identifier   |
+| `$iterableUserId`        | [Iterable](https://iterable.com/) user identifier                                             |
+| `$mixpanelDistinctId`    | [Mixpanel](https://mixpanel.com) user identifier                                              |
+| `$mparticleId`           | [mParticle](https://www.mparticle.com/) user identifier                                       |
+| `$onesignalId`           | [OneSignal](https://onesignal.com/) player identifier                                         |
+| `$clevertapId`           | [CleverTap](https://clevertap.com/) user identifier                                           |
+| `$airshipChannelId`      | [Airship](https://www.airship.com/) channel identifier                                        |
+| `$kochavaDeviceId`       | [Kochava](https://www.kochava.com/) device identifier                                         |
+| `$tenjinId`.             | The Tenjin identifier.                                                                        |
+| `$posthogUserId`         | [PostHog](https://posthog.com) user identifier                                                |
+| `$customerioId`          | [Customer.io](https://customer.io) person identifier                                          |
+
+#### Braze User Alias Object
+
+| Key                | Description                                                                                                   |
+| :----------------- | :------------------------------------------------------------------------------------------------------------ |
+| `$brazeAliasName`  | Braze 'alias\_name' in [User Alias Object](https://www.braze.com/docs/api/objects_filters/user_alias_object/)  |
+| `$brazeAliasLabel` | Braze 'alias\_label' in [User Alias Object](https://www.braze.com/docs/api/objects_filters/user_alias_object/) |
+
+#### Iterable Data
+
+| Key                   |
+| :-------------------- |
+| `$iterableCampaignId` |
+| `$iterableTemplateId` |
+
+#### Attribution Data
+
+| Key            |
+| :------------- |
+| `$mediaSource` |
+| `$campaign`    |
+| `$adGroup`     |
+| `$ad`          |
+| `$keyword`     |
+| `$creative`    |
+
+:::info Attribution Data
+If you have access to install attribution data, you can set it using the reserved keys above. RevenueCat itself is not an attribution network and can not automatically populate this information.
+
+Once attribution data is set for a subscriber, it can't be changed. This way attribution data can be associated with the original installation without getting overwritten.
+:::
+
+Reserved attributes can be written directly by setting the key (don't forget the `$` prefix) or with special helper methods:
+
+*Interactive content is available in the web version of this doc.*
+
+### Setting push tokens
+
+Push tokens can be used to engage with your users through Apple apns or Google cloud messaging. These can be saved in RevenueCat through system callbacks after the user accepts the push notification permissions in your app.
+
+*Interactive content is available in the web version of this doc.*
+
+## Deleting Attributes
+
+Any attribute can be cleared by passing `null` or an empty string as the key value. If you plan to set this attribute immediately, we recommend you call syncAttributesAndOfferingsIfNeeded() to push this change to our backend faster. Individual attributes can also be cleared for a specific user in their [customer view](/dashboard-and-metrics/customer-profile#customer-details).
+
+*Interactive content is available in the web version of this doc.*
+
+## Syncing Attributes
+
+Syncing of the attributes happens when the app is foregrounded, backgrounded, or when making a purchase. You can use the syncAttributesAndOfferingsIfNeeded() method to explicitly sync attributes mid-session, which will automatically refresh the cached Offering as well.
+
+## Setting Attributes via the REST API
+
+If you want to set, update, or delete attributes through the REST API from your own backend, for example, because you haven't implemented the RevenueCat SDK, you can use the `POST /subscribers/{app_user_id}/attributes` [API endpoint](/api-v1#tag/customers/operation/update-subscriber-attributes).
+
+## Reading Attributes
+
+You can access attributes through the [REST API](https://docs.revenuecat.com/reference) using a secret key, in [webhooks](/integrations/webhooks), and through analytics integrations ([Amplitude](/integrations/third-party-integrations/amplitude), [Mixpanel](/integrations/third-party-integrations/mixpanel), [Segment](/integrations/third-party-integrations/segment)). The [customer view dashboard](/dashboard-and-metrics/customer-profile#customer-details) will also show a list of attributes for the individual user that you can edit.
+
+![Customer attributes](/docs_images/customers/customer-attributes.png)
+
+:::info Accessing attributes
+Attributes are write-only from the SDK. Reading attributes should only be done server-side through the webhooks or REST API.
+
+Attributes are also included with transaction data for [Scheduled Data Exports](/integrations/scheduled-data-exports).
+:::
+
+## Next Steps
+
+- Enrich your app by [reacting to the user's current subscription status ](/customers/customer-info)

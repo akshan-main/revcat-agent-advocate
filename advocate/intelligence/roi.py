@@ -270,7 +270,7 @@ def format_output_report(report: OutputReport) -> str:
         f"| Ledger entries (auditable actions) | {m.ledger_entries} |",
         f"| Hash chain status | {chain_status} |",
         "",
-        "Every action this agent takes is recorded in a hash-chained ledger. ",
+        "Key actions this agent takes are recorded in a hash-chained ledger. ",
         "Tamper with any entry and the chain breaks. ",
         "Verify: `revcat-advocate verify-ledger`",
         "",

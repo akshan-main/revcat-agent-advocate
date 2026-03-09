@@ -165,6 +165,11 @@ class DBConnection:
 
     def commit(self):
         self._conn.commit()
+        if self._is_turso and hasattr(self._conn, 'sync'):
+            try:
+                self._conn.sync()
+            except (ValueError, Exception):
+                pass  # Remote-only mode doesn't support sync
 
     def close(self):
         self._conn.close()
@@ -172,7 +177,10 @@ class DBConnection:
     def sync(self):
         """Sync embedded replica with remote (Turso only)."""
         if self._is_turso and hasattr(self._conn, 'sync'):
-            self._conn.sync()
+            try:
+                self._conn.sync()
+            except (ValueError, Exception):
+                pass  # Remote-only mode doesn't support sync
 
 
 def init_db(db_path: str, turso_url: str | None = None, turso_token: str | None = None) -> DBConnection:
@@ -222,6 +230,7 @@ def _row_to_dict(row) -> dict:
 
 
 def insert_row(conn: DBConnection, table: str, data: dict, or_replace: bool = False) -> int:
+    _validate_table(table)
     data = {k: _serialize_value(v) for k, v in data.items()}
     cols = ", ".join(data.keys())
     placeholders = ", ".join(["?"] * len(data))
@@ -241,22 +250,28 @@ def query_rows(
     order_by: str = "id DESC",
     limit: int | None = None,
 ) -> list[dict]:
+    _validate_table(table)
+    _validate_order_by(order_by)
     sql = f"SELECT * FROM {table}"
     params = []
     if where:
         clauses = []
         for k, v in where.items():
+            if k not in _ALLOWED_COLUMNS:
+                raise ValueError(f"Invalid column in WHERE: {k}")
             clauses.append(f"{k} = ?")
             params.append(v)
         sql += " WHERE " + " AND ".join(clauses)
     sql += f" ORDER BY {order_by}"
     if limit:
-        sql += f" LIMIT {limit}"
+        sql += " LIMIT ?"
+        params.append(limit)
     rows = conn.execute(sql, tuple(params)).fetchall()
     return [_row_to_dict(row) for row in rows]
 
 
 def update_row(conn: DBConnection, table: str, row_id: int, data: dict):
+    _validate_table(table)
     data = {k: _serialize_value(v) for k, v in data.items()}
     sets = ", ".join(f"{k} = ?" for k in data.keys())
     conn.execute(
@@ -267,11 +282,14 @@ def update_row(conn: DBConnection, table: str, row_id: int, data: dict):
 
 
 def count_rows(conn: DBConnection, table: str, where: dict | None = None) -> int:
+    _validate_table(table)
     sql = f"SELECT COUNT(*) FROM {table}"
     params = []
     if where:
         clauses = []
         for k, v in where.items():
+            if k not in _ALLOWED_COLUMNS:
+                raise ValueError(f"Invalid column in WHERE: {k}")
             clauses.append(f"{k} = ?")
             params.append(v)
         sql += " WHERE " + " AND ".join(clauses)
@@ -287,6 +305,9 @@ def rows_since(
     since: str,
     date_col: str = "created_at",
 ) -> list[dict]:
+    _validate_table(table)
+    if date_col not in _ALLOWED_COLUMNS:
+        raise ValueError(f"Invalid date column: {date_col}")
     sql = f"SELECT * FROM {table} WHERE {date_col} >= ? ORDER BY {date_col} DESC"
     rows = conn.execute(sql, (since,)).fetchall()
     return [_row_to_dict(row) for row in rows]
@@ -305,14 +326,78 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-ALL_TABLES = [
+ALL_TABLES = {
     "seo_pages", "content_pieces", "community_interactions",
     "product_feedback", "run_log", "growth_experiments", "doc_snapshots",
-]
+}
+
+# Allowed column names for ORDER BY / WHERE to prevent SQL injection
+_ALLOWED_COLUMNS = {
+    "id", "slug", "title", "content_type", "status", "created_at", "published_at",
+    "word_count", "citations_count", "name", "hypothesis", "metric", "channel",
+    "tactic", "duration_days", "concluded_at", "severity", "area", "submitted_at",
+    "run_id", "sequence", "command", "started_at", "ended_at", "prev_hash", "hash",
+    "success", "keyword", "template_type", "experiment_id", "url", "path",
+    "doc_sha256", "content_length", "fetched_at", "changed_from", "thread_url",
+    "counterpart", "intent", "question", "sent_at", "body_md",
+}
+
+
+def _validate_table(table: str):
+    if table not in ALL_TABLES:
+        raise ValueError(f"Invalid table name: {table}")
+
+
+def _validate_order_by(order_by: str):
+    """Validate ORDER BY clause to prevent injection."""
+    import re
+    # Allow patterns like: "id DESC", "created_at ASC", "id DESC, created_at ASC"
+    parts = [p.strip() for p in order_by.split(",")]
+    for part in parts:
+        match = re.match(r'^(\w+)(?:\s+(ASC|DESC))?$', part, re.IGNORECASE)
+        if not match:
+            raise ValueError(f"Invalid ORDER BY clause: {order_by}")
+        col = match.group(1)
+        if col not in _ALLOWED_COLUMNS:
+            raise ValueError(f"Invalid column in ORDER BY: {col}")
+
+
+def exists_similar(conn: DBConnection, table: str, match_cols: dict, threshold: int = 60) -> bool:
+    """Check if a similar row already exists based on normalized text matching.
+
+    match_cols: dict of column_name -> value to match against.
+    Normalizes text (lowercase, strip punctuation, first `threshold` chars) before comparing.
+    Returns True if a similar row exists.
+    """
+    import re as _re
+    _validate_table(table)
+
+    for col, val in match_cols.items():
+        if col not in _ALLOWED_COLUMNS:
+            raise ValueError(f"Invalid column: {col}")
+        if not val:
+            continue
+        # Normalize the value
+        norm = _re.sub(r'[^a-z0-9\s]', '', str(val).strip().lower())
+        norm = _re.sub(r'\s+', ' ', norm)[:threshold]
+        if not norm:
+            continue
+
+        # Check existing rows
+        rows = conn.execute(f"SELECT {col} FROM {table}").fetchall()
+        for row in rows:
+            existing = row[col] if isinstance(row, dict) else row[0]
+            if not existing:
+                continue
+            existing_norm = _re.sub(r'[^a-z0-9\s]', '', str(existing).strip().lower())
+            existing_norm = _re.sub(r'\s+', ' ', existing_norm)[:threshold]
+            if existing_norm == norm:
+                return True
+    return False
 
 
 def reset_all_tables(conn: DBConnection):
     """Delete all rows from all tables. Use for clean re-runs."""
-    for table in ALL_TABLES:
+    for table in sorted(ALL_TABLES):
         conn.execute(f"DELETE FROM {table}")
     conn.commit()

@@ -275,6 +275,7 @@ def run_scenario(config: Config, scenario_name: str) -> ReproTranscript:
 
     for step_def in scenario["steps"]:
         if config.demo_mode or not session:
+            # No API key available — use mock steps (requires demo_mode or missing credentials)
             step = _run_mock_step(step_def)
         else:
             step = _run_api_step(config, step_def, session)

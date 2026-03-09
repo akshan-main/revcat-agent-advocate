@@ -1,0 +1,83 @@
+---
+id: "test-and-launch/debugging/caching"
+title: "Caching"
+description: "RevenueCat caches data in several places to improve performance. This includes the Dashboardâs Overview, Customer Lists, and the SDKâs CustomerInfo object."
+permalink: "/docs/test-and-launch/debugging/caching"
+slug: "caching"
+version: "current"
+original_source: "docs/test-and-launch/debugging/caching.mdx"
+---
+
+RevenueCat caches data in several places to improve performance. This includes the Dashboardâs Overview, Customer Lists, and the SDKâs CustomerInfo object.
+
+## Dashboard
+
+In the Overview, the data is usually not cached and these subscription metrics will be updated in real-time. New Customer and Active Users may be cached for 1-2 hours. For some larger customers, subscription metrics may be cached for 1-2 hours as well.
+
+![Image](/docs_images/test/overview-data-cache.png)
+
+In each metric, you can hover over the circle icon in the bottom right corner of the card to see how recently the data within that card has been updated.
+
+In Customer Lists, the data will always cache and refresh every two hours.
+
+## SDK
+
+The SDK will cache in several places.
+
+### App User Id
+
+A userâs app user id is cached on the device, so this value will persist between app launches.
+
+### CustomerInfo
+
+The latest `CustomerInfo` is automatically fetched and cached when theÂ *Purchases SDK*Â is configured and throughout the lifecycle of your app, so in most cases theÂ `getCustomerInfo()`Â method will return synchronously.Â It is safe to callÂ `getCustomerInfo()`Â  as often as needed and is a good idea to call it any time a user accesses premium content.
+
+The SDK will update the cache after:
+
+- 5 minutes with the app in the foreground
+- 25 hours with the app in the background
+- a purchase is made or restored
+
+For faster `CustomerInfo` updates, we recommend enabling [Platform Server Notifications](/platform-resources/server-notifications) and the `CustomerInfo` [listener](/getting-started/configuring-sdk#advanced-configuration).
+
+See here for information on the [CustomerInfo's fetchPolicy](https://revenuecat.github.io/purchases-ios-docs/4.31.5/documentation/revenuecat/purchases/customerinfo\(fetchpolicy:\)/).
+
+The SDK caches this subscription information to reduce your app's reliance on the network, and as such users who unlock entitlements will be able to access them even without an internet connection. The cache's default behavior is `cachedOrFetched`, which is that the SDK returns the cached data if available (even if stale), or fetches up-to-date data. See here for information on the [SDK's fetchPolicy](https://revenuecat.github.io/purchases-ios-docs/4.19.0/documentation/revenuecat/cachefetchpolicy/).
+
+Note that calling `logOut` clears the cache.
+
+### Debug Logs
+
+The RevenueCat SDKâs debug logs will tell you if cached data is being fetched.
+
+> \[Purchases] - DEBUG: Vending customerInfo from cache
+
+### Products
+
+Products are automatically fetched and cached when theÂ *Purchases SDK*Â is configured, so in most cases theÂ `getOfferings()`Â method will return synchronously. For this reason, it's safe to callÂ `getOfferings()`Â as often as needed, knowing it will read from the cache without a network call.
+
+These will be cached if nothing has changed in them since the last call to `getOfferings()`, or after 5 minutes.
+
+### Paywalls
+
+Once the RevenueCat SDK is configured, we initiate a prewarming process to ensure seamless accessibility to your Paywalls once we have the information needed. This involves caching all relevant paywall information including the offerings, images, and introductory eligibility data. However, it's important to note that all cached data (except for images) is session-based, meaning it's not persisted to the disk, therefore if the application is started quickly enough there may still be a slight loading time as the data is fetched.
+
+## FAQ
+
+### Does data cache between app launches?
+
+The `app_user_id` and `CustomerInfo` are cached between app launches.
+
+### How does the cache work if the user is offline?
+
+The `app_user_id` and `CustomerInfo` are cached. `CustomerInfo` will be returned while offline forever if the user never goes online, unless something happens that invalidates the cache. Currently `offerings` do not persist between app launches, so you will need to cache this data and display them yourself when the app is offline.
+
+The system grants a grace period for active entitlements when the user is offline. If the user's entitlement was active at the time they went offline, it will remain active for up to three days. After this period, the entitlement will no longer be displayed as active unless the user goes online to refresh their data. This ensures that users cannot exploit offline caching to retain access to features they are no longer entitled to.
+
+### When to use invalidateCustomerInfoCache()?
+
+You should use this method to invalidate the current cache if you want to force the SDK to fetch the data again.
+
+### What happens if the user leaves the app open in the background?
+
+If the app is in production, the app in background will refresh after 24-25 hours.

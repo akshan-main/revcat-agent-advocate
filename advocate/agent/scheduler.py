@@ -1,11 +1,8 @@
-"""Autonomous scheduler: runs the agent on a schedule without human intervention.
+"""Scheduled task runner: executes a fixed set of agent tasks in sequence.
 
-This is what makes the agent truly autonomous. It can:
-- Generate content on a cadence
-- Check for community questions and draft responses
-- Run growth experiments
-- Generate product feedback
-- Build and publish the site
+Runs content generation, experiment checks, feedback generation, and site builds
+on a schedule or as a one-shot. This is a task loop, not an autonomous decision-maker —
+it executes a predefined sequence of operations.
 
 Usage:
     revcat-advocate auto --interval 6h
@@ -161,7 +158,7 @@ class AutonomousScheduler:
                 "slug": slug,
                 "title": outline.title,
                 "content_type": content_type,
-                "status": "verified" if citations > 0 else "draft",
+                "status": "draft",
                 "body_md": body,
                 "outline_json": outline.model_dump_json(),
                 "sources_json": json.dumps([{"url": r.url, "doc_sha256": r.doc_sha256} for r in results]),
@@ -177,7 +174,8 @@ class AutonomousScheduler:
                              word_count=word_count,
                              citations_count=citations,
                              code_snippets=len(code_snippets),
-                         ))
+                         ),
+                         verification=None)
 
         return f"Wrote '{outline.title}' ({content_type}, {word_count} words, {citations} citations)"
 
@@ -214,7 +212,8 @@ class AutonomousScheduler:
                          outputs=LedgerOutputs(
                              artifact_type="feedback",
                              additional={"count": len(items)},
-                         ))
+                         ),
+                         verification=None)
 
         return f"Generated {len(items)} feedback items"
 
@@ -230,7 +229,8 @@ class AutonomousScheduler:
                          outputs=LedgerOutputs(
                              artifact_type="site",
                              additional={"pages": page_count},
-                         ))
+                         ),
+                         verification=None)
 
         return f"Site built ({page_count} pages)"
 

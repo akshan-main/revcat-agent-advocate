@@ -23,7 +23,6 @@ def test_build_site_creates_dirs(db_conn, tmp_path):
 
     site_dir = config.site_output_dir
     assert os.path.exists(os.path.join(site_dir, "apply", "index.html"))
-    assert os.path.exists(os.path.join(site_dir, "ledger", "index.html"))
     assert os.path.exists(os.path.join(site_dir, "content", "index.html"))
     assert os.path.exists(os.path.join(site_dir, "experiments", "index.html"))
     assert os.path.exists(os.path.join(site_dir, "feedback", "index.html"))
@@ -70,10 +69,13 @@ def test_build_site_chain_status(db_conn, tmp_path):
 
 
 def test_md_to_html_headers():
+    # _md_to_html strips the leading H1 (template renders it separately)
     html = _md_to_html("# Title\n## Subtitle\n### Section")
-    assert "<h1" in html
     assert "<h2" in html
     assert "<h3" in html
+    # Leading H1 is stripped, but a non-leading H1 is kept
+    html2 = _md_to_html("## Intro\n# Later Title\n### Section")
+    assert "<h1" in html2
 
 
 def test_md_to_html_code_blocks():
@@ -108,4 +110,4 @@ def test_md_to_html_blockquote():
 def test_build_site_returns_page_count(db_conn, tmp_path):
     config = _setup_config(tmp_path)
     count = build_site(db_conn, config)
-    assert count >= 6  # at least: index, apply, content, experiments, feedback, runbook, ledger
+    assert count >= 5  # at least: index, apply, content, experiments, feedback, runbook

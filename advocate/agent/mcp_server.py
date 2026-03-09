@@ -83,7 +83,7 @@ def create_mcp_server(config: Config) -> FastMCP:
         """
         from .chat import AdvocateAgent
         agent = AdvocateAgent(config)
-        return agent.ask(question, log_to_db=True)
+        return agent.ask(question)
 
     @mcp.tool()
     def suggest_topics() -> str:
@@ -202,10 +202,9 @@ def create_mcp_server(config: Config) -> FastMCP:
     def generate_content(topic: str, content_type: str = "tutorial") -> str:
         """Generate a new content piece about a RevenueCat topic.
 
-        Creates a full article with citations, code snippets, and verification.
+        Creates an outline and draft article with citations from ingested docs.
+        Does NOT run automated verification — content is saved as 'draft' status.
         content_type can be: tutorial, case_study, or agent_playbook.
-
-        Returns the generated content summary and verification status.
         """
         if content_type not in ("tutorial", "case_study", "agent_playbook"):
             return f"Invalid content_type '{content_type}'. Use: tutorial, case_study, agent_playbook"
@@ -250,6 +249,22 @@ def create_mcp_server(config: Config) -> FastMCP:
         import re
         citations = len(set(re.findall(r'\[(?:Source|[^\]]+)\]\((https?://[^)]+)\)', body)))
 
+        # Persist to database
+        slug = re.sub(r'[^a-z0-9]+', '-', topic.lower()).strip('-')[:80]
+        from ..db import insert_row, now_iso
+        insert_row(db, "content_pieces", {
+            "slug": slug,
+            "title": outline.title,
+            "content_type": content_type,
+            "status": "draft",
+            "body_md": body,
+            "outline_json": outline.model_dump_json() if outline else None,
+            "sources_json": "[]",
+            "created_at": now_iso(),
+            "word_count": word_count,
+            "citations_count": citations,
+        })
+
         return (
             f"✅ **Content Generated**\n\n"
             f"**Title:** {outline.title}\n"
@@ -259,6 +274,395 @@ def create_mcp_server(config: Config) -> FastMCP:
             f"---\n\n{body[:2000]}{'...' if len(body) > 2000 else ''}"
         )
 
+    # ── System Knowledge Tools ─────────────────────────────────────────
+
+    @mcp.tool()
+    def read_source_file(file_path: str) -> str:
+        """Read a source file from the agent's codebase.
+
+        Returns the full content of any Python, HTML, CSS, TOML, or YAML file
+        in the repository. Use list_source_files() first to see available files.
+
+        Examples: "advocate/agent/mcp_server.py", "cli.py", "advocate/ledger.py"
+        """
+        import os
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        full_path = os.path.join(repo_root, file_path)
+        # Security: only allow files within the repo (realpath prevents symlink/traversal bypass)
+        if not os.path.realpath(full_path).startswith(os.path.realpath(repo_root) + os.sep):
+            return "Access denied: path outside repository."
+        # Firewall check
+        from .firewall import check as fw_check
+        verdict = fw_check("read_file", {"path": file_path})
+        if not verdict:
+            return f"Firewall denied: {verdict.reason}"
+        # Block sensitive files
+        basename = os.path.basename(file_path)
+        BLOCKED = {".env", ".env.local", ".env.production", "credentials.json", "secrets.json"}
+        if basename in BLOCKED or ".env" in basename:
+            return f"Access denied: {basename} is a sensitive file."
+        # Only allow source file extensions
+        ALLOWED_EXT = {".py", ".html", ".css", ".toml", ".yml", ".yaml", ".md", ".txt", ".json", ".cfg"}
+        _, ext = os.path.splitext(full_path)
+        if ext.lower() not in ALLOWED_EXT:
+            return f"Access denied: {ext} files are not readable."
+        if not os.path.exists(full_path):
+            return f"File not found: {file_path}"
+        try:
+            with open(full_path, "r") as f:
+                return f.read()
+        except Exception as e:
+            return f"Error reading file: {e}"
+
+    @mcp.tool()
+    def list_source_files() -> str:
+        """List all source files in the agent's codebase.
+
+        Returns a tree of Python, HTML, CSS, TOML, and YAML files with line counts.
+        Use read_source_file() to read any specific file.
+        """
+        import os
+        import glob as globmod
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        files = []
+        for pattern in ["**/*.py", "**/*.html", "**/*.css", "**/*.toml", "**/*.yml", "**/*.md"]:
+            for fpath in globmod.glob(os.path.join(repo_root, pattern), recursive=True):
+                rel = os.path.relpath(fpath, repo_root)
+                if any(skip in rel for skip in ["__pycache__", "site_output", ".docs_cache", ".egg", ".pytest_cache"]):
+                    continue
+                try:
+                    with open(fpath, "r") as f:
+                        lines = len(f.readlines())
+                    files.append(f"  {rel} ({lines} lines)")
+                except Exception:
+                    files.append(f"  {rel}")
+        return "**Agent Source Files**\n\n" + "\n".join(sorted(files))
+
+    @mcp.tool()
+    def get_content_body(slug: str) -> str:
+        """Get the full markdown body of a content piece by slug.
+
+        Returns the complete generated article including citations, code snippets,
+        and sources section. Use list_content() to see available slugs.
+        """
+        from ..db import query_rows
+        rows = query_rows(db, "content_pieces")
+        for row in rows:
+            if row.get("slug") == slug:
+                return (
+                    f"**{row['title']}**\n"
+                    f"Type: {row['content_type']} | Words: {row['word_count']} | "
+                    f"Citations: {row['citations_count']} | Status: {row['status']}\n\n"
+                    f"---\n\n{row.get('body_md', 'No body available')}"
+                )
+        return f"No content piece found with slug '{slug}'."
+
+    @mcp.tool()
+    def get_experiment_details(name: str) -> str:
+        """Get full details of a growth experiment by name.
+
+        Returns hypothesis, metric, channel, tactic, inputs, outputs, results,
+        and timeline. Use list_experiments() to see available experiments.
+        """
+        from ..db import query_rows
+        import json
+        rows = query_rows(db, "growth_experiments")
+        for row in rows:
+            if row.get("name") == name:
+                outputs = row.get("outputs_json")
+                results = row.get("results_json")
+                if isinstance(outputs, str):
+                    try:
+                        outputs = json.loads(outputs)
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                if isinstance(results, str):
+                    try:
+                        results = json.loads(results)
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                return (
+                    f"**Experiment: {row['name']}**\n\n"
+                    f"- **Hypothesis:** {row['hypothesis']}\n"
+                    f"- **Metric:** {row['metric']}\n"
+                    f"- **Channel:** {row['channel']}\n"
+                    f"- **Tactic:** {row['tactic']}\n"
+                    f"- **Status:** {row['status']}\n"
+                    f"- **Started:** {row.get('created_at', 'N/A')}\n"
+                    f"- **Concluded:** {row.get('concluded_at', 'N/A')}\n\n"
+                    f"**Outputs:**\n{json.dumps(outputs, indent=2) if outputs else 'N/A'}\n\n"
+                    f"**Results:**\n{json.dumps(results, indent=2) if results else 'N/A'}"
+                )
+        return f"No experiment found with name '{name}'."
+
+    @mcp.tool()
+    def get_feedback_details(title: str) -> str:
+        """Get full details of a product feedback item by title (partial match).
+
+        Returns severity, area, reproduction steps, expected/actual behavior,
+        evidence links, and proposed fix.
+        """
+        from ..db import query_rows
+        rows = query_rows(db, "product_feedback")
+        for row in rows:
+            if title.lower() in row.get("title", "").lower():
+                return (
+                    f"**{row['title']}**\n\n"
+                    f"- **Severity:** {row['severity']}\n"
+                    f"- **Area:** {row['area']}\n"
+                    f"- **Status:** {row['status']}\n\n"
+                    f"**Reproduction Steps:**\n{row.get('repro_steps', 'N/A')}\n\n"
+                    f"**Expected Behavior:**\n{row.get('expected', 'N/A')}\n\n"
+                    f"**Actual Behavior:**\n{row.get('actual', 'N/A')}\n\n"
+                    f"**Evidence Links:**\n{row.get('evidence_links_json', 'N/A')}\n\n"
+                    f"**Proposed Fix:**\n{row.get('proposed_fix', 'N/A')}"
+                )
+        return f"No feedback item found matching '{title}'."
+
+    @mcp.tool()
+    def get_ledger_entries(limit: int = 20) -> str:
+        """Get recent entries from the tamper-evident hash-chained ledger.
+
+        Returns command, timestamp, success status, hash, and full JSON for
+        each entry. The ledger provides a cryptographic audit trail of key actions.
+        """
+        from ..db import query_rows
+        rows = query_rows(db, "run_log", order_by="sequence DESC", limit=limit)
+        if not rows:
+            return "No ledger entries yet."
+        lines = [f"**Ledger — {len(rows)} most recent entries**\n"]
+        for row in rows:
+            success = "OK" if row.get("success") else "FAIL"
+            lines.append(
+                f"#{row['sequence']} | **{row['command']}** | {row['started_at'][:19]} | "
+                f"{success} | `{row['hash'][:16]}...`"
+            )
+        return "\n".join(lines)
+
+    @mcp.tool()
+    def get_architecture() -> str:
+        """Get the complete architecture overview of the agent system.
+
+        Returns a detailed description of all subsystems, how they connect,
+        the tech stack, safety model, and deployment pipeline.
+        """
+        index = _get_index()
+        rag_index = _get_rag_index()
+        from ..ledger import verify_chain
+
+        chain = verify_chain(db, config)
+
+        return f"""**revcat-agent-advocate — System Architecture**
+
+## Tech Stack
+- **Language:** Python 3.11+
+- **LLM:** Claude API (Anthropic) — model configurable via AI_MODEL env var
+- **Vector DB:** ChromaDB Cloud (cosine similarity, persistent)
+- **Embeddings:** all-mpnet-base-v2 (768-dim) via HF Inference API
+- **Reranker:** ms-marco-MiniLM-L-12-v2 (cross-encoder) via HF Inference API
+- **Database:** Turso (cloud SQLite via libsql) with local fallback
+- **Search:** Hybrid BM25 (k1=1.2, b=0.75) + semantic + reranker
+- **Site:** Jinja2 templates → static HTML on GitHub Pages
+- **MCP:** FastMCP server (stdio + SSE transports)
+- **CI/CD:** GitHub Actions (test → build-site → deploy to Pages)
+
+## Subsystems
+1. **Knowledge Engine** — Ingests RC docs (LLM index + .md mirrors), builds BM25 + RAG indexes
+2. **Content Engine** — Outlines, drafts, citation verification, code snippet extraction
+3. **Growth Engine** — Experiments (SEO, content series, community blitz, integration showcase)
+4. **Feedback Engine** — Doc analysis, API/MCP repro testing, structured feedback
+5. **Community Engine** — GitHub/Reddit/X scanning, response drafting (DRY_RUN gated)
+6. **Intelligence** — Competitive analysis, doc quality scoring, ROI dashboard
+7. **Governance** — 17-case red-team suite (prompt injection, PII, brand safety)
+8. **Ledger** — Hash-chained (SHA256), HMAC-signed, tamper-evident audit trail
+9. **MCP Server** — Exposes all tools to other AI agents
+10. **HTTP API** — JSON endpoints for integration
+11. **Chat** — Interactive doc-grounded Q&A with slash commands
+12. **Scheduler** — Autonomous 6h cycle (ingest, content, experiments, feedback, site)
+13. **Distribution** — Content approval queue, publication status tracking
+14. **Reliability** — Circuit breakers, ops dashboard, health monitoring
+
+## Current State
+- Docs indexed: {index.doc_count if index else 0}
+- RAG chunks: {rag_index.chunk_count if hasattr(rag_index, 'chunk_count') else len(rag_index.chunks)}
+- Content pieces: {count_rows(db, 'content_pieces')}
+- Experiments: {count_rows(db, 'growth_experiments')}
+- Feedback items: {count_rows(db, 'product_feedback')}
+- Ledger entries: {chain.total_entries} ({'chain verified' if chain.valid else f'BROKEN: {len(chain.breaks)} breaks'})
+
+## Safety Model
+- DRY_RUN=true (default) — no external posts, drafts only
+- ALLOW_WRITES=false (default) — read-only API access
+- DEMO_MODE available — mock API responses for testing
+- Red-team suite: prompt injection, PII extraction, competitor bashing, brand safety
+- Key actions logged in tamper-evident ledger
+
+## MCP Connection
+```
+claude mcp add revcat-agent-advocate -- revcat-advocate mcp-serve
+```"""
+
+    @mcp.tool()
+    def run_experiment_mcp(name: str) -> str:
+        """Start a growth experiment by name.
+
+        Available experiments: programmatic-seo, content-series, community-blitz, integration-showcase.
+        Returns experiment status and initial outputs.
+        """
+        from ..growth.experiments import EXPERIMENT_REGISTRY, start_experiment, get_experiment
+        if name not in EXPERIMENT_REGISTRY:
+            return f"Unknown experiment '{name}'. Available: {', '.join(EXPERIMENT_REGISTRY.keys())}"
+        try:
+            exp_id = start_experiment(db, name, {})
+            exp = get_experiment(db, exp_id)
+            return (
+                f"**Experiment Started:** {exp['name']}\n\n"
+                f"- Hypothesis: {exp['hypothesis']}\n"
+                f"- Metric: {exp['metric']}\n"
+                f"- Channel: {exp['channel']}\n"
+                f"- Status: {exp['status']}\n\n"
+                f"Run `revcat-advocate run-experiment --name {name}` for full execution with SEO generation."
+            )
+        except Exception as e:
+            return f"Error starting experiment: {e}"
+
+    @mcp.tool()
+    def generate_feedback_mcp(count: int = 3) -> str:
+        """Generate structured product feedback from documentation analysis.
+
+        Analyzes RevenueCat docs for inconsistencies, gaps, and friction points.
+        Returns feedback items with severity, repro steps, and proposed fixes.
+        """
+        from ..feedback.collector import generate_feedback_from_docs
+        bm25_index = _get_index()
+        try:
+            items = generate_feedback_from_docs(bm25_index, config, db, ledger_ctx=None, count=count)
+            if not items:
+                return "No feedback generated. Ensure docs are ingested first."
+            lines = [f"**Generated {len(items)} feedback items:**\n"]
+            for item in items:
+                lines.append(
+                    f"- [{item.severity.upper()}] **{item.title}** ({item.area})\n"
+                    f"  Repro: {item.repro_steps[:100]}...\n"
+                    f"  Fix: {item.proposed_fix[:100]}..."
+                )
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error generating feedback: {e}"
+
+    @mcp.tool()
+    def get_weekly_report() -> str:
+        """Generate a weekly activity report.
+
+        Summarizes all agent activity from the past 7 days: content published,
+        experiments run, feedback filed, community interactions, and ledger stats.
+        """
+        from ..reporting.weekly import generate_weekly_report
+        try:
+            report = generate_weekly_report(db, config)
+            return report
+        except Exception as e:
+            return f"Error generating report: {e}"
+
+    # ── Skill Runtime ──────────────────────────────────────────────────
+
+    @mcp.tool()
+    def list_skills() -> str:
+        """List all available developer skills with their capabilities.
+
+        Skills are composable tools for RevenueCat integration tasks:
+        code review, migration, paywall generation, webhook debugging, etc.
+        """
+        from ..skills.runtime import SkillRuntime
+        runtime = SkillRuntime(config, db)
+        runtime.discover()
+        skills = runtime.list_skills()
+        if not skills:
+            return "No skills discovered."
+        lines = [f"**{len(skills)} skills available:**\n"]
+        for s in skills:
+            inputs_str = ", ".join(f"`{i['name']}`{'*' if i['required'] else ''}" for i in s["inputs"]) or "none"
+            lines.append(
+                f"### {s['name']} v{s['version']}\n"
+                f"{s['description']}\n"
+                f"- Inputs: {inputs_str}\n"
+                f"- Scopes: {', '.join(s['scopes'])}\n"
+                f"- Chains to: {', '.join(s['chains_to']) or 'none'}"
+            )
+        return "\n\n".join(lines)
+
+    @mcp.tool()
+    def run_skill(skill_name: str, inputs_json: str = "{}") -> str:
+        """Prepare a skill's context, prompt, and scoped tools for the caller to drive.
+
+        Validates inputs, checks permission scopes, and returns the skill's prompt
+        and available tools. The caller (CLI, MCP client, or agent) drives the
+        actual LLM tool-use cycle. Use list_skills() first to see available skills.
+
+        Args:
+            skill_name: Name of the skill (e.g. "review-rc", "search-docs", "debug-webhook")
+            inputs_json: JSON string of input parameters matching the skill's declared schema
+        """
+        import json
+        from ..skills.runtime import SkillRuntime
+        runtime = SkillRuntime(config, db)
+        runtime.discover()
+        try:
+            inputs = json.loads(inputs_json) if inputs_json else {}
+        except json.JSONDecodeError as e:
+            return f"Invalid JSON inputs: {e}"
+        result = runtime.execute(skill_name, inputs)
+        if not result.success:
+            return f"Skill '{skill_name}' failed:\n" + "\n".join(f"- {e}" for e in result.errors)
+        parts = [
+            f"**Skill:** {result.skill}",
+            f"**Duration:** {result.duration_ms}ms",
+            f"**Scopes:** {', '.join(result.scopes_used)}",
+            f"**Tools:** {', '.join(result.output.get('tools_available', []))}",
+        ]
+        if result.output.get("doc_context"):
+            parts.append(f"\n**Doc context ({len(result.output['doc_context'])} results):**")
+            for doc in result.output["doc_context"]:
+                parts.append(f"- [{doc['title']}]({doc['url']})")
+        if result.output.get("prompt"):
+            parts.append(f"\n**Prompt loaded:** {len(result.output['prompt'])} chars")
+        return "\n".join(parts)
+
+    @mcp.tool()
+    def run_skill_chain(skill_names: str, inputs_json: str = "{}") -> str:
+        """Execute a chain of skills in sequence, passing context forward.
+
+        Skills declared with chains_to/chains_from are designed to compose.
+        Example: "search-docs,review-rc,rc-audit"
+
+        Args:
+            skill_names: Comma-separated skill names to chain
+            inputs_json: JSON string of initial input parameters
+        """
+        import json
+        from ..skills.runtime import SkillRuntime
+        runtime = SkillRuntime(config, db)
+        runtime.discover()
+        names = [n.strip() for n in skill_names.split(",") if n.strip()]
+        if len(names) < 2:
+            return "Chain requires at least 2 skills. Provide comma-separated names."
+        try:
+            inputs = json.loads(inputs_json) if inputs_json else {}
+        except json.JSONDecodeError as e:
+            return f"Invalid JSON inputs: {e}"
+        try:
+            chain = runtime.chain(names)
+        except Exception as e:
+            return f"Chain validation failed: {e}"
+        result = chain.run(inputs)
+        if not result.success:
+            return "Chain failed:\n" + "\n".join(f"- {e}" for e in result.errors)
+        return (
+            f"**Chain completed:** {' → '.join(names)}\n"
+            f"**Scopes used:** {', '.join(result.output.get('scopes_used', []))}\n"
+            f"**Steps:** {len(result.output.get('chain_results', []))}"
+        )
+
     # ── Resources ─────────────────────────────────────────────────────
 
     @mcp.resource("advocate://stats")
@@ -266,25 +670,20 @@ def create_mcp_server(config: Config) -> FastMCP:
         """Current agent statistics."""
         return get_agent_stats()
 
+    @mcp.resource("advocate://architecture")
+    def resource_architecture() -> str:
+        """Full system architecture."""
+        return get_architecture()
+
     @mcp.resource("advocate://readme")
     def resource_readme() -> str:
         """Agent README and capabilities overview."""
-        return (
-            "# RevenueCat revcat-agent-advocate\n\n"
-            "Autonomous developer advocacy agent for RevenueCat.\n\n"
-            "## Capabilities\n"
-            "- Search and answer questions from official RevenueCat docs\n"
-            "- Generate cited technical content (tutorials, case studies, playbooks)\n"
-            "- Run growth experiments (SEO, content series, community engagement)\n"
-            "- File structured product feedback from doc analysis\n"
-            "- Maintain a tamper-evident hash-chained audit trail\n\n"
-            "## Available Tools\n"
-            "- `search_docs`: Search RevenueCat documentation\n"
-            "- `ask_question`: Get a cited answer about RevenueCat\n"
-            "- `generate_content`: Create a new content piece\n"
-            "- `list_content` / `list_experiments` / `list_feedback`: View agent outputs\n"
-            "- `verify_ledger`: Check the audit trail integrity\n"
-            "- `get_agent_stats`: View agent activity metrics\n"
-        )
+        import os
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        readme_path = os.path.join(repo_root, "README.md")
+        if os.path.exists(readme_path):
+            with open(readme_path, "r") as f:
+                return f.read()
+        return "README.md not found."
 
     return mcp

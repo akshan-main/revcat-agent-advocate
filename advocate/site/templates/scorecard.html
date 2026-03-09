@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>Agent Scorecard</h1>
+    <p class="page-intro">
+        Live operational metrics from the agent's database. Every number links to verifiable evidence
+        in the ledger, content, experiments, and feedback pages.
+    </p>
+
+    <div class="scorecard-grid">
+        <div class="score-card score-hero">
+            <div class="score-value">{{ stats.total_runs }}</div>
+            <div class="score-label">Total Runs</div>
+            <div class="score-detail">{{ stats.success_rate }}% success rate</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ stats.total_words | default(0) }}</div>
+            <div class="score-label">Words Written</div>
+            <div class="score-detail">across {{ stats.content_count }} articles</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ stats.total_citations }}</div>
+            <div class="score-label">Doc Citations</div>
+            <div class="score-detail">from {{ stats.docs_indexed }} indexed pages</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value {% if stats.chain_valid %}score-green{% else %}score-red{% endif %}">
+                {% if stats.chain_valid %}&#10003;{% else %}&#10007;{% endif %}
+            </div>
+            <div class="score-label">Ledger Chain</div>
+            <div class="score-detail">{% if stats.chain_valid %}Verified{% else %}{{ stats.chain_breaks }} break{{ 's' if stats.chain_breaks != 1 }}{% endif %} &middot; {{ stats.chain_entries }} entries</div>
+        </div>
+    </div>
+
+    <h2>Artifacts Produced</h2>
+    <table class="scorecard-table">
+        <thead>
+            <tr><th>Artifact Type</th><th>Count</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><a href="{{ base_url }}/content/">Content Articles</a></td>
+                <td><strong>{{ stats.content_count }}</strong></td>
+                <td>tutorials, playbooks, case studies</td>
+            </tr>
+            {% if stats.seo_count > 0 %}
+            <tr>
+                <td><a href="{{ base_url }}/content/">SEO Pages</a></td>
+                <td><strong>{{ stats.seo_count }}</strong></td>
+                <td>comparison, how-to, glossary formats</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td><a href="{{ base_url }}/experiments/">Growth Experiments</a></td>
+                <td><strong>{{ stats.experiment_count }}</strong></td>
+                <td>{{ stats.experiments_concluded }} concluded, {{ stats.experiments_running }} running</td>
+            </tr>
+            <tr>
+                <td><a href="{{ base_url }}/feedback/">Product Feedback</a></td>
+                <td><strong>{{ stats.feedback_count }}</strong></td>
+                <td>{{ stats.feedback_major }} major, {{ stats.feedback_minor }} minor</td>
+            </tr>
+            <tr>
+                <td><a href="{{ base_url }}/twitter-bot/">Tweets</a></td>
+                <td><strong>{{ stats.tweet_count }}</strong></td>
+                <td>{{ stats.tweets_sent }} posted, {{ stats.tweets_draft }} draft</td>
+            </tr>
+            <tr>
+                <td>Doc Snapshots</td>
+                <td><strong>{{ stats.docs_indexed }}</strong></td>
+                <td>RevenueCat doc pages ingested and indexed</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Run History by Command</h2>
+    <table class="scorecard-table">
+        <thead>
+            <tr><th>Command</th><th>Runs</th><th>Succeeded</th><th>Failed</th><th>Rate</th></tr>
+        </thead>
+        <tbody>
+            {% for cmd in command_stats %}
+            <tr>
+                <td><code>{{ cmd.command }}</code></td>
+                <td>{{ cmd.total }}</td>
+                <td>{{ cmd.succeeded }}</td>
+                <td>{{ cmd.failed }}</td>
+                <td>
+                    <span class="{% if cmd.rate >= 80 %}score-green{% elif cmd.rate >= 50 %}score-amber{% else %}score-red{% endif %}">
+                        {{ cmd.rate }}%
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Safety Model</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        The agent enforces safety constraints in code, not just configuration. These gates control what the agent can do autonomously.
+    </p>
+    <div class="safety-gates-grid">
+        <div class="safety-gate-card">
+            <div class="gate-status gate-on">DEFAULT ON</div>
+            <strong>DRY_RUN</strong>
+            <span>Blocks external posts to GitHub, Reddit, forums. Community responses are drafted locally, never auto-posted.</span>
+        </div>
+        <div class="safety-gate-card">
+            <div class="gate-status gate-on">DEFAULT ON</div>
+            <strong>Tweet Critic</strong>
+            <span>Before any tweet posts, a critic agent runs programmatic checks (length, code detection) + LLM quality review. Rewrites up to 3x if rejected.</span>
+        </div>
+        <div class="safety-gate-card">
+            <div class="gate-status gate-on">ENFORCED</div>
+            <strong>Citation-Only Content</strong>
+            <span>Every factual claim must cite a specific doc page. The verifier checks all citation links are reachable before publishing.</span>
+        </div>
+    </div>
+
+    {% if failed_runs %}
+    <h2>Failed Runs</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        Runs that failed are logged transparently. Failures are part of normal operation;
+        API errors, rate limits, and retries are expected in any autonomous system.
+    </p>
+    <table class="scorecard-table">
+        <thead>
+            <tr><th>Run ID</th><th>Command</th><th>When</th></tr>
+        </thead>
+        <tbody>
+            {% for run in failed_runs %}
+            <tr>
+                <td style="font-size:0.78rem;font-family:monospace;">{{ run.run_id[:30] }}...</td>
+                <td><code>{{ run.command }}</code></td>
+                <td>{{ run.started_at[:16] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Timeline</h2>
+    <div class="timeline-bar">
+        <div class="timeline-point">
+            <strong>{{ stats.first_run[:10] }}</strong>
+            <span>First run</span>
+        </div>
+        <div class="timeline-line"></div>
+        <div class="timeline-point">
+            <strong>{{ stats.last_run[:10] }}</strong>
+            <span>Latest run</span>
+        </div>
+        <div class="timeline-line"></div>
+        <div class="timeline-point">
+            <strong>{{ stats.total_runs }} runs</strong>
+            <span>in {{ stats.days_active }} day{{ 's' if stats.days_active != 1 }}</span>
+        </div>
+    </div>
+</article>
+{% endblock %}

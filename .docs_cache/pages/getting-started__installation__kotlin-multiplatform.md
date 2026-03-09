@@ -1,0 +1,116 @@
+---
+id: "getting-started/installation/kotlin-multiplatform"
+title: "Kotlin Multiplatform"
+description: "What is RevenueCat?"
+permalink: "/docs/getting-started/installation/kotlin-multiplatform"
+slug: "kotlin-multiplatform"
+version: "current"
+original_source: "docs/getting-started/installation/kotlin-multiplatform.mdx"
+---
+
+## What is RevenueCat?
+
+RevenueCat provides a backend and a wrapper around StoreKit and Google Play Billing to make implementing in-app purchases and subscriptions easy. With our SDK, you can build and manage your app business on any platform without having to maintain IAP infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/growth/where-does-revenuecat-fit-in-your-app/) or you can [sign up free](https://app.revenuecat.com/signup) to start building.
+
+## Requirements
+
+Android 5.0+ (API 21+)\
+iOS 13.0+
+
+## Installation
+
+### Adding the dependency
+
+Purchases for Kotlin Multiplatform (Google Play and iOS App Store) is available on Maven Central and can be included via Gradle.
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-kmp.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-kmp/releases)
+
+Add the following coordinates to your `libs.versions.toml`.
+
+*Interactive content is available in the web version of this doc.*
+
+You can now add the dependency to your `commonMain` source set in your module's `build.gradle.kts`.
+
+*Interactive content is available in the web version of this doc.*
+
+### Opt in to ExperimentalForeignApi
+
+Since the SDK uses generated Kotlin bindings for native code on iOS, you will need to opt in to `ExperimentalForeignApi` in your iOS source sets. To do so, add the following to your module's `build.gradle.kts`.
+
+*Interactive content is available in the web version of this doc.*
+
+### Link the native iOS SDK
+
+Since the SDK depends on a native RevenueCat iOS framework, `PurchasesHybridCommon`, this will need to be linked to your existing iOS project. You have 2 options do to so: using Swift Package Manager and using CocoaPods. It's easiest to pick the dependency manager you're already using in your iOS project.
+
+#### Using Swift Package Manager
+
+To add `PurchasesHybridCommon` to your iOS project using Swift Package Manager, do the following:
+
+1. Select `File Â» Add Packages Dependencies...` and enter the repository URL `https://github.com/RevenueCat/purchases-hybrid-common` into the search bar (top right).
+2. Then set the Dependency Rule to `Exact`, and specify the version number to be equal to everything after the '+' in the purchases-kmp version.
+3. When "Choose Package Products for purchases-hybrid-common" appears, select `PurchasesHybridCommon`. If you plan to use Paywalls, select `PurchasesHybridCommonUI` too.
+4. Lastly, click "Add Package".
+
+The library should now have been added to the Package Dependencies section.
+
+#### Using CocoaPods
+
+There are 2 approaches to add `PurchasesHybridCommon` to your iOS project using CocoaPods. The approach depends on how you currently integrate your existing Kotlin Multiplatform code with your iOS project.
+
+##### 1. Directly as a local iOS framework
+
+Follow these instructions if your Kotlin Multiplatform module is integrated directly with your iOS project as a local iOS framework. That is, Xcode is calling the `embedAndSignAppleFrameworkForXcode` Gradle task (or the old `packForXcode` task) as part of the build. At the time of writing, if you generated your Kotlin Multiplatform project using the [online wizard](https://kmp.jetbrains.com/), this is how it's set up.
+
+In this scenario, you need to specify the transitive dependency on `PurchasesHybridCommon` in your `Podfile`. Add the following:
+
+*Interactive content is available in the web version of this doc.*
+
+##### 2. Using Cocoapods
+
+Follow these instructions if your Kotlin Multiplatform module is integrated with your iOS project using CocoaPods. That is, you've applied the `kotlin("native.cocoapods")` Gradle plugin, and set it up such that the `Podfile` specifies a dependency on your Kotlin Multiplatform module. (See also [the Kotlin docs](https://kotlinlang.org/docs/native-cocoapods-xcode.html).)
+
+In this scenario, you can specify the transitive dependency on `PurchasesHybridCommon` using Gradle. To do so, add the following to your `libs.versions.toml`:
+
+*Interactive content is available in the web version of this doc.*
+
+Now you can add the following to your module's `build.gradle.kts`:
+
+*Interactive content is available in the web version of this doc.*
+
+Finally, add the following `post_install` script to your iOS app target in your `Podfile`. For instance, if your Kotlin Multiplatform module is named `shared`, it should look something like this:
+
+*Interactive content is available in the web version of this doc.*
+
+This avoids the compiler looking for an app icon in your Kotlin Multiplatform module.
+
+### Set the correct launchMode for Android
+
+Depending on your user's payment method, they may be asked by Google Play to verify their purchase in their (banking) app. This means they will have to background your app and go to another app to verify the purchase. If your Activity's `launchMode` is set to anything other than `standard` or `singleTop`, backgrounding your app can cause the purchase to get cancelled. To avoid this, set the `launchMode` of your Activity to `standard` or `singleTop` in your Android app's `AndroidManifest.xml` file:
+
+*Interactive content is available in the web version of this doc.*
+
+You can find Android's documentation on the various `launchMode` options [here](https://developer.android.com/guide/topics/manifest/activity-element#lmode).
+
+### Build static binaries for iOS targets
+
+In some cases it may be required to configure your iOS targets to build static binaries, in order for your project to compile. Make sure `isStatic` is set to `true` in your iOS targets' binary output settings in your `build.gradle.kts`:
+
+*Interactive content is available in the web version of this doc.*
+
+## Import Purchases
+
+You should now be able to import `Purchases`.
+
+*Interactive content is available in the web version of this doc.*
+
+:::warning
+On Android, Purchases uses AndroidX App Startup under the hood. Make sure you have not removed the `androidx.startup.InitializationProvider` completely in your manifest. If you need to remove specific initializers, such as `androidx.work.WorkManagerInitializer`, set `tools:node="merge"` on the provider, and `tools:node="remove"` on the meta-data of the initializer you want to remove.
+
+*Interactive content is available in the web version of this doc.*
+
+:::
+
+## Next Steps
+
+- Now that you've installed the Purchases SDK in Kotlin Multiplatform, get started by [configuring an instance of Purchases â](/getting-started/quickstart#3-using-revenuecats-purchases-sdk)

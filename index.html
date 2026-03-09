@@ -150,7 +150,7 @@
             <li>Files structured product feedback based on doc analysis</li>
             <li>Drafts tweets, GitHub issue responses, and Reddit replies</li>
             <li>Publishes a static website showing all of this work</li>
-            <li>Logs every action to a tamper-evident ledger (hash chain)</li>
+            <li>Logs key actions to a tamper-evident ledger (hash chain)</li>
         </ul>
 
         <p>The output is a static website hosted on GitHub Pages. A reviewer at RevenueCat can visit the URL, click through the content, check the ledger, and verify that everything traces back to real documentation.</p>
@@ -171,7 +171,7 @@
 
         <p>The job posting asks for someone who can operate autonomously, create developer content, run growth experiments, and provide product feedback. This system does all of those things, and by submitting it, the application <em>is</em> the proof of work.</p>
 
-        <p>The hash-chained ledger is the differentiator. Every action the system takes (ingesting docs, writing a post, running an experiment) creates a log entry. Each entry's hash depends on the previous entry's hash. If anyone tampers with an entry, the chain breaks. This means a reviewer can verify that the outputs are real and haven't been faked after the fact.</p>
+        <p>The hash-chained ledger is the differentiator. Key actions the system takes (ingesting docs, writing a post, running an experiment) create log entries. Each entry's hash depends on the previous entry's hash. If anyone tampers with an entry, the chain breaks. This means a reviewer can verify that the outputs are real and haven't been faked after the fact.</p>
 
         <h2 id="how">How it works, step by step</h2>
 
@@ -180,20 +180,20 @@
         <p>It then builds two search indexes over the cached docs:</p>
         <ul>
             <li><strong>BM25 keyword search</strong>: traditional term-frequency scoring</li>
-            <li><strong>RAG (retrieval-augmented generation)</strong>: splits docs into chunks, embeds them via Hugging Face Inference API (all-mpnet-base-v2, 768-dim), stores in ChromaDB Cloud, and uses a cross-encoder reranker (ms-marco-MiniLM-L-12-v2) via HF API at query time. Everything runs remotely, no local models, no local vector storage. Final scoring is 70% semantic + 30% BM25.</li>
+            <li><strong>RAG (retrieval-augmented generation)</strong>: splits docs into chunks, embeds them via Hugging Face Inference API (all-mpnet-base-v2, 768-dim), stores in ChromaDB (cloud or local fallback), and uses a cross-encoder reranker (ms-marco-MiniLM-L-12-v2) via HF API at query time. Final scoring is 70% semantic + 30% BM25.</li>
         </ul>
 
         <h3>2. Write content</h3>
         <p>Given a topic, the system:</p>
         <ol>
             <li>Searches the doc index for relevant pages</li>
-            <li>Builds an outline (using Claude API if available, otherwise a template)</li>
+            <li>Builds an outline using Claude API</li>
             <li>Generates a draft with citations in <code>[Source](url)</code> format</li>
             <li>Verifies every citation link is reachable (HEAD request)</li>
             <li>Checks that doc SHA256 hashes still match</li>
             <li>Saves to the database and outputs markdown</li>
         </ol>
-        <p>Without an Anthropic API key, it uses Jinja2 templates to assemble content from doc snippets. Less natural, but still includes real citations.</p>
+        <p>An Anthropic API key is required for content generation. The system uses Claude to produce natural, well-structured articles grounded in real documentation.</p>
 
         <h3>3. Run experiments</h3>
         <p>There are 4 predefined growth experiments:</p>
@@ -207,7 +207,7 @@
         <p>Each experiment records a hypothesis, a metric, and results. The SEO experiment actually generates pages; the others scaffold the structure.</p>
 
         <h3>4. Generate feedback</h3>
-        <p>The system analyzes the cached docs and identifies potential issues: missing information, inconsistencies, unclear explanations. If Claude API is available, it uses an LLM to find these; otherwise it runs heuristic checks (broken internal links, missing code examples, etc.).</p>
+        <p>The system analyzes the cached docs and identifies potential issues: missing information, inconsistencies, unclear explanations. An Anthropic API key is required — the system uses Claude to analyze docs and generate structured feedback.</p>
         <p>Each feedback item has: title, severity (critical/major/minor/suggestion), area (sdk/api/docs/etc.), reproduction steps, expected behavior, actual behavior, and a proposed fix.</p>
         <p>There's also a <strong>repro harness</strong> that runs scripted API scenarios against RevenueCat's API (or mocks in demo mode) and detects friction: slow responses, unhelpful error messages, missing fields, undocumented error codes. These produce golden test snapshots that can catch regressions.</p>
 
@@ -228,13 +228,12 @@
             <tr><td><code>/content</code></td><td>List of all generated posts, each with citations and verification status</td></tr>
             <tr><td><code>/experiments</code></td><td>Growth experiments with hypothesis and results</td></tr>
             <tr><td><code>/feedback</code></td><td>Product feedback items with severity and repro steps</td></tr>
-            <tr><td><code>/ledger</code></td><td>Hash-chained log of every action, with chain verification status</td></tr>
-            <tr><td><code>/roi</code></td><td>Output dashboard: counts of everything produced</td></tr>
+            <tr><td><code>/twitter-bot</code></td><td>Agent-drafted tweets with critic review pipeline</td></tr>
             <tr><td><code>/runbook</code></td><td>Operator reference: all commands, safety gates, architecture</td></tr>
         </table>
 
         <h3>7. The ledger</h3>
-        <p>Every command creates a row in the <code>run_log</code> table (Turso cloud). Each row contains:</p>
+        <p>Key commands create a row in the <code>run_log</code> table (Turso cloud). Each row contains:</p>
         <ul>
             <li>What command was run and when</li>
             <li>What inputs it received</li>
@@ -249,7 +248,7 @@
         <h2 id="parts">Project structure</h2>
 
         <pre class="file-tree"><code>rcagent/
-  cli.py                          # 27 CLI commands (Click)
+  cli.py                          # 31 CLI commands (Click)
   advocate/
     config.py                     # Pydantic settings from .env
     db.py                         # Turso cloud SQLite schema (7 tables) + CRUD helpers
@@ -268,7 +267,7 @@
 
     content/
       planner.py                  # Topic selection + outline generation
-      writer.py                   # Draft generation (Claude or template)
+      writer.py                   # Draft generation (Claude API)
       verifier.py                 # Citation link checks, SHA256 matching
       linter.py                   # Content quality checks
 
@@ -296,7 +295,7 @@
       roi.py                      # Output metrics dashboard
 
     governance/
-      redteam.py                  # 16-case adversarial test suite
+      redteam.py                  # 17-case adversarial test suite
 
     distribution/
       pipeline.py                 # Content distribution queue
@@ -326,7 +325,7 @@
     mock_api.py                   # Mock RC API/Charts/MCP responses
     fixtures/                     # Sample doc pages and API responses
 
-  tests/                          # 259 tests
+  tests/                          # 258 tests
     conftest.py                   # Shared fixtures (in-memory DB, mock config)
     test_*.py                     # One test file per module</code></pre>
 
@@ -338,7 +337,7 @@
             <tr><td><code>growth_experiments</code></td><td>Experiments: hypothesis, metric, status, results</td></tr>
             <tr><td><code>community_interactions</code></td><td>Drafted responses: channel, question, response, status</td></tr>
             <tr><td><code>product_feedback</code></td><td>Feedback items: severity, area, repro steps, evidence</td></tr>
-            <tr><td><code>run_log</code></td><td>Ledger: hash-chained log of every command run</td></tr>
+            <tr><td><code>run_log</code></td><td>Ledger: hash-chained log of key commands run</td></tr>
             <tr><td><code>seo_pages</code></td><td>Generated SEO pages: keyword, template type, body</td></tr>
             <tr><td><code>doc_snapshots</code></td><td>Doc page hashes: URL, SHA256, fetch timestamp</td></tr>
         </table>
@@ -381,10 +380,10 @@
             <tr><th>Flag</th><th>Default</th><th>What it prevents</th></tr>
             <tr><td><code>DRY_RUN</code></td><td><code>true</code></td><td>Blocks posting to Twitter, GitHub, Reddit. All responses stay as drafts.</td></tr>
             <tr><td><code>ALLOW_WRITES</code></td><td><code>false</code></td><td>Blocks POST/PUT/DELETE requests to RevenueCat's API. Only GET allowed.</td></tr>
-            <tr><td><code>DEMO_MODE</code></td><td><code>false</code></td><td>Uses mock API responses instead of real ones. All output labeled <code>[DEMO]</code>.</td></tr>
+            <tr><td><code>DEMO_MODE</code></td><td><code>false</code></td><td>Uses mock API responses for testing instead of real ones.</td></tr>
         </table>
 
-        <p>There's also a <strong>red-team governance suite</strong>: 16 adversarial test cases across 5 categories that test whether the response-drafting system can be tricked into:</p>
+        <p>There's also a <strong>red-team governance suite</strong>: 17 adversarial test cases across 5 categories that test whether the response-drafting system can be tricked into:</p>
         <ul>
             <li>Leaking system prompts</li>
             <li>Disclosing internal data or PII</li>
@@ -402,7 +401,7 @@
             <tr><td><code>click</code></td><td>CLI framework</td></tr>
             <tr><td><code>rich</code></td><td>Terminal formatting (progress bars, tables)</td></tr>
             <tr><td><code>jinja2</code></td><td>HTML template rendering for the static site</td></tr>
-            <tr><td><code>anthropic</code></td><td>Claude API for content generation (optional; templates used as fallback)</td></tr>
+            <tr><td><code>anthropic</code></td><td>Claude API for content generation (required)</td></tr>
             <tr><td><code>mcp</code></td><td>MCP protocol SDK for connecting to RC's MCP server</td></tr>
             <tr><td><code>markdown</code></td><td>Markdown-to-HTML conversion for site pages</td></tr>
             <tr><td><code>chromadb</code></td><td>Vector database (ChromaDB Cloud, free 10GB)</td></tr>
@@ -413,7 +412,7 @@
         <h2 id="limits">What this does NOT do</h2>
         <p>Being honest about the boundaries:</p>
         <ul>
-            <li><strong>Without an Anthropic API key</strong>, content generation uses templates, readable but not natural prose. The Claude API makes everything significantly better.</li>
+            <li><strong>An Anthropic API key is required</strong> for content generation, outline creation, and feedback analysis. Without it, these features will not run.</li>
             <li><strong>Without RevenueCat credentials</strong>, demo mode uses mock API responses. The repro harness, charts, and customer queries only work with real credentials.</li>
             <li><strong>The social modules don't actually post anything</strong> in default config. They draft responses. Posting requires explicit opt-in (<code>DRY_RUN=false</code>) plus platform credentials.</li>
             <li><strong>The SEO pages are generated locally</strong>, not deployed to any search engine. They demonstrate the capability but don't have real traffic.</li>
@@ -435,15 +434,15 @@ python -m http.server -d site_output 8000
 
         <h3>Run the tests:</h3>
         <pre><code>pip install -e ".[dev]"
-pytest tests/ -v    # 259 tests, ~35 seconds</code></pre>
+pytest tests/ -v    # 258 tests</code></pre>
 
         <h2>Numbers</h2>
         <table>
-            <tr><td>Tests</td><td>259</td></tr>
+            <tr><td>Tests</td><td>258</td></tr>
             <tr><td>CLI commands</td><td>27</td></tr>
             <tr><td>Database tables</td><td>7</td></tr>
             <tr><td>Site pages generated</td><td>7 sections</td></tr>
-            <tr><td>Red-team test cases</td><td>16</td></tr>
+            <tr><td>Red-team test cases</td><td>17</td></tr>
             <tr><td>Monitored GitHub repos</td><td>6</td></tr>
             <tr><td>Monitored subreddits</td><td>6</td></tr>
             <tr><td>Tracked competitors (public data only)</td><td>4</td></tr>

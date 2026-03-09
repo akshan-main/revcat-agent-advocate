@@ -1,4 +1,4 @@
-"""RAG Pipeline: Retrieval Augmented Generation, fully cloud-hosted.
+"""RAG Pipeline: Retrieval Augmented Generation.
 
 Stack:
 - ChromaDB Cloud: hosted vector database (free 10GB tier)
@@ -7,7 +7,7 @@ Stack:
 - BM25: keyword search for exact matches (existing module)
 - Hybrid scoring: combine vector similarity + BM25 + reranker scores
 
-Everything runs remotely; no local models, no local vector storage.
+Cloud-hosted by default; falls back to local ChromaDB if cloud credentials not configured.
 """
 import json
 import os
@@ -218,7 +218,7 @@ def _get_chroma_client(cache_dir: str,
                        chroma_api_key: str | None = None,
                        chroma_tenant: str | None = None,
                        chroma_database: str | None = None):
-    """Get ChromaDB client: cloud if credentials provided, else local."""
+    """Get ChromaDB client: cloud if credentials provided, otherwise local fallback."""
     if not HAS_CHROMADB:
         return None
     if chroma_api_key:
@@ -238,8 +238,8 @@ def build_rag_index(cache_dir: str, db_conn=None, hf_token: str | None = None,
                     chroma_database: str | None = None) -> RAGIndex:
     """Build ChromaDB vector index from cached doc pages.
 
-    Uses ChromaDB Cloud + HF Inference API, fully remote, no local storage.
-    Falls back to local ChromaDB for tests.
+    Uses ChromaDB Cloud + HF Inference API if configured.
+    Falls back to local ChromaDB if cloud credentials not provided.
     """
     if not HAS_CHROMADB:
         return RAGIndex()
@@ -348,6 +348,96 @@ def build_rag_index(cache_dir: str, db_conn=None, hf_token: str | None = None,
     return index
 
 
+def connect_rag_index(cache_dir: str, db_conn=None, hf_token: str | None = None,
+                      chroma_api_key: str | None = None,
+                      chroma_tenant: str | None = None,
+                      chroma_database: str | None = None) -> RAGIndex:
+    """Connect to an existing ChromaDB collection without re-indexing.
+
+    Use this for read-only search servers (e.g. Fly.io) that should use the
+    already-indexed vectors in ChromaDB Cloud rather than rebuilding.
+    Falls back to build_rag_index if the collection doesn't exist.
+    """
+    if not HAS_CHROMADB:
+        return RAGIndex()
+
+    # Resolve credentials from env if not passed
+    if hf_token is None:
+        hf_token = os.environ.get("HF_TOKEN")
+    if chroma_api_key is None:
+        chroma_api_key = os.environ.get("CHROMA_API_KEY")
+    if chroma_tenant is None:
+        chroma_tenant = os.environ.get("CHROMA_TENANT")
+    if chroma_database is None:
+        chroma_database = os.environ.get("CHROMA_DATABASE")
+
+    client = _get_chroma_client(cache_dir, chroma_api_key, chroma_tenant, chroma_database)
+    embedding_fn = _get_embedding_function(api_key=hf_token)
+
+    try:
+        collection = client.get_collection(
+            name="revenuecat_docs",
+            embedding_function=embedding_fn,
+        )
+        count = collection.count()
+        if count == 0:
+            raise ValueError("Collection empty")
+    except Exception:
+        # Collection doesn't exist or is empty — fall back to full build
+        return build_rag_index(cache_dir, db_conn, hf_token,
+                               chroma_api_key, chroma_tenant, chroma_database)
+
+    # Build local chunk metadata from cached docs (for snippet extraction)
+    pages_dir = os.path.join(cache_dir, "pages")
+    all_chunks = []
+    doc_count = 0
+
+    sha256_map = {}
+    if db_conn:
+        try:
+            rows = db_conn.execute("SELECT url, doc_sha256 FROM doc_snapshots").fetchall()
+            for row in rows:
+                if isinstance(row, dict):
+                    sha256_map[row["url"]] = row["doc_sha256"]
+                else:
+                    sha256_map[row[0]] = row[1]
+        except Exception:
+            pass
+
+    if os.path.isdir(pages_dir):
+        for filename in sorted(os.listdir(pages_dir)):
+            if not filename.endswith(".md"):
+                continue
+            filepath = os.path.join(pages_dir, filename)
+            with open(filepath, "r") as f:
+                content = f.read()
+            doc_url = _path_to_url(filename)
+            doc_title = _extract_title(content) or filename.replace("__", "/").replace(".md", "")
+            doc_sha256 = sha256_map.get(doc_url, "")
+            chunks = chunk_document(content, filename, doc_url, doc_title, doc_sha256)
+            all_chunks.extend(chunks)
+            doc_count += 1
+
+    return RAGIndex(
+        collection=collection,
+        chunks=all_chunks,
+        doc_count=doc_count,
+        chunk_count=len(all_chunks),
+    )
+
+
+def connect_rag_index_from_config(config, db_conn=None) -> RAGIndex:
+    """Connect to existing RAG index using config object."""
+    return connect_rag_index(
+        config.docs_cache_dir,
+        db_conn=db_conn,
+        hf_token=config.hf_token,
+        chroma_api_key=config.chroma_api_key,
+        chroma_tenant=config.chroma_tenant,
+        chroma_database=config.chroma_database,
+    )
+
+
 def build_rag_index_from_config(config, db_conn=None) -> RAGIndex:
     """Build RAG index using config object; picks cloud or local automatically."""
     return build_rag_index(
@@ -439,7 +529,7 @@ def hybrid_search(
     """Combine BM25 keyword + ChromaDB vector + HF reranker.
 
     Three-stage pipeline:
-    1. Vector search (ChromaDB + HF Inference all-MiniLM-L6-v2): semantic similarity
+    1. Vector search (ChromaDB + HF Inference all-mpnet-base-v2): semantic similarity
     2. BM25 search: exact keyword matches
     3. Reranking (HF Inference cross-encoder): precision boost
     4. Score fusion: weighted combination

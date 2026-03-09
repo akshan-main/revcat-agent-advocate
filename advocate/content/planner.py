@@ -36,10 +36,10 @@ def create_outline(
     search_results: list[SearchResult],
     config=None,
 ) -> ContentOutline:
-    """Create a content outline, optionally using Claude API."""
-    if config and config.has_anthropic:
-        return _create_outline_with_claude(topic, content_type, search_results, config)
-    return _create_outline_from_results(topic, content_type, search_results)
+    """Create a content outline using Claude API."""
+    if not config or not config.has_anthropic:
+        raise RuntimeError("Anthropic API key required for content outline generation. Set ANTHROPIC_API_KEY.")
+    return _create_outline_with_claude(topic, content_type, search_results, config)
 
 
 def _create_outline_with_claude(
@@ -93,8 +93,7 @@ def _create_outline_with_claude(
         end = text.rindex("}") + 1
         data = json.loads(text[start:end])
     except (ValueError, json.JSONDecodeError):
-        # Fallback to template
-        return _create_outline_from_results(topic, content_type, search_results)
+        raise RuntimeError(f"Failed to parse Claude outline response as JSON: {text[:200]}")
 
     sections = []
     for s in data.get("sections", []):
@@ -114,40 +113,3 @@ def _create_outline_with_claude(
     )
 
 
-def _create_outline_from_results(
-    topic: str,
-    content_type: ContentType,
-    search_results: list[SearchResult],
-) -> ContentOutline:
-    """Create a basic outline from search results (no LLM needed)."""
-    sections = [
-        Section(
-            heading="Introduction",
-            key_points=[f"Overview of {topic}", "Why this matters for developers"],
-            source_refs=[r.url for r in search_results[:2]],
-        ),
-    ]
-
-    # Create sections from top search results
-    for i, result in enumerate(search_results[:3]):
-        points = [s[:200] for s in result.snippets[:3]] or [f"Details from {result.title}"]
-        sections.append(Section(
-            heading=result.title or f"Section {i + 2}",
-            key_points=points,
-            source_refs=[result.url],
-            has_code_snippet=(i == 0),
-        ))
-
-    sections.append(Section(
-        heading="Key Takeaways",
-        key_points=["Summary of key concepts", "Recommended next steps"],
-        source_refs=[r.url for r in search_results[:2]],
-    ))
-
-    return ContentOutline(
-        title=topic,
-        content_type=content_type,
-        sections=sections,
-        sources=[r.url for r in search_results],
-        estimated_word_count=1500,
-    )

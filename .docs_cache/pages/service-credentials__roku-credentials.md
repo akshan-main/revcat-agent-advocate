@@ -1,0 +1,28 @@
+---
+id: "service-credentials/roku-credentials"
+title: "Roku Channel"
+description: "The Roku Pay API key allows RevenueCat to connect with Roku on your behalf."
+permalink: "/docs/service-credentials/roku-credentials"
+slug: "roku-credentials"
+version: "current"
+original_source: "docs/service-credentials/roku-credentials.md"
+---
+
+The Roku Pay API key allows RevenueCat to connect with Roku on your behalf.
+
+## Setup
+
+1. Log in to your [Roku Developer Dashboard](https://developer.roku.com/dev/dashboard).
+2. On the left-hand side of the Developer Dashboard, you'll see the main navigation panel. Under 'Monetization' options, select 'Roku Pay web services'.
+
+![](/docs_images/platform-resources/roku/roku-pay-web-services.png)
+
+3. Copy the Roku Pay API key.
+
+![](/docs_images/platform-resources/roku/roku-api-key.png)
+
+## Enter the API key in RevenueCat
+
+In your Roku app settings page in the RevenueCat dashboard, enter the key in the configuration section:
+
+![](/docs_images/platform-resources/roku/roku-name-key.png)

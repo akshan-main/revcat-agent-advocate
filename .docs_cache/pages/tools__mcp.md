@@ -1,0 +1,79 @@
+---
+id: "tools/mcp"
+title: "RevenueCat MCP Server"
+description: "The RevenueCat MCP (Model Context Protocol) Server enables AI assistants to manage subscription apps, products, entitlements, and everything in-between without requiring direct dashboard access. This powerful tool provides 26 different capabilities for complete subscription management through natural language interactions."
+permalink: "/docs/tools/mcp"
+slug: "mcp"
+version: "current"
+original_source: "docs/tools/mcp.mdx"
+---
+
+The RevenueCat MCP (Model Context Protocol) Server enables AI assistants to manage subscription apps, products, entitlements, and everything in-between without requiring direct dashboard access. This powerful tool provides 26 different capabilities for complete subscription management through natural language interactions.
+
+## What is MCP?
+
+[Model Context Protocol](https://modelcontextprotocol.io/) is a standard that allows AI assistants to securely access external tools and data sources. The RevenueCat MCP server acts as a bridge between AI assistants (like Claude, GPT-4, etc.) and the RevenueCat API, enabling natural language interactions with your subscription infrastructure.
+
+## Deployment
+
+The RevenueCat MCP server is available as a cloud-hosted service:
+
+**Best for:**
+
+- Team collaboration and shared access
+- Production environments
+- Individual developer use
+- Integration with multiple AI assistants or applications
+- Centralized, always-available service
+
+**Access:** `https://mcp.revenuecat.ai/mcp`
+
+## Core Features & Capabilities
+
+The MCP server provides 26 powerful tools for:
+
+- **Project Management**: Access and view RevenueCat project details
+- **App Management**: Create, read, update, and delete apps across multiple platforms (iOS, macOS, Android, Amazon, Stripe, RC Billing, Roku)
+- **Product Management**: Manage subscription products and in-app purchases
+- **Entitlement Management**: Control user access and permissions
+- **Offering & Package Management**: Create and manage subscription offerings
+- **Paywall Management**: Create and manage paywalls
+- **Analytics Integration**: Built-in tracking for tool usage
+
+## Getting Started
+
+### 1. [Setup](./mcp/setup)
+
+Get your API keys and configure the MCP server for your AI assistant.
+
+### 2. [Tools Reference](./mcp/tools-reference)
+
+Complete reference documentation for all 26 available tools, organized by category with detailed parameter tables.
+
+### 3. [Usage Examples](./mcp/usage-examples)
+
+Natural language interaction examples and common usage patterns to help you get the most out of the MCP server.
+
+### 4. [Best Practices & Troubleshooting](./mcp/best-practices-and-troubleshooting)
+
+Security considerations, best practices, troubleshooting guides, and advanced usage patterns.
+
+## Quick Start
+
+**Cloud Server**: Perfect for team collaboration, production use, and individual development
+
+- Access: `https://mcp.revenuecat.ai/mcp`
+- Authentication: Bearer token with your RevenueCat API v2 key
+
+## What You Can Do
+
+With natural language commands, you can:
+
+- **Manage Apps**: Create, update, and configure apps across all platforms
+- **Handle Products**: Set up subscription products and in-app purchases
+- **Control Entitlements**: Define and manage user access permissions
+- **Organize Offerings**: Create and structure subscription offerings and packages
+- **Generate Paywalls**: Build paywalls for your offerings
+- **Monitor Configuration**: Review and validate your subscription setup
+
+Ready to get started? Jump to [Setup](./mcp/setup) to configure the MCP server for your AI assistant.

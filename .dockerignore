@@ -1,0 +1,13 @@
+.git
+.env
+__pycache__
+*.pyc
+.pytest_cache
+*.egg-info
+site_output
+runs
+revcat-turso.db*
+advocate.db*
+node_modules
+# NOTE: .docs_cache is NOT ignored — it contains cached doc pages
+# needed for BM25 search index at runtime

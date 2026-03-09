@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>Community Engagement</h1>
+    <p>
+        The agent can scan GitHub issues and Reddit posts for RevenueCat-related developer questions
+        and draft cited responses grounded in documentation. All responses are drafted, never auto-posted.
+    </p>
+
+    <h2>X / Twitter</h2>
+    <p>
+        <a href="https://x.com/RevenueCat_agad" target="_blank">@RevenueCat_agad</a> - agent-operated account posting developer-focused RevenueCat content.
+        See the <a href="{{ base_url }}/twitter-bot/">Twitter Agent page</a> for posted tweets and the pipeline architecture.
+    </p>
+
+    <h2>GitHub Issue Responses</h2>
+    <p>
+        The agent scans these RevenueCat SDK repos for open issues and drafts cited responses
+        using <code>scan-github</code>:
+    </p>
+    <ul class="monitored-list">
+        {% for repo in github_repos %}
+        <li><a href="https://github.com/{{ repo }}">{{ repo }}</a></li>
+        {% endfor %}
+    </ul>
+    {% if github_responses %}
+    <div class="content-grid">
+        {% for item in github_responses %}
+        <div class="content-card">
+            <h3><a href="{{ item.issue.url }}">{{ item.issue.title }}</a></h3>
+            <div class="content-meta">
+                <span class="badge badge-draft">DRAFT</span>
+                {% if item.issue.repo %}<span>{{ item.issue.repo }}</span>{% endif %}
+            </div>
+            <p style="margin-top:0.4rem;font-size:0.9rem;">{{ item.response[:300] }}{% if item.response|length > 300 %}...{% endif %}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="placeholder" style="padding:1rem;text-align:left;">
+        No GitHub responses drafted yet. Run <code>scan-github --since 168</code> with a valid <code>GITHUB_TOKEN</code> to scan for issues and draft responses.
+    </p>
+    {% endif %}
+
+    <h2>Reddit Responses</h2>
+    <p>
+        The agent scans these subreddits for subscription monetization discussions
+        using <code>scan-reddit</code>:
+    </p>
+    <ul class="monitored-list">
+        {% for sub in reddit_subreddits %}
+        <li><a href="https://reddit.com/r/{{ sub }}">r/{{ sub }}</a></li>
+        {% endfor %}
+    </ul>
+    {% if reddit_responses %}
+    <div class="content-grid">
+        {% for item in reddit_responses %}
+        <div class="content-card">
+            <h3><a href="{{ item.post.url }}">{{ item.post.title }}</a></h3>
+            <div class="content-meta">
+                <span class="badge badge-draft">DRAFT</span>
+                <span>r/{{ item.post.subreddit }}</span>
+            </div>
+            <p style="margin-top:0.4rem;font-size:0.9rem;">{{ item.response[:300] }}{% if item.response|length > 300 %}...{% endif %}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="placeholder" style="padding:1rem;text-align:left;">
+        No Reddit responses drafted yet. Run <code>scan-reddit --limit 10</code> with Reddit API credentials to scan and draft responses.
+    </p>
+    {% endif %}
+
+    {% if interactions %}
+    <h2>Other Interactions</h2>
+    <div class="content-grid">
+        {% for ix in interactions %}
+        <div class="content-card">
+            <div class="experiment-header">
+                <h3>{% if ix.thread_url %}<a href="{{ ix.thread_url }}">{{ ix.question[:80] }}{% if ix.question|length > 80 %}...{% endif %}</a>{% else %}{{ ix.question[:80] }}{% if ix.question|length > 80 %}...{% endif %}{% endif %}</h3>
+                <span class="badge badge-{{ ix.status }}">{{ ix.status | upper }}</span>
+            </div>
+            <div class="content-meta">
+                <span>{{ ix.channel }}</span>
+                <span>{{ ix.intent }}</span>
+                <time>{{ ix.created_at[:10] }}</time>
+            </div>
+            {% if ix.draft_response %}
+            <p style="margin-top:0.4rem;font-size:0.9rem;">{{ ix.draft_response[:200] }}{% if ix.draft_response|length > 200 %}...{% endif %}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <h2>How It Works</h2>
+    <ul>
+        <li><strong>DRY_RUN=true</strong> (default): responses are drafted, never auto-posted</li>
+        <li>Every response is grounded in retrieved documentation with citations</li>
+        <li>Human review required before any public posting</li>
+        <li>All interactions logged to the hash-chained audit ledger</li>
+    </ul>
+</article>
+{% endblock %}

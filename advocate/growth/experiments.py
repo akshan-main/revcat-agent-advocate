@@ -38,6 +38,15 @@ EXPERIMENT_REGISTRY: dict[str, ExperimentDefinition] = {
         required_inputs=["platforms"],
         duration_days=14,
     ),
+    "agentic": ExperimentDefinition(
+        name="agentic",
+        hypothesis="Agent-designed experiment based on autonomous landscape analysis",
+        metric="agent_determined",
+        channel="agent_determined",
+        tactic="Agent autonomously researches the landscape, identifies an opportunity, designs a hypothesis, and executes the experiment",
+        required_inputs=[],
+        duration_days=7,
+    ),
 }
 
 

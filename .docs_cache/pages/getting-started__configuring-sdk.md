@@ -1,0 +1,141 @@
+---
+id: "getting-started/configuring-sdk"
+title: "Configuring the SDK"
+description: "If this is your first time integrating RevenueCat into your app, we recommend following our Quickstart guide."
+permalink: "/docs/getting-started/configuring-sdk"
+slug: "configuring-sdk"
+version: "current"
+original_source: "docs/getting-started/configuring-sdk.mdx"
+---
+
+If this is your first time integrating RevenueCat into your app, we recommend following our [Quickstart](/getting-started/quickstart) guide.
+
+:::success Test Store works out of the box
+Once configured, the SDK automatically works with your Test Store productsâno additional setup required. You can start testing purchases immediately without connecting to the App Store or Google Play.
+
+**SDK Version Requirements:** Test Store requires minimum SDK versions (iOS 5.43.0, Android 9.9.0, Flutter 9.8.0, React Native 9.5.4, Capacitor 11.2.6, Cordova 7.2.0, Unity 8.3.0, KMP 2.2.2, Web 1.15.0). [See all versions](/test-and-launch/sandbox#testing-with-revenuecat-test-store).
+:::
+
+:::info Using an older SDK (v3.x)
+View our migration guide to v4.x [here](/sdk-guides/ios-native-3x-to-4x-migration).
+:::
+
+## Initialization
+
+Once you've [installed](/getting-started/installation) the SDK for your app, it's time to initialize and configure it.
+
+You should only configure *Purchases* once, usually early in your application lifecycle. After configuration, the same instance is shared throughout your app by accessing the `.shared` instance in the SDK.
+
+Make sure you configure *Purchases* with your public SDK key only. You can read more about the different API keys available in our [Authentication guide](/projects/authentication).
+
+**Note:** If you're using a hybrid SDK, such as React Native or Flutter, you'll need to initialize the SDK with a separate API key for each platform (i.e., iOS and Android). The keys can be found in the RevenueCat dashboard under **Project Settings > API keys > App specific keys**.
+
+*Interactive content is available in the web version of this doc.*
+
+## Enabling Debug Logs
+
+Be sure to enable and view debug logs while implementing the SDK and testing your app. Debug logs contain important information about what's happening behind the scenes and should be the first thing you check if your app is behaving unexpectedly.
+
+As detailed in the sample code above, debug logs can be enabled or disabled by setting the `Purchases.logLevel` property before configuring *Purchases*.
+
+Debug logs will provide detailed log output in Xcode or LogCat for what is going on behind the scenes and should be the first thing you check if your app is behaving unexpectedly, and also to confirm there aren't any unhandled warnings or errors.
+
+## Testing with Test Store
+
+After configuring the SDK, you can immediately start testing with your Test Store productsâno additional SDK configuration required. Simply use your Test Store API key when initializing the SDK, and test purchases will work automatically.
+
+See [Sandbox Testing](/test-and-launch/sandbox) for details on testing with Test Store vs platform sandboxes.
+
+### Switching between Test Store and Real Stores
+
+Test Store uses a **separate API key** from your real store API keys. This allows you to control which store your app communicates with:
+
+- **Test Store API Key**: Use during development and testing
+- **Platform Store API Keys** (iOS, Android, etc.): Use for production builds
+
+You can find both types of keys in **Project Settings > API keys** in the RevenueCat dashboard. Switch between them by changing which key you pass to the SDK configuration.
+
+:::danger CRITICAL: Never submit apps with Test Store API key
+**You must NEVER submit an app to the App Store or Google Play that is configured with a Test Store API key.** Always use the correct platform-specific API key (iOS, Android, etc.) for release builds.
+
+We recommend using build configurations or environment variables to automatically use the correct API key for each build type:
+
+- **Development/Debug builds**: Test Store API key
+- **Production/Release builds**: Platform-specific API key (iOS, Android, etc.)
+  :::
+
+## Additional Configuration
+
+The SDK allows additional configuration on first setup:
+
+- **API Key (required)**: The public API key that corresponds to your app, found via **Project Settings > API keys > App specific keys** in the RevenueCat dashboard.
+- **App User ID (optional)**: An identifier for the current user. Pass `null` if you don't have a user identifier at the time of configuration, RevenueCat will generate an anonymous App User ID for you. See our [guide on identifying users](/customers/user-ids) for more information.
+- **Purchases Completed By (optional)**: A boolean value to tell RevenueCat not to [complete purchases](/migrating-to-revenuecat/sdk-or-not/finishing-transactions). Only set purchase completion to your app if you have your own code handling purchases.
+- **User Defaults (optional, iOS only)**: A key to override the standard user defaults used to cache `CustomerInfo`. This is required if you need to access `CustomerInfo` in an [iOS App Extension](https://developer.apple.com/app-extensions/).
+
+### Proxies & configuration for users in Mainland China, Russia, and Myanmar
+
+We've received reports of our API being blocked in mainland China, Russia, and Myanmar.
+
+While we work on a long-term solution, if your app has a significant user base in these regions, set the `proxyURL` property to `https://api.rc-backup.com/` before initializing the RevenueCat SDK. Ensure this configuration occurs prior to SDK setup to prevent connection issues for users in these regions.
+
+:::caution If you already have a proxy server
+If you have your own proxy server and already use the `proxyURL` API, you don't need any further configuration.
+:::
+
+*Interactive content is available in the web version of this doc.*
+
+### iOS
+
+#### Listening for CustomerInfo updates
+
+:::info Note
+RevenueCat doesn't push new data to the SDK, so this method is only called when CustomerInfo is updated from another SDK method or after a purchase is made on the current device.
+:::
+
+Implement the following delegate method to receive updates to the `CustomerInfo` object:
+
+```
+purchases:receivedUpdated
+```
+
+Called whenever *Purchases* receives an updated `CustomerInfo` object. This may happen periodically throughout the life of the app if new information becomes available (e.g. after making a purchase).
+
+#### Handling Promoted Purchases
+
+Implement the following delegate method to handle promoted purchases:
+
+```
+purchases:readyForPromotedProduct
+```
+
+Called when a user initiates a promoted in-app purchase from the App Store. If your app is able to handle a purchase at the current time, run the `defermentBlock` in this method.
+
+If the app is not in a state to make a purchase: cache the `defermentBlock`, then call the `defermentBlock` when the app is ready to make the promoted purchase.
+
+If the purchase should never be made, you don't need to ever call the `defermentBlock` and *Purchases* will not proceed with promoted purchases.
+
+### Android
+
+#### Listening for CustomerInfo updates
+
+:::info Note
+RevenueCat doesn't push new data to the SDK, so this method is only called when CustomerInfo is updated from another SDK method or after a purchase is made on the current device.
+:::
+
+Implement the following listener to receive updates to the `CustomerInfo` object:
+
+```
+UpdatedCustomerInfoListener
+```
+
+Called whenever *Purchases* receives an updated `CustomerInfo` object. This may happen periodically throughout the life of the app if new information becomes available (e.g. after making a purchase).
+
+## Next steps
+
+Once you've configured the SDK, you're ready to set up your products:
+
+- **Start with Test Store** (recommended): Your project already has a Test Store provisioned. [Create test products](/offerings/products-overview) and start testing immediately.
+- **Connect real stores**: When you're ready for production, [configure your products](/offerings/products-overview) in App Store Connect, Google Play Console, or other platforms.
+
+Set up your products â

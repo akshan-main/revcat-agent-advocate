@@ -1,0 +1,428 @@
+---
+id: "test-and-launch/errors"
+title: "Error Handling"
+description: "This section assumes you've followed our Quickstart section of our Getting Started guide to install and configure our SDK."
+permalink: "/docs/test-and-launch/errors"
+slug: "errors"
+version: "current"
+original_source: "docs/test-and-launch/errors.mdx"
+---
+
+:::success
+This section assumes you've followed our [Quickstart](/getting-started/quickstart) section of our Getting Started guide to install and configure our SDK.
+:::
+
+## Error Handling
+
+If the completion callbacks or listeners on asynchronous methods receive an error argument that is not nil, an error has occurred.
+
+With the exception of `NetworkError`, `PurchaseCancelledError` or `StoreProblemError`, retrying a failed operation with the same arguments won't succeed. For failed purchases, assume the user wasn't charged, unless a `StoreProblemError` occurred - in which case the user may or may not have been charged.
+
+### iOS Errors
+
+On iOS, when an error has occurred the completion callback will receive a `RevenueCat.ErrorCode` object.
+
+When investigating or logging errors, review the `errorUserInfo` dictionary, paying attention to the following keys:
+
+- `rc_code_name` contains a cross-platform error name string that can be used for identifying the error.
+- `NSDebugDescriptionErrorKey` contains a description of the error. This description is meant for the developer.
+
+#### Examples
+
+*Interactive content is available in the web version of this doc.*
+
+### Android Errors
+
+On Android, when an error has occurred, the `onError` listener will receive a `PurchasesError` object.
+
+When investigating or logging errors, review the properties of `PurchasesError`:
+
+- `code` contains the `PurchasesErrorCode` that can be used for identifying the error.
+- `message` contains a description of the error. This description is meant for the developer.
+- `underlyingErrorMessage ` contains a description of the underlying error that caused the error in question, if an underlying error is present.
+
+#### Examples
+
+*Interactive content is available in the web version of this doc.*
+
+## Legend
+
+When debugging errors, it's important to consider whether the error was thrown by RevenueCat, Apple, or Google. This can help you pinpoint where to look for a resolution.
+
+| Icon | Description                     |
+| ---- | ------------------------------- |
+| ð¿   | Error generated from RevenueCat |
+| ð   | Error generated from Apple      |
+| ð¤   | Error generated from Google     |
+| ð¦   | Error generated from Amazon     |
+
+## Error codes common to all methods
+
+#### ð¿ `INVALID_APP_USER_ID`
+
+**Problem:**
+Indicates the [App User Id](/customers/user-ids) is set to an invalid value.
+
+**Resolution:**
+Make sure you're not sending a string over 100 characters or a [blocked app user Id](/customers/user-ids#blocked-app-user-ids).
+
+***
+
+#### ð¿ ð ð¤ ð¦ `INVALID_CREDENTIALS`
+
+**Problem:**
+Indicates the application has been configured with an invalid credentials.
+
+**Resolution:**
+If this error occurs before a purchase, ensure you're using the [correct API Key](/projects/authentication) from the RevenueCat dashboard.
+If this error happens during the purchase flow, make sure your [Play Store Credentials](/service-credentials/creating-play-service-credentials) and/or [App Store Shared Secret](/service-credentials/itunesconnect-app-specific-shared-secret) and/or [Amazon Appstore Credentials](/service-credentials/amazon-appstore-credentials) are configured correctly in the RevenueCat dashboard.
+
+***
+
+#### ð¿ `INVALID_SUBSCRIBER_ATTRIBUTES`
+
+**Problem:**
+Indicates attributes for a Customer were unable to be saved.
+
+**Resolution:**
+Make sure that there are no formatting issues when [setting attributes](/customers/customer-attributes#restrictions).
+
+***
+
+#### ð¿ `NETWORK_ERROR`
+
+**Problem:**
+Indicates a network error occurred during the operation.
+
+**Resolution:**
+Make sure the device has an internet connection and try again. If you are testing in sandbox, make sure your outgoing connections is turned on. You can find this in XCode under signing & capabilities > App Sandbox > Outgoing connections (Client).
+
+***
+
+#### ð¿ `OFFLINE_CONNECTION_ERROR`
+
+**Problem:**
+Indicates the device was offline when attempting a network request.
+
+**Resolution:**
+Make sure the device has an internet connection and try again.
+
+***
+
+#### ð¿ `OPERATION_ALREADY_IN_PROGRESS`
+
+**Problem:**\
+Indicates an identical operation is already in progress. For example, making two identical purchase attempts at the same time.
+
+**Resolution:**
+Wait for the original operation to complete.
+
+***
+
+#### ð ð¤ ð¦ `STORE_PROBLEM`
+
+**Problem:**
+This error is forwarded from Apple/Google/Amazon and indicates there was a problem connecting to the App Store, Play Store, or Amazon Appstore.
+
+The problems that will trigger this on iOS:
+
+- Apple server is down (more common in sandbox than production)
+- [SKErrorUnknown](https://developer.apple.com/documentation/storekit/skerrorcode/skerrorunknown)
+- [SKErrorCloudServiceNetworkConnectionFailed](https://developer.apple.com/documentation/storekit/skerrorcode/skerrorcloudservicenetworkconnectionfailed)
+- [SKErrorCloudServiceRevoked](https://developer.apple.com/documentation/storekit/skerrorcode/SKErrorCloudServiceRevoked)
+- An [SCA purchase flow](https://developer.apple.com/support/psd2/) was initiated.
+
+The problems that will trigger this on Android:
+
+- Google server is down
+- [Google Play Developer API Quota exceeded](https://developers.google.com/android-publisher/quotas)
+- Invalid Android package name in the RevenueCat dashboard
+- Google Billing Client [SERVICE\_TIMEOUT](https://developer.android.com/reference/com/android/billingclient/api/BillingClient.BillingResponseCode#service_timeout) error
+
+**Resolution:**
+If everything was working while testing, you shouldn't have to do anything to handle this error in production. RevenueCat will automatically retry any purchase failures so no data is lost.
+
+If this occurs while testing in sandbox you can try:
+
+- Repeating the operation later.
+- Create a new sandbox user on iOS.
+
+***
+
+#### ð¤· `SIGNATURE_VERIFICATION_FAILED`
+
+**Problem:**
+Indicates that the SDK detected a request was tampered.
+
+**Resolution:**
+
+- Ensure that a proxy is not modifying responses from our API.
+- See [the docs](/customers/trusted-entitlements) for more information.
+
+***
+
+#### ð¿ `UNEXPECTED_BACKEND_RESPONSE_ERROR`
+
+**Problem:**
+Indicates the SDK received an unexpected response from the server.
+
+**iOS sub error codes:**
+
+- `loginResponseDecoding`: Unable to decode response returned from login.
+- `postOfferIdBadResponse`: Unable to decode response returned from posting offer for signing.
+- `postOfferIdMissingOffersInResponse`: Missing offers from response returned from posting offer for signing.
+- `postOfferIdSignature`: Signature error encountered in response returned from posting offer for signing.
+- `getOfferUnexpectedResponse`: Unknown error encountered while getting offerings.
+- `customerInfoNil`: Unable to instantiate a CustomerInfoResponse, CustomerInfo in response was nil.
+- `customerInfoResponseParsing`: Unable to instantiate a CustomerInfoResponse due to malformed json.
+
+**Resolution:**
+[Report the error](https://www.revenuecat.com/support) with the full error object.
+
+***
+
+#### ð¿ `UNKNOWN_BACKEND_ERROR`
+
+**Problem:**
+Indicates there was an unknown server error.
+
+**Resolution:**
+[Report the error](https://www.revenuecat.com/support) with the full error object.
+
+***
+
+#### ð¤· `UNKNOWN`
+
+**Problem:**
+Indicates an unknown error occurred. Possible causes:
+
+- The subscriber has reached the maximum number of Apple receipts allowed. This can be an indication of an implementation error regarding identifying users. Take a look at our [best practices for identifying users](/customers/user-ids#aliasing) for common implementation mistakes.
+
+**Resolution:**
+Help us [fix it](https://www.revenuecat.com/jobs/).
+
+***
+
+## Purchasing Errors
+
+#### ð¿ `RECEIPT_ALREADY_IN_USE`
+
+**Problem:**
+Indicates there is an identical receipt already in use by another subscriber.
+
+**Resolution:**
+The user will either need to log in as the App User Id that already owns the receipt or [restore purchases](/getting-started/restoring-purchases) to re-sync the receipt with their current account. We recommend checking out the ['Transfer purchases'](/getting-started/restoring-purchases#transfer-purchases) restore behavior.
+
+***
+
+#### ð ð¤ ð¦ `INVALID_RECEIPT`
+
+**Problem:**
+Indicates the receipt is malformed or invalid.
+
+**Resolution:**
+This error indicates an error with configuration and usually occurs in the sandbox environment.
+
+If testing with StoreKit Configuration Files:
+
+- Follow [StoreKit test guide](/test-and-launch/sandbox/apple-app-store#ios-14-only-testing-on-the-simulator)
+- Re-upload the StoreKit certificate after making any changes to products or code-signing
+- All products in StoreKit file are listed in the [RevenueCat dashboard](/getting-started/entitlements#revenuecat-configuration)
+
+Some other places to check:
+
+- Bundle ID and [shared secret](/service-credentials/itunesconnect-app-specific-shared-secret) are set correctly for your app
+
+***
+
+#### ð `INVALID_APPLE_SUBSCRIPTION_KEY`
+
+**Problem:**
+Indicates that the Apple Subscription Key is invalid or not present.
+
+**Resolution:**
+In order to provide Subscription Offers you must first generate a [subscription key](/subscription-guidance/subscription-offers/ios-subscription-offers#subscription-keys).
+
+***
+
+#### ð `MISSING_RECEIPT_FILE`
+
+**Problem:**
+Indicates there is no receipt file available on the device. This is more common in sandbox testing.
+
+**Resolution:**
+Make sure you're signed into the device with a valid Apple account. In Sandbox, you may have to make a purchase to generate a receipt before attempting the operation. This error can occur fairly often in the sandbox environment. In sandbox a receipt is generated when a user makes a purchase and is saved against the sandbox account. While in production a receipt is generated when a user downloads the app and is saved against the Apple account.
+
+***
+
+#### ð `INELIGIBLE_ERROR`
+
+**Problem:**
+Indicates that the user is ineligible for the specific Subscription Offer.
+
+Some possible causes:
+
+- User has already used this Offer
+- Offer not available in specific region
+- User has no current or previous subscription
+
+**Resolution:**
+If a user is not eligible for a Subscription Offer, be sure to update your UI to reflect normal pricing or terms. [`.paymentDiscount(...)`](/subscription-guidance/subscription-offers/ios-subscription-offers#fetch-payment-discount) is the best way to check for Subscription Offer eligibility. If you are testing in sandbox and already tested a purchase with that offer, you may want to [create a new sandbox user](/test-and-launch/sandbox/apple-app-store#create-a-sandbox-test-account) to try again.
+
+***
+
+#### ð ð¤ `INSUFFICIENT_PERMISSIONS_ERROR`
+
+**Problem:**
+Indicates the device does not have sufficient permissions to make in-app purchases.
+
+**Resolution:**
+Make sure you're signed into a physical device with a valid Apple or Google account that has permissions to make purchases.
+
+***
+
+#### ð ð¤ `PAYMENT_PENDING_ERROR`
+
+**Problem:**
+Additional action is required by the user before granting entitlement. For example, a user might choose to purchase your in-app product at a physical store using cash, a parental control on a child's device may require approval before purchasing, or the transaction may require [Strong Customer Authentication](https://developer.apple.com/support/sca/) (SCA) to be completed. This error message may include language that the payment is deferred.
+
+**Resolution:**
+Confirm to the user that they've started the pending purchase, and to complete it, they should follow instructions that are given to them from Apple or Google.
+
+***
+
+#### ð `PRODUCT_ALREADY_PURCHASED`
+
+#### ð¤ `ITEM_ALREADY_OWNED`
+
+**Problem:**
+Indicates that the product is already active for the user.
+
+**Resolution:**
+If testing in sandbox:
+
+- Subscription IAP: Wait for the subscription to automatically cancel and try again.
+- Non-subscription IAP: Create a new sandbox user.
+
+If this occurs in production, make sure the user [restores purchases](/getting-started/restoring-purchases) to re-sync any transactions with their current App User Id.
+
+***
+
+#### ð `PRODUCT_NOT_AVAILABLE_FOR_PURCHASE`
+
+#### ð¤ `ITEM_UNAVAILABLE`
+
+**Problem:**
+Indicates the product is not available for purchase by the device or user.
+
+**Resolution:**
+Ensure you're attempting to purchase a product that's available for the device / user.
+
+***
+
+#### ð ð¤ `PURCHASE_CANCELLED`
+
+**Problem:**
+Indicates the user cancelled their purchase and was not charged.
+
+On iOS, this can also mean the Apple account already owns the product. The user can [restore purchases](/getting-started/restoring-purchases) to re-sync any transactions with their current App User Id.
+
+**Resolution:**
+No action required. The user decided not to proceed with their in-app purchase.
+
+***
+
+#### ð ð¦ `PURCHASE_INVALID`
+
+#### ð¤ `DEVELOPER_ERROR`
+
+**Problem:**
+Indicates one of the provided arguments for the purchase was invalid, including the payment method.
+
+The problems that will trigger this on Android:
+
+- Google Billing Client [DEVELOPER\_ERROR](https://developer.android.com/reference/com/android/billingclient/api/BillingClient.BillingResponseCode#developer_error)
+
+The problems that will trigger this on iOS:
+
+- [SKErrorInvalidOfferIdentifier](https://developer.apple.com/documentation/storekit/skerrorcode/skerrorinvalidofferidentifier)
+
+**Resolution:**
+Ensure the device payment method is valid and all arguments passed in are correct.
+
+***
+
+#### ð ð¤ `PURCHASE_NOT_ALLOWED`
+
+**Problem:**
+Indicates the device or user is not allowed to make the purchase.
+
+The problems that will trigger this on Android:
+
+- Google Billing Client [FEATURE\_NOT\_SUPPORTED](https://developer.android.com/reference/com/android/billingclient/api/BillingClient.BillingResponseCode#feature_not_supported)
+
+The problems that will trigger this on iOS:
+
+- [SKErrorPrivacyAcknowledgementRequired](https://developer.apple.com/documentation/storekit/skerrorcode/skerrorprivacyacknowledgementrequired)
+- [SKErrorPaymentNotAllowed](https://developer.apple.com/documentation/storekit/skerror/2330535-paymentnotallowed)
+- [SKErrorCloudServicePermissionDenied](https://developer.apple.com/documentation/storekit/skerror/2335083-cloudservicepermissiondenied)
+- [SKErrorOverlayInvalidConfiguration](https://developer.apple.com/documentation/storekit/skerror/3656407-overlayinvalidconfiguration)
+- [SKErrorUnsupportedPlatform](https://developer.apple.com/documentation/storekit/skerror/3689489-unsupportedplatform)
+- [SKErrorIneligibleForOffer](https://developer.apple.com/documentation/storekit/skerror/3663443-ineligibleforoffer)
+- [SKErrorClientInvalid](https://developer.apple.com/documentation/storekit/skerror/2330533-clientinvalid)
+
+**Resolution:**
+Make sure the device and user are allowed to make in-app purchases. Try the following troubleshooting steps:
+
+- Make sure your device/emulator is completely updated.
+- Try running on device. Sometimes the emulator glitches out and it must be restarted. Overall, testing on device is more reliable.
+- Restart your device/emulator.
+- Make sure you're logged in with a Google account.
+- If you're running on an emulator, make sure it has Google Play installed.
+
+***
+
+## Restoring Errors
+
+#### ð ð¤ `INVALID_RECEIPT`
+
+**Problem:**
+Indicates the receipt is malformed or invalid.
+
+**Resolution:**
+Receipt validation failed, no action required.
+
+***
+
+#### ð `MISSING_RECEIPT_FILE`
+
+**Problem:**
+Indicates there is no receipt file available on the device. This is more common in sandbox testing.
+
+**Resolution:**
+Make sure you're signed into the device with a valid Apple account. For Sandbox testing, you may have to make a purchase to generate a receipt before attempting the operation. In Sandbox a receipt is generated when a user makes a purchase and is saved against the sandbox account. While in production a receipt is generated when a user downloads the app and is saved against the Apple account.
+
+***
+
+#### ð¦ `ERROR_FINDING_RECEIPT_SKU`
+
+**Problem:**
+Indicates there is no SKU available from the token.
+
+***
+
+#### ð¦ `ERROR_FETCHING_RECEIPTS`
+
+**Problem:**
+Indicates there was an error fetching receipts.
+
+***
+
+#### ð¦ `ERROR_FETCHING_RECEIPT_INFO`
+
+**Problem:**
+Indicates there was an error fetching information about the receipt.
+
+## Next Steps
+
+- You're set up to handle errors, time to start [making purchases in sandbox â](/test-and-launch/sandbox)

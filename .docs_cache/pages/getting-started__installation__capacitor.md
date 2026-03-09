@@ -1,0 +1,80 @@
+---
+id: "getting-started/installation/capacitor"
+title: "Capacitor"
+description: "What is RevenueCat?"
+permalink: "/docs/getting-started/installation/capacitor"
+slug: "capacitor"
+version: "current"
+original_source: "docs/getting-started/installation/capacitor.mdx"
+---
+
+## What is RevenueCat?
+
+RevenueCat provides a backend and a wrapper around StoreKit and Google Play Billing to make implementing in-app purchases and subscriptions easy. With our SDK, you can build and manage your app business on any platform without having to maintain IAP infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/growth/where-does-revenuecat-fit-in-your-app/) or you can [sign up free](https://app.revenuecat.com/signup) to start building.
+
+## Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-capacitor.svg?filter=!*beta*\&style=flat)](https://github.com/RevenueCat/purchases-capacitor/releases)
+
+*Interactive content is available in the web version of this doc.*
+
+## Additional Android Setup
+
+### Set the correct launchMode
+
+Depending on your user's payment method, they may be asked by Google Play to verify their purchase in their (banking) app. This means they will have to background your app and go to another app to verify the purchase. If your Activity's `launchMode` is set to anything other than `standard` or `singleTop`, backgrounding your app can cause the purchase to get cancelled. To avoid this, set the `launchMode` of your Activity to `standard` or `singleTop` in your Android app's `AndroidManifest.xml` file:
+
+*Interactive content is available in the web version of this doc.*
+
+You can find Android's documentation on the various `launchMode` options [here](https://developer.android.com/guide/topics/manifest/activity-element#lmode).
+
+## Additional iOS Setup
+
+:::info Enable In-App Purchase capability for iOS projects in Xcode
+Don't forget to enable the In-App Purchase capability for your iOS project under `Project Target -> Capabilities -> In-App Purchase`
+:::
+
+### Set Swift Language Version
+
+You have to make sure that the `SWIFT_LANGUAGE_VERSION` is set if it's not already. `purchases-capacitor` needs Swift >= 5.0.
+
+You can either set it in the project yourself, or use an external plugin. In order to set it yourself:
+
+1. In Xcode, in project manager, select your app target.
+2. Open the `Build Settings` tab
+3. Look for the `Swift Language Version` setting.
+4. Set it to 5.0.
+
+## Import Purchases
+
+### TypeScript
+
+The types are shipped inside the npm package. You can import them like this:
+
+*Interactive content is available in the web version of this doc.*
+
+### Angular
+
+Wait for the Platform to be ready, then configure the plugin in your `src/app/app.component.ts`:
+
+*Interactive content is available in the web version of this doc.*
+
+### React
+
+Import the plugin object then use its static methods:
+
+*Interactive content is available in the web version of this doc.*
+
+### Vue.js
+
+:::warning Important note if using Vue.js reactivity wrappers
+If using Vue.js and its Reactivity API wrappers like [reactive](https://vuejs.org/api/reactivity-core.html#reactive) or [readonly](https://vuejs.org/api/reactivity-core.html#readonly), make sure you pass the raw objects (rather than `Proxy` objects) to the Capacitor plugin methods. You can use the [toRaw](https://vuejs.org/api/reactivity-advanced.html#toraw) method to convert to the raw object.
+:::
+
+Import the plugin object then use its static methods:
+
+*Interactive content is available in the web version of this doc.*
+
+## Next Steps
+
+- Now that you've installed the Purchases SDK in your Capacitor app, get started by [configuring an instance of Purchases â](/getting-started/quickstart#3-using-revenuecats-purchases-sdk)

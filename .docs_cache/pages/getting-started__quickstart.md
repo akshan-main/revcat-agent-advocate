@@ -1,0 +1,169 @@
+---
+id: "getting-started/quickstart"
+title: "SDK Quickstart"
+description: "This guide will walk you through how to get up and running with subscriptions and RevenueCat's SDK with only a few lines of code."
+permalink: "/docs/getting-started/quickstart"
+slug: "quickstart"
+version: "current"
+original_source: "docs/getting-started/quickstart.mdx"
+---
+
+This guide will walk you through how to get up and running with subscriptions and RevenueCat's SDK with only a few lines of code.
+
+## 1. Set up your RevenueCat account
+
+Before continuing with this guide, follow our [Setting up RevenueCat](/welcome/overview) guide to create a free account and set up your first project.
+
+Set up your account â
+
+## 2. Product Configuration
+
+Before using the SDK, you need to configure your products, entitlements, and offerings in the RevenueCat dashboard. Every new project comes with a **Test Store** automatically configured, so you can start immediately without connecting to Apple or Google.
+
+Configure Products â
+
+:::info Already configured your products?
+Continue to SDK installation below.
+:::
+
+:::tip SDK Version Requirements
+Test Store requires minimum SDK versions (iOS 5.43.0+, Android 9.9.0+, etc.). See [Sandbox Testing](/test-and-launch/sandbox#testing-with-revenuecat-test-store) for complete version requirements.
+:::
+
+## 3. Using RevenueCat's Purchases SDK
+
+Our SDK seamlessly implements purchases and subscriptions across platforms while syncing tokens with the RevenueCat server.
+
+### SDK Installation
+
+Install the SDK on your preferred platform.
+
+**Note: if you are using RevenueCat's Paywalls, the `RevenueCatUI` package is required during the installation process.**
+
+If you run into issues with the SDK, see [Troubleshooting the SDKs](/test-and-launch/debugging/troubleshooting-the-sdks) for guidance.
+
+*Interactive content is available in the web version of this doc.*
+
+### Initialize and Configure the SDK
+
+:::info Only use your public API key to configure Purchases
+You can get your public API key from the **API keys** section in the dashboard.
+:::
+
+You should only configure the shared instance of *Purchases* once, usually on app launch. After that, the same instance is shared throughout your app by accessing the `.shared` instance in the SDK.
+
+See our guide on [Configuring SDK](/getting-started/configuring-sdk) for more information and best practices.
+
+Make sure you configure *Purchases* with your public API key only. You can find this API key in your app settings by selecting your app in the API keys page. You can read more about the different API keys available in our [Authentication guide](/projects/authentication).
+
+*Interactive content is available in the web version of this doc.*
+
+The `app_user_id` field in `.configure` is how RevenueCat identifies users of your app. You can provide a custom value here or omit it for us to generate an anonymous id. For more information, see our [Identifying Users](/customers/user-ids) guide.
+
+When in development, we recommend enabling more verbose debug logs. For more information about these logs, see our [Debugging](/test-and-launch/debugging) guide.
+
+If you're planning to use RevenueCat alongside your existing purchase code, be sure to tell the SDK that [your app will complete the purchases](/migrating-to-revenuecat/sdk-or-not/finishing-transactions)
+
+:::info Configuring Purchases with User IDs
+If you have a user authentication system in your app, you can provide a user identifier at the time of configuration or at a later date with a call to `.logIn()`. To learn more, check out our guide on [Identifying Users](/customers/user-ids).
+:::
+
+### Present a Paywall
+
+The SDK will automatically fetch your configured Offerings and retrieve product information from your Test Store or connected stores (Apple, Google, Amazon). You can present a paywall using RevenueCat's pre-built UI or build your own.
+
+**Option A: Use RevenueCat Paywalls** (Recommended)
+
+RevenueCat provides customizable paywall templates that you can configure remotely. See [Creating Paywalls](/tools/paywalls/creating-paywalls) to design your paywall, then [Displaying Paywalls](/tools/paywalls/displaying-paywalls) for platform-specific implementation.
+
+*Interactive content is available in the web version of this doc.*
+
+**Option B: Build Your Own**
+
+If you prefer full control, manually display products and handle purchases. See [Displaying Products](/getting-started/displaying-products) and [Making Purchases](/getting-started/making-purchases).
+
+#### SDK not fetching products or offerings?
+
+A common issue when displaying your paywall or making a purchase is missing or empty offerings. This is almost always a configuration issue.
+
+If you're running into this error, please see our [community post](https://community.revenuecat.com/sdks-51/why-are-offerings-or-products-empty-124) for troubleshooting steps.
+
+### Make a Purchase
+
+Once your paywall is presented, select one of your products to make a purchase. The SDK will handle the purchase flow automatically and send the purchase information to RevenueCat.
+
+**Testing with Test Store:**
+
+- Test Store purchases work immediately without any additional setup
+- They behave just like real subscriptions in your app
+- No real money is charged
+- Perfect for development and testing your integration
+
+**Testing with real stores:**
+
+- The RevenueCat SDK automatically handles sandbox vs. production environments
+- Each platform requires slightly different configuration steps to test in sandbox
+- See [Sandbox Testing](/test-and-launch/sandbox) for platform-specific instructions
+
+When the purchase is complete, you can find the purchase associated to the customer in the [RevenueCat dashboard](/dashboard-and-metrics/customer-profile). You can [search for the customer](/dashboard-and-metrics/customer-lists#find-an-individual-customer) by their App User ID that you configured, or by the automatically assigned `$RCAnonymousID` that you'll find in your logs.
+
+**Note:** RevenueCat ***always*** validates transactions. Test Store purchases are validated by RevenueCat; real store purchases are validated by the respective platform (Apple, Google, etc.).
+
+Additionally, the SDK will automatically update the customer's `CustomerInfo` object with the new purchase information. This object contains all the information about the customer's purchases and subscriptions.
+
+*Want to manually call the `purchase` method? See [Making Purchases](/getting-started/making-purchases).*
+
+### Check Subscription Status
+
+The SDK makes it easy to check what active subscriptions the current customer has, too. This can be done by checking a user's `CustomerInfo` object to see if a specific Entitlement is active, or by checking if the active Entitlements array contains a specific Entitlement ID.
+
+If you're not using Entitlements (you probably should be!) you can check the array of active subscriptions to see what product IDs from the respective store it contains.
+
+*Interactive content is available in the web version of this doc.*
+
+You can use this method whenever you need to get the latest status, and it's safe to call this repeatedly throughout the lifecycle of your app. *Purchases* automatically caches the latest `CustomerInfo` whenever it updates â so in most cases, this method pulls from the cache and runs very fast.
+
+It's typical to call this method when deciding which UI to show the user and whenever the user performs an action that requires a certain entitlement level.
+
+:::info Here's a tip!
+You can access a lot more information about a subscription than simply whether it's active or not. See our guide on [Subscription Status](/customers/customer-info) to learn if subscription is set to renew, if there's an issue detected with the user's credit card, and more.
+:::
+
+### Reacting to Subscription Status Changes
+
+You can respond to any changes in a customer's `CustomerInfo` by conforming to an optional delegate method, `purchases:receivedUpdated:`.
+
+This method will fire whenever the SDK receives an updated `CustomerInfo` object from calls to `getCustomerInfo()`, `purchase(package:)`, `purchase(product:)`, or `restorePurchases()`.
+
+**Note:** `CustomerInfo` updates are *not* pushed to your app from the RevenueCat backend, updates can only happen from an outbound network request to RevenueCat, as mentioned above.
+
+Depending on your app, it may be sufficient to ignore the delegate and simply handle changes to customer information the next time your app is launched or in the completion blocks of the SDK methods.
+
+*Interactive content is available in the web version of this doc.*
+
+### Restore Purchases
+
+RevenueCat enables your users to restore their in-app purchases, reactivating any content that they previously purchased from the **same store account** (Apple, Google, or Amazon account). We recommend that all apps have some way for users to trigger the restore method. Note that Apple does require a restore mechanism in the event a user loses access to their purchases (e.g: uninstalling/reinstalling the app, losing their account information, etc).
+
+By default, RevenueCat Paywalls include a 'Restore Purchases' button. You can also trigger this method programmatically.
+
+*Interactive content is available in the web version of this doc.*
+
+If two different [App User IDs](/customers/user-ids) restore transactions from the same underlying store account (Apple, Google, or Amazon account) RevenueCat may attempt to create an alias between the two App User IDs and count them as the same user going forward. See our guide on [Restoring Purchases](/getting-started/restoring-purchases) for more information on the different configurable restore behaviors.
+
+:::success You did it!
+You have now implemented a fully-featured subscription purchasing system without spending a month writing server code. Congrats!
+:::
+
+## Sample Apps
+
+To download more complete examples of integrating the SDK, head over to our sample app resources.
+
+View Sample Apps â
+
+## Next Steps
+
+- If you want to use your own user identifiers, read about [setting app user IDs](/customers/user-ids).
+- Once you're ready to test your integration, follow our guides on [testing and debugging](/test-and-launch/debugging).
+- If you're moving to RevenueCat from another system, see our [migration guide](/migrating-to-revenuecat/migrating-existing-subscriptions).
+- If you qualify for the App Store Small Business Program, check out our [guide on how to apply](/platform-resources/apple-platform-resources/app-store-small-business-program).

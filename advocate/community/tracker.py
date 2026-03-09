@@ -1,9 +1,15 @@
 from ..models import CommunityInteraction
-from ..db import insert_row, query_rows, update_row, now_iso
+from ..db import insert_row, query_rows, update_row, now_iso, exists_similar
 
 
 def log_interaction(db_conn, interaction: CommunityInteraction) -> int:
-    """Log a community interaction. Returns row id."""
+    """Log a community interaction. Deduplicates by question text. Returns row id or -1 if duplicate."""
+    # Check for duplicate before inserting
+    match_col = "question" if interaction.question else "draft_response"
+    match_val = interaction.question or interaction.draft_response
+    if match_val and exists_similar(db_conn, "community_interactions", {match_col: match_val}):
+        return -1  # Duplicate, skip
+
     return insert_row(db_conn, "community_interactions", {
         "channel": interaction.channel.value,
         "thread_url": interaction.thread_url,

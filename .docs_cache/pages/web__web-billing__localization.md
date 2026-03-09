@@ -1,0 +1,78 @@
+---
+id: "web/web-billing/localization"
+title: "Localization"
+description: "Web Billing (formerly RevenueCat Billing) provides localization support to help you deliver a seamless purchase experience to customers around the world. The localization features allow you to present the purchase flow in your customers' preferred languages while maintaining consistent product information and pricing across regions."
+permalink: "/docs/web/web-billing/localization"
+slug: "localization"
+version: "current"
+original_source: "docs/web/web-billing/localization.mdx"
+---
+
+Web Billing (formerly RevenueCat Billing) provides localization support to help you deliver a seamless purchase experience to customers around the world. The localization features allow you to present the purchase flow in your customers' preferred languages while maintaining consistent product information and pricing across regions.
+
+- Web Billing supports localization for 33 languages in the Web SDK.
+- Localization affects the entire purchase flow, including the checkout form (excluding any possible secondary payment flows such as 3D Secure authentication).
+- Product names and descriptions are not localized, and will be shown in their original form (as defined in the RevenueCat Dashboard).
+- Prices configured through [multi-currency support](/web/web-billing/multi-currency-support/) are now formatted following the selected locale in the purchase flow.
+
+:::warning Beta translations
+Our localization support is in beta, and supported translations may include minor issues. We're working to validate these, and appreciate your input!Â Please [contact us](mailto:support%40revenuecat.com) or [open an issue](https://github.com/RevenueCat/purchases-js/issues) in our github repo with any corrections or general feedback on translations).
+:::
+
+### Current limitations
+
+Currently, the following limitations apply to localization support:
+
+- It is not possible to override any strings for the given languages.
+- It is not possible to specify the language used in Web Purchase Links (hosted purchase flow).
+- Some of the supported languages may have minor translation issues, and we're working to validate them (please [contact us](mailto:support%40revenuecat.com) or [open an issue](https://github.com/RevenueCat/purchases-js/issues) in our github repo with any corrections or general feedback on translations).
+
+## How to use localization support in purchases-js
+
+:::info Web SDK version compatibility
+Localization is supported in purchases-js version 0.14.0 and above.
+:::
+
+When invoking `purchase()`, you can provide a `selectedLocale` or `defaultLocale` using the `PurchaseParams` interface:
+
+*Interactive content is available in the web version of this doc.*
+
+## Supported languages
+
+The following language codes can be specified as locales:
+
+| Language code | Language name         |
+| ------------- | --------------------- |
+| ar            | Arabic                |
+| ca            | Catalan               |
+| zh\_Hans       | Chinese (Simplified)  |
+| zh\_Hant       | Chinese (Traditional) |
+| hr            | Croatian              |
+| cs            | Czech                 |
+| da            | Danish                |
+| nl            | Dutch                 |
+| en            | English               |
+| fi            | Finnish               |
+| fr            | French                |
+| de            | German                |
+| el            | Greek                 |
+| he            | Hebrew                |
+| hi            | Hindi                 |
+| hu            | Hungarian             |
+| id            | Indonesian            |
+| it            | Italian               |
+| ja            | Japanese              |
+| ko            | Korean                |
+| ms            | Malay                 |
+| no            | Norwegian             |
+| pl            | Polish                |
+| pt            | Portuguese            |
+| ro            | Romanian              |
+| ru            | Russian               |
+| sk            | Slovak                |
+| es            | Spanish               |
+| sv            | Swedish               |
+| th            | Thai                  |
+| tr            | Turkish               |
+| uk            | Ukrainian             |
+| vi            | Vietnamese            |

@@ -1,0 +1,167 @@
+---
+id: "getting-started/installation/unity"
+title: "Unity"
+description: "What is RevenueCat?"
+permalink: "/docs/getting-started/installation/unity"
+slug: "unity"
+version: "current"
+original_source: "docs/getting-started/installation/unity.mdx"
+---
+
+## What is RevenueCat?
+
+RevenueCat provides a backend and a wrapper around StoreKit and Google Play Billing to make implementing in-app purchases and subscriptions easy. With our SDK, you can build and manage your app business on any platform without having to maintain IAP infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/where-does-revenuecat-fit-in-your-app) or you can [sign up free](https://app.revenuecat.com/signup) to start building.
+
+## Installation
+
+[![Release](https://img.shields.io/github/release/RevenueCat/purchases-unity.svg?style=flat)](https://github.com/RevenueCat/purchases-unity/releases)
+
+We provide 2 ways to install our SDK: via Unity Package Manager (UPM) in the OpenUPM registry, or as a `.unitypackage`.
+
+### Option 1 (recommended): Install using OpenUPM
+
+1. First you need to import the [EDM4U](https://github.com/googlesamples/unity-jar-resolver) plugin into your project if you haven't already. This plugin will add all the Android and iOS dependencies automatically when building your project. To do this, you can:
+   - Download the `external-dependency-manager-latest.unitypackage` file from the root of the [EDM4U](https://github.com/googlesamples/unity-jar-resolver) repo.
+   - [Import](https://docs.unity3d.com/Manual/AssetPackagesImport.html) the downloaded `unitypackage` to your project.
+
+2. Then, you can add the OpenUPM scoped registry. To do this, go to your project's settings -> Package Manager, and add a new scoped registry with URL `https://package.openupm.com` and scopes: `com.openupm` and `com.revenuecat.purchases-unity`. It should look like this:
+
+![](/docs_images/sdk/unity/openupm-settings.jpg)
+
+3. Then, go to the Package Manager and from "My Registries", select the RevenueCat package and click on Install.
+
+![](/docs_images/sdk/unity/package-manager-revenuecat.jpg)
+
+:::info Using OpenUPM-CLI
+If you prefer, you can also use OpenUPM-CLI to add the scoped registry and the package through the command line. To do that, install the [OpenUPM-CLI](https://openupm.com/docs/getting-started.html) if you haven't already, then run `openupm add com.revenuecat.purchases-unity`. That should be it!
+:::
+
+:::warning If using Unity IAP alongside RevenueCat
+If you're using `UnityIAP` alongside `RevenueCat`, you need to follow special instructions outlined below.
+:::
+
+### Option 2: Import the Purchases Unity package
+
+Download the latest version of [**Purchases.unitypackage**](https://github.com/RevenueCat/purchases-unity/releases/latest/download/Purchases.unitypackage).
+
+Now, import the downloaded unitypackage to your Unity project. Make sure the `PlayServiceResolver` and the `ExternalDependencyManager` folders are also added. These folders will install the [EDM4U](https://github.com/googlesamples/unity-jar-resolver) plugin, which will add all the Android and iOS dependencies automatically when building your project.
+
+If you're running `purchases-unity` v3.5.1 or later, also make sure that the `RevenueCatPostInstall` script is added, since it will set up `StoreKit` for iOS and prevent issues when uploading builds to App Store Connect in Unity 2020.
+
+![](/docs_images/sdk/unity/external-dependency-manager.png)
+
+:::warning ExternalDependencyManager plugin
+Make sure the ExternalDependencyManager is properly installed. Otherwise our plugin will not be able to compile. If you don't see the option under the Assets menu after restarting the editor, try reinstalling the RevenueCat plugin or manually importing the [EDM4U](https://github.com/googlesamples/unity-jar-resolver) plugin.
+:::
+
+### Create a GameObject with the Purchases behavior
+
+The Purchases package will include a MonoBehavior called Purchases. This will be your access point to RevenueCat from inside Unity. It should be instantiated once and kept as a singleton. You can use properties to configure your API Key, app user ID (if you have one), and product identifiers you want to fetch.
+
+![](/docs_images/sdk/unity/purchases-behavior.png)
+
+### Link StoreKit (iOS only)
+
+`StoreKit` should automatically be linked. If you run into any issues, add *StoreKit.framework* to *Linked Frameworks and Libraries* in Xcode.
+
+### Set the correct launchMode (Android only)
+
+Depending on your user's payment method, they may be asked by Google Play to verify their purchase in their (banking) app. This means they will have to background your app and go to another app to verify the purchase. If your Activity's `launchMode` is set to anything other than `standard` or `singleTop`, backgrounding your app can cause the purchase to get cancelled. To avoid this, set the `launchMode` of your Activity to `standard` or `singleTop` in your Android project's `AndroidManifest.xml` file:
+
+*Interactive content is available in the web version of this doc.*
+
+You can find Android's documentation on the various `launchMode` options [here](https://developer.android.com/guide/topics/manifest/activity-element#lmode).
+
+### Subclass Purchases.Listener MonoBehavior
+
+The Purchases behavior takes one additional parameter, a GameObject with a Purchases.Listener component. This will be where you handle purchase events, and updated subscriber information from RevenueCat. Here is a simple example:
+
+*Interactive content is available in the web version of this doc.*
+
+## Unity Editor
+
+Running the Purchases SDK is unsupported in the Unity Editor at this time, and may result in `NullReferenceException: Object reference not set to an instance of an object` errors. Please build and run your app instead.
+
+## Proguard rules
+
+If you have enabled Minify in Unity, make sure to add these custom rules to your `Assets/Plugins/Android/proguard-user.txt` and enable the Custom Proguard File setting in Publishing Settings:
+
+```
+-keep class com.revenuecat.** { *; }
+```
+
+## Installation with Unity IAP side by side
+
+Starting with version 8.0.0, RevenueCat's Purchases Unity SDK is compatible with Unity IAP 5.0.0 and above.
+
+:::info Unity IAP 5.0.0+ required
+If you're using an older version of Unity IAP, you'll need to upgrade to Unity IAP 5.0.0 or later to use the current version of the Purchases Unity SDK.
+:::
+
+:::warning Amazon Store Support
+Unity IAP 5 has removed support for the Amazon Appstore. **If you need to support Amazon purchases, we recommend using the latest Purchases Unity SDK (8.0.0+) and letting RevenueCat handle all purchases directly**.
+
+Completing transactions with your own IAP code requires consistent configuration across all stores. If you complete purchases with your own IAP code for Amazon, you must also do so for Google Play. However:
+
+- Unity IAP 4 supports Amazon but uses an older BillingClient
+- Purchases Unity 4.16.0 (last version compatible with Amazon SDK 2.0.76) doesn't work with the newer Google Play BillingClient required for current Unity IAP versions
+- Unity IAP 5 removed Amazon support entirely
+
+This means you cannot simultaneously support both Google Play and Amazon when completing transactions with Unity IAP. The recommended approach is to use RevenueCat to handle all purchases for both stores.
+
+If your app only supports Amazon (not Google Play) and you want to complete purchases with your own IAP code, you can use [Purchases Unity 4.16.0](https://github.com/RevenueCat/purchases-unity/releases/tag/4.16.0) with Unity IAP 4.
+:::
+
+### Troubleshooting "duplicated class" errors
+
+If using RevenueCat alongside Unity IAP or other plugin that includes the Android BillingClient library, you may get an error when compiling that warns about some BillingClient classes being duplicated.
+
+The easiest way to remove the error would be to tell Gradle to not include the billingclient library that Unity IAP is already including.
+
+In order to do that, make sure you have `Custom Main Gradle Template` selected in the Android Player Settings... That should create a `mainTemplate.gradle` inside the `Assets/Plugins/Android`.
+
+![](/docs_images/sdk/unity/custom-main-gradle-template.png)
+
+Modify the `mainTemplate.gradle` to include the following at the end of the dependencies block:
+
+*Interactive content is available in the web version of this doc.*
+
+Perform a clean up of the resolved dependencies using the `Assets/External Dependency Manager/Android Resolver/Delete Resolved Libraries` menu. This will cleanup the previously downloaded .aars in `Assets/Plugins/Android`. Otherwise you could end up with duplicated classes errors.
+
+Also make sure to perform a resolve, so External Dependency Manager adds the right dependencies to the generated `build.gradle`.
+
+:::danger
+The above instructions will also apply if using other plugin that includes the Android InAppBillingService class, or for some other reason you get an error regarding duplicated classes.
+:::
+
+### Troubleshooting "ClassNotFoundException" errors at Runtime in Android
+
+When exporting your project to Android, in the Build Settings window, make sure you uncheck the `Symlink Sources` checkbox. That will make it so Unity actually uses the correct source files for our SDK.
+
+![](/docs_images/sdk/unity/unity-symlink-sources-unchecked.jpg)
+
+### Completing Transactions with your own IAP Code
+
+:::info Not recommended for Amazon Store
+Due to compatibility issues with Unity IAP and Amazon SDK versions, we do not recommend completing transactions with Unity IAP for Amazon Store. See the [Amazon Store Support warning](#installation-with-unity-iap-side-by-side) above for details.
+:::
+
+#### For Google Play (can also be done programmatically, see Configuration section)
+
+![](/docs_images/sdk/unity/google-play-store.png)
+
+#### For Amazon Store (can also be done programmatically, see Configuration section)
+
+![](/docs_images/sdk/unity/amazon-store.png)
+
+:::warning Important note regarding InAppBillingService (Android Unity only)
+If using RevenueCat alongside Unity IAP or other plugin that includes the Android InAppBillingService class, follow [these instructions](/getting-started/installation/unity#troubleshooting-duplicated-class-errors)
+:::
+
+:::danger Important (Android only)
+On Android, RevenueCat **will not** consume or acknowledge any purchase if [you tell the SDK that your app will complete purchases](/migrating-to-revenuecat/sdk-or-not/finishing-transactions), so be sure your app is handling that. **Failure to do so will result in your purchases being refunded after 3 days.**
+:::
+
+## Next Steps
+
+- Now that you've installed the Purchases SDK in your Unity app, get started [building with Purchases â](/getting-started/quickstart#3-using-revenuecats-purchases-sdk)

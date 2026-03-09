@@ -1,0 +1,47 @@
+---
+id: "tools/paywalls/creating-paywalls/customer-states"
+title: "Designing for other customer states"
+description: "Customers may use your paywall in many different states -- such as in dark mode, or while eligible for an introductory offer -- and these states may benefit from having their own configured properties to make your paywall work best in each situation."
+permalink: "/docs/tools/paywalls/creating-paywalls/customer-states"
+slug: "customer-states"
+version: "current"
+original_source: "docs/tools/paywalls/creating-paywalls/customer-states.mdx"
+---
+
+Customers may use your paywall in many different states -- such as in dark mode, or while eligible for an introductory offer -- and these states may benefit from having their own configured properties to make your paywall work best in each situation.
+
+## Light mode / dark mode
+
+Paywalls are configured for light mode by default, but if your app supports dark mode you can additionally configure colors and images to be used for dark mode.
+
+To configure your paywall for dark mode:
+
+1. Click on `Light mode` in the settings above the paywall preview
+2. Click `Dark mode` in the dropdown to preview & edit your paywall in dark mode
+3. While in dark mode, all configurable elements (colors & images) will display the moon icon next to them instead of the sun icon.
+
+![Dark mode icons](/docs_images/paywalls/paywalls-dark-mode.png)
+
+:::tip
+You can also click the sun/moon icon to switch between light and dark mode as you're working with each property.
+:::
+
+## Offer eligibility
+
+All text fields can be configured to have unique strings based on whether the customer viewing the paywall is or is not eligible for an introductory offer or promotional offer (App Store only)
+
+To learn more about how to configure your paywall to support offers, [click here](/tools/paywalls/creating-paywalls/supporting-offers).
+
+## Selected state of packages
+
+When multiple packages are offered to a customer, one will be selected by default, and they may optionally select any of the other packages to purchase before tapping the purchase button. Your paywall should style the selected state and the default state of the package uniquely to make it clear to the customer which one is currently selected, such as by including a unique icon within the package, differentiating the border color or background color, etc.
+
+To configure the selected state of each package:
+
+1. Click on the package component in the Layers panel you'd like to configure
+2. Click on the `Selected` tab at the top of that package's properties panel
+3. While on the selected tab, all changes to any properties will only apply to the selected state of that component
+
+![Selected state](/docs_images/paywalls/paywalls-selected-state.png)
+
+Any changes you make to the default state of the package will also apply to the selected state unless you've manually set that property's selected state to something else. In other words, when you change properties like margin & padding on the default state, we'll apply that to the selected state too so you don't need to make the same changes twice; and when you update the border color of the selected state, we won't overwrite that if you update the border of the default state later on.

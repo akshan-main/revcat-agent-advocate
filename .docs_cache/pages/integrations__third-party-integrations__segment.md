@@ -1,0 +1,105 @@
+---
+id: "integrations/third-party-integrations/segment"
+title: "Segment"
+description: "Segment can be a useful integration tool for seeing all events and revenue that occur for your app even if itâs not active for a period of time. You can use Segment to collect data on customer events to create a single view customer portfolio using an API."
+permalink: "/docs/integrations/third-party-integrations/segment"
+slug: "segment"
+version: "current"
+original_source: "docs/integrations/third-party-integrations/segment.mdx"
+---
+
+Segment can be a useful integration tool for seeing all events and revenue that occur for your app even if itâs not active for a period of time. You can use Segment to collect data on customer events to create a single view customer portfolio using an API.
+
+With our Segment integration, you can:
+
+- Create an onboarding flow for users who have subscribed but have not yet engaged with the tutorial or first steps of your product.
+- Send personalized messages to users who have free trials that are about to expire.
+
+With accurate and up-to-date subscription data in Segment, you'll be set to turbocharge your user engagement â¡ï¸
+
+### Integration at a Glance
+
+| Includes Revenue | Supports Negative Revenue | Sends Sandbox Events  | Includes Customer Attributes | Sends Transfer Events |                                                                 Optional Event Types                                                                 |
+| :--------------: | :-----------------------: | :-------------------: | :--------------------------: | :-------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------: |
+|        â        |            â             | Toggle on in Settings |              â              |          â           | `non_subscription_purchase_event` `uncancellation_event` `subscription_paused_event` `expiration_event` `billing_issue_event` `product_change_event` |
+
+## Events
+
+The Segment integration tracks the following events:
+
+| Event Type                | Default Event Name                   | Description                                                                                                                                                                                                                                                                                                                                 | App Store | Play Store | Amazon | Stripe | Promo |
+| ------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- | ------ | ------ | ----- |
+| Initial Purchase          | `rc_initial_purchase_event`          | A new subscription has been purchased.                                                                                                                                                                                                                                                                                                      | â        | â         | â     | â     | â    |
+| Trial Started             | `rc_trial_started_event`             | The start of an auto-renewing subscription product free trial.                                                                                                                                                                                                                                                                              | â        | â         | â     | â     | â    |
+| Trial Converted           | `rc_trial_converted_event`           | When an auto-renewing subscription product converts from a free trial to normal paid period.                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Trial Cancelled           | `rc_trial_cancelled_event`           | When a user turns off renewals for an auto-renewing subscription product during a free trial period.                                                                                                                                                                                                                                        | â        | â         | â     | â     | â    |
+| Renewal                   | `rc_renewal_event`                   | An existing subscription has been renewed or a lapsed user has resubscribed.                                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Cancellation              | `rc_cancellation_event`              | A subscription or non-renewing purchase has been cancelled. See [cancellation reasons](/integrations/webhooks/event-types-and-fields#cancellation-and-expiration-reasons) for more details.                                                                                                                                                 | â        | â         | â     | â     | â    |
+| Uncancellation            | `rc_uncancellation_event`            | A non-expired cancelled subscription has been re-enabled.                                                                                                                                                                                                                                                                                   | â        | â         | â     | â     | â    |
+| Non Subscription Purchase | `rc_non_subscription_purchase_event` | A customer has made a purchase that will not auto-renew.                                                                                                                                                                                                                                                                                    | â        | â         | â     | â     | â    |
+| Subscription Paused       | `rc_subscription_paused_event`       | A subscription has been paused.                                                                                                                                                                                                                                                                                                             | â        | â         | â     | â     | â    |
+| Expiration                | `rc_expiration_event`                | A subscription has expired and access should be removed. If you have [Platform Server Notifications](/platform-resources/server-notifications) configured, this event will occur as soon as we are notified (within seconds to minutes) of the expiration. If you do not have notifications configured, delays may be approximately 1 hour. | â        | â         | â     | â     | â    |
+| Billing Issue             | `rc_billing_issue_event`             | There has been a problem trying to charge the subscriber. This does not mean the subscription has expired. Can be safely ignored if listening to CANCELLATION event + cancel\_reason=BILLING\_ERROR.                                                                                                                                          | â        | â         | â     | â     | â    |
+| Product Change            | `rc_product_change_event`            | A subscriber has changed the product of their subscription. This does not mean the new subscription is in effect immediately. See [Managing Subscriptions](/subscription-guidance/managing-subscriptions) for more details on updates, downgrades, and crossgrades.                                                                         | â        | â         | â     | â     | â    |
+
+For events that have revenue, such as trial conversions and renewals, RevenueCat will automatically record this amount along with the event in Segment.
+
+## Setup
+
+### 1. Set Segment User Identity
+
+If you're using the Segment SDK, you can set the User ID to match the RevenueCat App User Id. This way, events sent from the Segment SDK and events sent from RevenueCat can be synced to the same user.
+
+Use the `.identify()` method on the Segment SDK to set the same App User Id that is set in RevenueCat.
+
+*Interactive content is available in the web version of this doc.*
+
+### 2. Generate a Segment Write Key
+
+In Segment, add a HTTP API as a source and copy the Write Key.
+
+![](/docs_images/integrations/third-party-integrations/segment/segment-write-key.png)
+
+### 3. Send RevenueCat events to Segment
+
+After you've set up the *Purchases SDK* and Segment SDK to have the same user identity, you can "turn on" the integration and configure the event names from the RevenueCat dashboard.
+
+1. Navigate to your project settings in the RevenueCat dashboard and choose 'Segment' from the Integrations menu
+
+![Integration setup](/docs_images/integrations/setup-integrations.png)
+
+2. Choose your Segment region.
+3. Add your **Segment Write Key** from step 2.
+4. Enter the event names that RevenueCat will send or choose the default event names.
+5. Select whether you want sales reported as gross revenue (before app store commission), or after store commission and/or estimated taxes.
+6. Select whether you want RevenueCat to send sandbox events into Segment or not. You can check the `environment` key in the `context` property of the event to determine if it was triggered in a sandbox or production environment.
+
+## Sample Events
+
+Below are sample JSONs that are delivered to Segment for each event type.
+
+*Interactive content is available in the web version of this doc.*
+
+*Interactive content is available in the web version of this doc.*
+
+## Subscription Status Attribute
+
+Whenever RevenueCat sends an event to Segment, we'll update the `rc_subscription_status` user attribute with any applicable changes, using one of the following values:
+
+| Status              | Description                                                                                                                                |
+| :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| active              | The customer has an active, paid subscription which is set to renew at their next renewal date.                                            |
+| intro               | The customer has an active, paid subscription through a paid introductory offer.                                                           |
+| cancelled           | The customer has a paid subscription which is set to expire at their next renewal date.                                                    |
+| grace\_period        | The customer has a paid subscription which has entered a grace period after failing to renew successfully.                                 |
+| trial               | The customer is in a trial period which is set to convert to paid at the end of their trial period.                                        |
+| cancelled\_trial     | The customer is in a trial period which is set to expire at the end of their trial period.                                                 |
+| grace\_period\_trial  | The customer was in a trial period and has now entered a grace period after failing to renew successfully.                                 |
+| expired             | The customer's subscription has expired.                                                                                                   |
+| promotional         | The customer has access to an entitlement through a RevenueCat [Granted Entitlement](/dashboard-and-metrics/customer-profile#entitlements) |
+| expired\_promotional | The customer previously had access to an entitlement through a RevenueCat Granted Entitlement that has since expired.                      |
+| paused              | The customer has a paid subscription which has been paused and is set to resume at some future date.                                       |
+
+For customers with multiple active subscriptions, this attribute will represent the status of only the subscription for which the most recent event occurred.
+
+Please note that since this attribute is set and updated when events are delivered, subscribers with events prior to our release of this attribute (during November 2023) will not have this attribute set until/unless a future event (renewal, cancellation, etc) occurs.

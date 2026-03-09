@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from advocate.content.planner import suggest_topics, create_outline
 from advocate.content.writer import (
@@ -38,24 +39,15 @@ def test_suggest_topics():
         assert len(topic) > 10
 
 
-def test_create_outline_from_results():
+def test_create_outline_requires_api_key():
+    """Without API key, outline creation raises RuntimeError."""
     results = _make_search_results()
-    outline = create_outline("Charts API Tutorial", ContentType.TUTORIAL, results)
-    assert outline.title == "Charts API Tutorial"
-    assert outline.content_type == ContentType.TUTORIAL
-    assert len(outline.sections) >= 3  # intro + results + takeaways
-    assert len(outline.sources) > 0
+    with pytest.raises(RuntimeError, match="Anthropic API key required"):
+        create_outline("Charts API Tutorial", ContentType.TUTORIAL, results)
 
 
-def test_outline_has_source_refs():
-    results = _make_search_results()
-    outline = create_outline("Test Topic", ContentType.TUTORIAL, results)
-    # At least some sections should have source refs
-    has_refs = any(len(s.source_refs) > 0 for s in outline.sections)
-    assert has_refs
-
-
-def test_generate_draft_from_template():
+def test_generate_draft_requires_api_key():
+    """Without API key, draft generation raises RuntimeError."""
     outline = ContentOutline(
         title="Test Article",
         content_type=ContentType.TUTORIAL,
@@ -65,21 +57,13 @@ def test_generate_draft_from_template():
                 key_points=["Point A", "Point B"],
                 source_refs=["https://www.revenuecat.com/docs/charts"],
             ),
-            Section(
-                heading="Details",
-                key_points=["Detail 1"],
-                source_refs=["https://www.revenuecat.com/docs/api-v2"],
-            ),
         ],
         sources=["https://www.revenuecat.com/docs/charts"],
         estimated_word_count=500,
     )
     doc_snippets = {"https://www.revenuecat.com/docs/charts": "# Charts\nMetrics overview."}
-    body = generate_draft(outline, doc_snippets)
-    assert "# Test Article" in body
-    assert "## Sources" in body
-    assert "[Source]" in body
-    assert "---" in body  # YAML front matter
+    with pytest.raises(RuntimeError, match="Anthropic API key required"):
+        generate_draft(outline, doc_snippets)
 
 
 def test_extract_code_snippets():

@@ -1,7 +1,6 @@
 import hashlib
 import os
 import re
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
@@ -188,13 +187,50 @@ def _fetch_one(entry: DocEntry, cache_dir: str, session: requests.Session, force
     was_cached = os.path.exists(cache_path) and not force
 
     if demo_mode and not os.path.exists(cache_path):
-        return entry, None, None, False, "demo_skip"
+        # Try to find a matching fixture file for this entry
+        fixtures_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'demo', 'fixtures')
+        matched = _match_demo_fixture(entry, fixtures_dir)
+        if matched:
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            with open(cache_path, "w") as f:
+                f.write(matched)
+            doc_sha256 = hashlib.sha256(matched.encode()).hexdigest()
+            return entry, matched, doc_sha256, False, None
+        # Generate minimal stub content so the page is indexable (DEMO ONLY)
+        stub = f"# {entry.title}\n\n> **[DEMO STUB]** This is placeholder content generated in demo mode. Not sourced from RevenueCat documentation.\n\n{entry.title}. See {entry.url} for full documentation.\n"
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w") as f:
+            f.write(stub)
+        doc_sha256 = hashlib.sha256(stub.encode()).hexdigest()
+        return entry, stub, doc_sha256, False, None
 
     try:
         content, doc_sha256 = fetch_doc_page(entry, cache_dir, session, force=force)
         return entry, content, doc_sha256, was_cached, None
     except Exception as e:
         return entry, None, None, False, str(e)
+
+
+def _match_demo_fixture(entry: DocEntry, fixtures_dir: str) -> str | None:
+    """Try to find a demo fixture file matching the entry path."""
+    if not os.path.isdir(fixtures_dir):
+        return None
+    # Map known fixture names to path keywords
+    mappings = {
+        "charts": "sample_doc_charts.md",
+        "authentication": "sample_doc_auth.md",
+        "mcp": "sample_doc_mcp.md",
+        "getting-started": "sample_doc_getting_started.md",
+        "offerings": "sample_doc_offerings.md",
+    }
+    path_lower = entry.path.lower()
+    for keyword, filename in mappings.items():
+        if keyword in path_lower:
+            fixture_path = os.path.join(fixtures_dir, filename)
+            if os.path.exists(fixture_path):
+                with open(fixture_path) as f:
+                    return f.read()
+    return None
 
 
 def ingest_all(db_conn, config, force: bool = False) -> IngestReport:

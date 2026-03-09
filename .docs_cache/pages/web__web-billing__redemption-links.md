@@ -1,0 +1,226 @@
+---
+id: "web/web-billing/redemption-links"
+title: "Redemption Links"
+description: "Redemption Links are one-time-use deep links with a 60-minute expiration, generated after a customer completes a web purchase. These links allow customers to associate their web purchase with their account in your app. By tapping the link, customers are redirected into the app where the purchase is automatically linked to their App User ID, granting them access to the associated entitlements."
+permalink: "/docs/web/web-billing/redemption-links"
+slug: "redemption-links"
+version: "current"
+original_source: "docs/web/web-billing/redemption-links.mdx"
+---
+
+Redemption Links are one-time-use deep links with a 60-minute expiration, generated after a customer completes a web purchase. These links allow customers to associate their web purchase with their account in your app. By tapping the link, customers are redirected into the app where the purchase is automatically linked to their App User ID, granting them access to the associated entitlements.
+Redemption Links can increase conversion and be incredibly useful for projects like marketing campaigns.
+
+:::info App User IDs no longer required for web purchases
+Using web purchases with Redemption Links means that you do not need to provide an App User ID when initializing the purchase, and customers can therefore check out anonymously.
+:::
+
+## How Redemption Links work
+
+Here's how a purchase and redemption flow looks, once you've configured and enabled the feature:
+
+1. The Web Billing purchase flow is initialized, either through the web SDK `purchase()` method, or through a [Web Purchase Link](/web/web-billing/web-purchase-links) (App User ID not required at this stage)
+2. The customer purchases a subscription or non-subscription product through the web checkout.
+3. The **customer receives a redemption link** at the end of the purchase flow, both on the success page, and in the email receipt for the purchase.
+4. On tapping the redemption link, customers are brought into the mobile app (using a custom URL scheme provided by RevenueCat).
+5. The app handles associating the purchase with the customer, either by aliasing or transferring the purchase.
+6. The customer has access to their entitlements associated with the web purchase.
+
+:::warning Redemption links expire after 60 minutes
+If a customer tries to use an expired link, they'll automatically get a new link sent to their email. Make sure your app handles the expired case so you can show customers a helpful message.
+:::
+
+:::info Redemption URL in Custom Success Pages
+When using a custom success page (redirect URL), the redemption URL is automatically included as a query parameter named `redeem_url`. For example, if your success page URL is `https://your-app.com/success`, the user will be redirected to:
+
+```
+https://your-app.com/success?redeem_url=rc-abc123://redeem_web_purchase?redemption_token=xyz789
+```
+
+You can use this `redeem_url` parameter in your success page to provide the redemption functionality to your users.
+:::
+
+:::warning Redemption Link Limitations
+The redemption link can only be opened from the mobile app where it was configured. It will fail if:
+
+- The app is not installed on the device
+- The link is opened on a desktop browser
+- The link is older than 60 minutes (a new link will be emailed automatically)
+
+Make sure your success page handles these cases appropriately by:
+
+- Showing a QR code for desktop users to scan with their mobile device
+- Clearly instructing users to open the link on their mobile device after installing the app
+  :::
+
+## How to configure Redemption Links to redeem web purchases on mobile
+
+### Update your mobile app(s) to register custom URL schemes from RevenueCat
+
+:::warning Updated mobile apps must be adopted
+After Redemption Links are enabled, customers purchasing with an anonymous App User ID will be shown app deep links (to redirect the customer into your app and redeem the purchase). Any customers on older app versions that aren't configured to accept custom URL schemes will not be able to use these links. You should therefore make sure that as many customers as possible have updated to your new app version before sending them to a purchase flow without an App User ID.
+:::
+
+The SDK versions supporting Redemption Links are:
+
+| RevenueCat SDK         | Versions supporting Redemption Links |
+| :--------------------- | :----------------------------------- |
+| purchases-android      | 8.10.6 and above                     |
+| purchases-ios          | 5.14.1 and above                     |
+| purchases-flutter      | 8.4.0 and above                      |
+| purchases-unity        | 7.4.1 and above                      |
+| react-native-purchases | 8.5.0 and above                      |
+| purchases-kmp          | 1.6.0+13.19.0 and above              |
+| purchases-capacitor    | 10.1.0 and above                     |
+
+In order to be able to redeem the redemption links in your mobile apps, follow these steps
+
+#### 1. Copy the custom URL scheme from the RevenueCat Dashboard
+
+You can find this in the RevenueCat dashboard inside your Web Billing app's settings, under "Redemption Links". It is unique to your Web Billing app:
+
+![](/docs_images/web/web-billing/redemption-links-dashboard-disabled.png)
+
+#### 2. Allow your app to respond to links with your custom scheme
+
+##### iOS
+
+In iOS, you need to define a custom URL schema. You can do this in Xcode, from your xcodeproj file, Info tab, URL Types section. Then add your custom scheme from Step 1 in the "URL Schemes" field. You can see a screenshot here, but remember to replace `<YOUR_CUSTOM_SCHEME>` with the one you obtained in step 1.
+
+![](/docs_images/web/web-billing/redemption-links-xcode-1.png)
+
+You can see official instructions by Apple [here](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app).
+
+##### Android
+
+In Android, you need to add a deep linking intent filter for the provided scheme. You can do that by adding the following intent filter inside your `AndroidManifest.xml` activity and replacing `<YOUR_CUSTOM_SCHEME>` with the scheme you copied in step 1. Note that it's fine to have multiple intent filters for the same activity.
+
+*Interactive content is available in the web version of this doc.*
+
+You can check out official docs from Google [here](https://developer.android.com/training/app-links/deep-linking#adding-filters).
+
+#### 3. Perform redemption using our SDKs
+
+Our SDKs provide APIs to perform the redemptions and provide you with the result of that redemption.
+
+##### iOS
+
+If using SwiftUI, you can use the `onWebPurchaseRedemptionAttempt` modifier to automatically perform redemption of Redemption Links once the app is opened with them.
+
+*Interactive content is available in the web version of this doc.*
+
+Alternatively, if you don't want to perform the redemption automatically or if you're not using SwiftUI, you can use the provided URL extension `asWebPurchaseRedemption` and then perform the redemption using `Purchases.shared.redeemWebPurchase` as follows:
+
+*Interactive content is available in the web version of this doc.*
+
+##### Android
+
+In Android, you first need to obtain the link and make sure it's a Redemption Link, then redeem it using the `redeemWebPurchase` method. You can see an example of this in the following code block:
+
+*Interactive content is available in the web version of this doc.*
+
+##### Flutter
+
+In our Flutter SDK, you will need to obtain the deep link first. Please read the official docs on how to parse deep links: https://docs.flutter.dev/ui/navigation/deep-linking. You can use [app\_links](https://pub.dev/packages/app_links) or similar libraries to obtain the deep link.
+
+Once you have the deep link, you can use the following snippet to perform the redemption:
+
+*Interactive content is available in the web version of this doc.*
+
+##### React Native
+
+In our React Native SDK, you will need to obtain the deep link first. Please read the official docs on how to parse deep links: https://reactnavigation.org/docs/deep-linking/.
+
+Once you have the deep link, you can use the following snippet to perform the redemption:
+
+*Interactive content is available in the web version of this doc.*
+
+:::tip Tutorial
+For a complete walkthrough of implementing Redemption Links in React Native, see [How to Configure RevenueCat Redemption Links in React Native](https://www.revenuecat.com/blog/engineering/how-to-configure-revenuecat-redemption-links-in-react-native/).
+:::
+
+##### Unity
+
+In our Unity SDK, you will need to obtain the deep link first. Please read the official docs on how to parse deep links: https://docs.unity3d.com/Manual/deep-linking.html.
+
+Once you have the deep link, you can use the following snippet to perform the redemption:
+
+*Interactive content is available in the web version of this doc.*
+
+##### Kotlin Multiplatform
+
+In our Kotlin Multiplatform SDK, you will need to obtain the deep link first. There are several ways to do this, using a 3rd party library, or by writing the relevant android/iOS code in your app and passing the url back to the shared kotlin code.
+
+Once you have the deep link, you can use the following snippet to perform the redemption:
+
+*Interactive content is available in the web version of this doc.*
+
+##### Capacitor
+
+In our Capacitor SDK, you will need to obtain the deep link first. Please read the official docs on how to parse deep links: https://capacitorjs.com/docs/guides/deep-links.
+
+Once you have the deep link, you can use the following snippet to perform the redemption:
+
+*Interactive content is available in the web version of this doc.*
+
+#### 4. Verify your setup
+
+Once you've followed the steps above, in order to verify that your integration worked correctly you can open your app using a deep link in the format: `<YOUR_CUSTOM_SCHEME>://redeem_web_purchase?redemption_token=<ANY_TOKEN>`
+
+For example, `rc-d458f1e3a2://redeem_web_purchase?redemption_token=invalid_token`.
+
+You can use a deep link test app or write the deep link in a notes app and click on it. Alternatively, if you're using an iOS simulator you can run this command in your mac terminal: `xcrun simctl openurl booted "<YOUR_CUSTOM_SCHEME>://redeem_web_purchase?redemption_token=<ANY_TOKEN>"`, and on android you can follow the instructions [here](https://developer.android.com/training/app-links/deep-linking#testing-filters).
+
+Then, you need to make sure that you display the appropriate UI in your app. In this case, an invalid link error.
+
+### Configure Redemption Links in the RevenueCat Dashboard
+
+:::info Test redemption links in sandbox mode before enabling for production purchases
+Use the "Enable only for Sandbox" setting to test the full purchase flow, including deep-linking into your app. This will ensure that you don't send redemption links to customers before they're functioning and tested.
+:::
+
+#### How to test Redemption Links in sandbox mode
+
+1. Navigate to your project in the RevenueCat dashboard, and then the Web Billing app.
+
+2. Under App Information in the Settings tab, make sure you have added: App icon, App name, and at least one store link for either the App Store or Google Play Store:
+
+![](/docs_images/web/web-billing/redemption-links-dashboard-1.png)
+
+3. Under Redemption Links, set the feature to "Enable only for Sandbox":
+
+![](/docs_images/web/web-billing/redemption-links-dashboard-sandbox.png)
+
+4. Use the sandbox purchase flow to make a test purchase on a mobile device where your app is installed (either through [Web Purchase Links](/web/web-billing/web-purchase-links) sandbox URL, or the [Web SDK](/web/web-billing/web-sdk) with a sandbox API key).
+
+### Purchase Association Behavior
+
+:::info Terminology
+In this context, `Identified` means a Custom App User ID has been set, while `Anonymous` refers to an App User ID automatically generated by RevenueCat.
+:::
+When a customer redeems a web purchase in your app, RevenueCat will automatically handle associating the purchase based on the App User IDs involved:
+
+| Current App User ID | Web Purchase Owner | Result                                                                                                                            |
+| :------------------ | :----------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
+| Anonymous           | Anonymous          | App customer and Web Purchase Owner have CustomerInfo merged (aliased)                                                            |
+| Anonymous           | Identified         | App customer and Web Purchase Owner have CustomerInfo merged (aliased)                                                            |
+| Identified          | Anonymous          | App customer and Web Purchase Owner have CustomerInfo merged (aliased)                                                            |
+| Identified          | Identified         | Follows project's [restore behavior](/projects/restore-behavior) (The default is to transfer the purchase to the new App User ID) |
+
+In most cases, the App User IDs will be merged (aliased) and treated as the same customer going forward. The exception is when both App User IDs are identified - in this case, it follows your project's configured [restore behavior](/projects/restore-behavior).
+
+After successful redemption, the customer will immediately have access to their entitlements regardless of which association method was used.
+
+## FAQs
+
+#### How can I make sure that customers can't share redemption links with other people and allow anyone to access premium entitlements in my app?
+
+A redemption link is only valid for one single redemption of a purchase â once redeemed, it's no longer valid.
+
+#### Can my customers redeem their purchases on multiple devices?
+
+Customers can redeem a single purchase multiple times (i.e. on a different devices) â on each occasion they'll be sent a new redemption link to their billing email address, valid for one new redemption.
+
+#### What happens if a redemption link expires?
+
+Redemption links expire 60 minutes after they're created. If a customer tries to use an expired link, your app will get an `expired` result, and we'll automatically send them a new link to their billing email. Show customers a message letting them know to check their email for the new link.

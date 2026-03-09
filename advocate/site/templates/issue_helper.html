@@ -1,0 +1,530 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>Issue Helper</h1>
+    <p class="page-intro">
+        Paste a GitHub issue URL, Stack Overflow link, or any developer question about RevenueCat.
+        The agent searches {{ doc_count }} ingested doc pages and generates a doc-grounded response with citations.
+        Answers reflect what's in the documentation; they may not fully resolve the issue if it involves repo-specific code or undocumented behavior.
+    </p>
+    <p class="page-intro" style="font-size:0.82rem;color:var(--text-muted);margin-top:-0.5rem;">
+        This could be deployed as an automated bot on RevenueCat repos, triaging new issues with doc-grounded context
+        before a human reviews them. Currently it runs on-demand here for demonstration.
+    </p>
+
+    <div class="helper-input-section">
+        <div class="api-key-section">
+            <label>Provider:</label>
+            <select id="helper-provider" onchange="helperProviderChange()">
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI (GPT-4o-mini)</option>
+            </select>
+            <label>API Key:</label>
+            <input type="password" id="helper-key" placeholder="sk-ant-... or sk-..." />
+            <button onclick="helperSaveKey()">Save</button>
+            <span id="helper-key-status" class="key-status"></span>
+        </div>
+        <p class="key-notice">Your key is stored in your browser only. It goes directly to the AI provider, never to our server.</p>
+
+        <label for="helper-issue"><strong>Paste a GitHub issue URL or describe the problem:</strong></label>
+        <textarea id="helper-issue" rows="5" placeholder="https://github.com/RevenueCat/purchases-ios/issues/1234
+
+or paste the issue text directly:
+
+'I'm getting PRODUCT_NOT_AVAILABLE when calling getOfferings() on Android...'"
+            style="width:100%;font-family:inherit;font-size:0.9rem;padding:0.6rem;border:1px solid var(--border);border-radius:5px;resize:vertical;"></textarea>
+
+        <div id="helper-fetched-preview" style="display:none;margin-top:0.5rem;padding:0.6rem 0.75rem;background:#f8f9fa;border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong id="helper-fetched-title" style="color:var(--link);"></strong>
+                <span id="helper-fetched-meta" style="color:var(--text-muted);font-size:0.75rem;"></span>
+            </div>
+            <div id="helper-fetched-body" style="margin-top:0.3rem;color:var(--text-muted);max-height:120px;overflow-y:auto;white-space:pre-wrap;"></div>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;align-items:center;margin-top:0.75rem;">
+            <button onclick="helperSubmit()" id="helper-submit-btn"
+                style="padding:0.6rem 1.5rem;background:var(--link);color:#fff;border:none;border-radius:5px;font-size:0.9rem;font-weight:700;cursor:pointer;">
+                Get Answer
+            </button>
+            <span id="helper-status" style="font-size:0.82rem;color:var(--text-muted);"></span>
+        </div>
+    </div>
+
+    <div id="helper-result" style="display:none;margin-top:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+            <h2 style="margin:0;border:none;padding:0;">Answer</h2>
+            <button onclick="helperCopy()" id="helper-copy-btn"
+                style="padding:0.35rem 1rem;background:#f5f5f5;border:1px solid var(--border);border-radius:4px;font-size:0.82rem;cursor:pointer;">
+                Copy Markdown
+            </button>
+        </div>
+        <div id="helper-answer" class="helper-answer-box"></div>
+        <div id="helper-raw-md" style="display:none;"></div>
+    </div>
+
+    <h2>Recent Open Issues</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        Live from RevenueCat's GitHub repos (fetched client-side). Click any issue to load it into the helper.
+    </p>
+    <div id="recent-issues-list">
+        <p style="font-size:0.82rem;color:var(--text-muted);">Loading from GitHub API...</p>
+    </div>
+
+    <h2>How It Works</h2>
+    <div class="bot-architecture">
+        <div class="arch-row">
+            <div class="arch-step" style="--step-color: #6366f1;">
+                <div class="step-icon">1</div>
+                <strong>Paste</strong>
+                <span>Paste a GitHub issue URL or describe a problem. URLs are auto-fetched via GitHub's public API.</span>
+            </div>
+            <div class="arch-arrow">&#10132;</div>
+            <div class="arch-step" style="--step-color: #8b5cf6;">
+                <div class="step-icon">2</div>
+                <strong>Search</strong>
+                <span>The agent searches {{ doc_count }} cached RevenueCat doc pages for relevant information.</span>
+            </div>
+            <div class="arch-arrow">&#10132;</div>
+            <div class="arch-step" style="--step-color: #a855f7;">
+                <div class="step-icon">3</div>
+                <strong>Answer</strong>
+                <span>Claude generates a response grounded in real documentation with clickable citations.</span>
+            </div>
+            <div class="arch-arrow">&#10132;</div>
+            <div class="arch-step" style="--step-color: #10b981;">
+                <div class="step-icon">4</div>
+                <strong>Review</strong>
+                <span>Review the doc-grounded answer, verify the cited links, and use it as a starting point for your own response.</span>
+            </div>
+        </div>
+    </div>
+
+    <h2>Knowledge Base</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);">
+        The agent has access to {{ doc_count }} RevenueCat documentation pages covering SDKs, API, dashboard, billing, paywalls, offerings, charts, and more.
+        All responses cite specific doc pages so you can verify every claim.
+    </p>
+    <details style="margin-top:0.5rem;">
+        <summary style="cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text-muted);">View indexed doc categories ({{ doc_categories | length }})</summary>
+        <ul style="font-size:0.82rem;margin-top:0.5rem;">
+            {% for cat in doc_categories %}
+            <li>{{ cat.name }} ({{ cat.count }} pages)</li>
+            {% endfor %}
+        </ul>
+    </details>
+</article>
+
+<script>
+var HELPER_KEY_STORE = 'helper_api_key';
+var HELPER_PROVIDER_STORE = 'helper_provider';
+var HELPER_DOC_INDEX = {{ doc_index_json }};
+var HELPER_FETCHED_ISSUE = null;
+var SEARCH_API_URL = {{ search_api_url | default('') | tojson }};
+
+var RC_REPOS = [
+    'RevenueCat/purchases-ios',
+    'RevenueCat/purchases-android',
+    'RevenueCat/purchases-flutter',
+    'RevenueCat/purchases-unity',
+    'RevenueCat/purchases-kmp',
+    'RevenueCat/purchases-react-native'
+];
+
+// Init
+(function() {
+    var k = localStorage.getItem(HELPER_KEY_STORE);
+    var p = localStorage.getItem(HELPER_PROVIDER_STORE) || 'anthropic';
+    if (k) {
+        document.getElementById('helper-key').value = '••••••••' + k.slice(-4);
+        document.getElementById('helper-provider').value = p;
+    }
+    helperUpdateStatus();
+    loadRecentIssues();
+    // Fallback if loading takes too long
+    setTimeout(function() {
+        var el = document.getElementById('recent-issues-list');
+        if (el && el.innerHTML.indexOf('Loading') !== -1) {
+            el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-muted);">GitHub API rate limit reached (60 req/hr unauthenticated). Paste an issue URL directly above.</p>';
+        }
+    }, 8000);
+
+    // Auto-detect GitHub URL on paste
+    document.getElementById('helper-issue').addEventListener('input', function() {
+        var val = this.value.trim();
+        var gh = parseGitHubUrl(val);
+        if (gh) { fetchGitHubIssue(gh.owner, gh.repo, gh.number); }
+    });
+})();
+
+function parseGitHubUrl(text) {
+    var m = text.match(/github\.com\/([^\/]+)\/([^\/]+)\/issues\/(\d+)/);
+    if (m) return {owner: m[1], repo: m[2], number: m[3]};
+    return null;
+}
+
+async function fetchGitHubIssue(owner, repo, number) {
+    var status = document.getElementById('helper-status');
+    status.textContent = 'Fetching issue...';
+    try {
+        var resp = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/issues/' + number, {
+            headers: {'Accept': 'application/vnd.github.v3+json'}
+        });
+        if (!resp.ok) throw new Error('GitHub API ' + resp.status);
+        var issue = await resp.json();
+
+        // Show preview
+        var preview = document.getElementById('helper-fetched-preview');
+        document.getElementById('helper-fetched-title').textContent = '#' + issue.number + ' ' + issue.title;
+        document.getElementById('helper-fetched-meta').textContent = owner + '/' + repo + ' · ' + issue.state + ' · ' + issue.comments + ' comments';
+        document.getElementById('helper-fetched-body').textContent = (issue.body || '').substring(0, 500);
+        preview.style.display = 'block';
+
+        // Also fetch comments for context
+        var comments_text = '';
+        if (issue.comments > 0) {
+            try {
+                var cresp = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/issues/' + number + '/comments?per_page=10', {
+                    headers: {'Accept': 'application/vnd.github.v3+json'}
+                });
+                if (cresp.ok) {
+                    var comments = await cresp.json();
+                    comments_text = '\n\n--- COMMENTS ---\n' + comments.map(function(c) {
+                        return '@' + c.user.login + ': ' + (c.body || '').substring(0, 300);
+                    }).join('\n\n');
+                }
+            } catch(e) {}
+        }
+
+        HELPER_FETCHED_ISSUE = {
+            title: issue.title,
+            body: issue.body || '',
+            labels: (issue.labels || []).map(function(l) { return l.name; }),
+            comments: comments_text,
+            url: issue.html_url,
+            repo: owner + '/' + repo,
+        };
+        status.textContent = 'Issue loaded. Click "Get Answer" to generate a response.';
+    } catch(e) {
+        status.textContent = 'Could not fetch issue: ' + e.message;
+        HELPER_FETCHED_ISSUE = null;
+    }
+}
+
+async function loadRecentIssues() {
+    var container = document.getElementById('recent-issues-list');
+    var allIssues = [];
+
+    // Fetch from first 3 repos in parallel with timeout
+    var fetches = RC_REPOS.slice(0, 3).map(function(repo, i) {
+        var controller = new AbortController();
+        setTimeout(function() { controller.abort(); }, 5000);
+        return fetch('https://api.github.com/repos/' + repo + '/issues?state=open&per_page=5&sort=created', {
+            headers: {'Accept': 'application/vnd.github.v3+json'},
+            signal: controller.signal
+        }).then(function(resp) {
+            if (!resp.ok) return [];
+            return resp.json();
+        }).then(function(issues) {
+            return (issues || []).filter(function(iss) { return !iss.pull_request; }).map(function(iss) {
+                return {
+                    title: iss.title,
+                    url: iss.html_url,
+                    repo: repo.split('/')[1],
+                    number: iss.number,
+                    created: iss.created_at.substring(0, 10),
+                    labels: (iss.labels || []).map(function(l) { return l.name; }).join(', '),
+                    comments: iss.comments,
+                };
+            });
+        }).catch(function() { return []; });
+    });
+
+    try {
+        var results = await Promise.all(fetches);
+        results.forEach(function(issues) { allIssues = allIssues.concat(issues); });
+    } catch(e) {}
+
+    if (allIssues.length === 0) {
+        container.innerHTML = '<p style="font-size:0.82rem;color:var(--text-muted);">Could not load issues (GitHub API rate limit). Paste an issue URL directly above.</p>';
+        return;
+    }
+
+    // Sort by date, show latest 10
+    allIssues.sort(function(a, b) { return b.created.localeCompare(a.created); });
+    allIssues = allIssues.slice(0, 10);
+
+    var html = '<div class="recent-issues-grid">';
+    allIssues.forEach(function(iss) {
+        html += '<div class="recent-issue-card" onclick="loadIssueFromCard(\'' + iss.url + '\')" style="cursor:pointer;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+            + '<strong style="font-size:0.85rem;color:var(--link);">' + iss.repo + '#' + iss.number + '</strong>'
+            + '<span style="font-size:0.72rem;color:var(--text-muted);">' + iss.created + '</span>'
+            + '</div>'
+            + '<div style="font-size:0.85rem;margin-top:0.2rem;">' + iss.title + '</div>'
+            + '<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem;">'
+            + (iss.labels ? iss.labels : '') + (iss.comments > 0 ? ' · ' + iss.comments + ' comments' : '')
+            + '</div></div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function loadIssueFromCard(url) {
+    document.getElementById('helper-issue').value = url;
+    var gh = parseGitHubUrl(url);
+    if (gh) fetchGitHubIssue(gh.owner, gh.repo, gh.number);
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function helperProviderChange() {
+    localStorage.setItem(HELPER_PROVIDER_STORE, document.getElementById('helper-provider').value);
+    helperUpdateStatus();
+}
+
+function helperSaveKey() {
+    var k = document.getElementById('helper-key').value.trim();
+    if (!k || k.startsWith('••')) {
+        k = prompt('Enter your API key:\n• Anthropic: starts with sk-ant-\n• OpenAI: starts with sk-');
+    }
+    if (!k) return;
+    var p = k.startsWith('sk-ant-') ? 'anthropic' : 'openai';
+    localStorage.setItem(HELPER_KEY_STORE, k);
+    localStorage.setItem(HELPER_PROVIDER_STORE, p);
+    document.getElementById('helper-provider').value = p;
+    document.getElementById('helper-key').value = '••••••••' + k.slice(-4);
+    helperUpdateStatus();
+}
+
+function helperUpdateStatus() {
+    var el = document.getElementById('helper-key-status');
+    var k = localStorage.getItem(HELPER_KEY_STORE);
+    var p = localStorage.getItem(HELPER_PROVIDER_STORE) || 'anthropic';
+    if (k) {
+        var model = p === 'openai' ? 'GPT-4o-mini' : 'Claude Sonnet';
+        el.textContent = 'Ready (' + model + ')';
+        el.style.color = 'var(--green)';
+    } else {
+        el.textContent = 'No key set';
+        el.style.color = 'var(--text-muted)';
+    }
+}
+
+function helperBuildFallbackContext() {
+    // Fallback: use static doc index baked at build time (summaries only)
+    var lines = ["You have access to the following RevenueCat documentation pages:\n"];
+    for (var i = 0; i < HELPER_DOC_INDEX.length; i++) {
+        var d = HELPER_DOC_INDEX[i];
+        lines.push("- [" + d.title + "](" + d.url + "): " + d.summary);
+    }
+    return lines.join("\n");
+}
+
+async function helperSearchDocs(query) {
+    // Call hybrid RAG search API (BM25 + ChromaDB vectors + HF reranker)
+    // Returns actual doc content chunks, not just summaries
+    if (!SEARCH_API_URL) return null;
+    try {
+        var resp = await fetch(SEARCH_API_URL + '/api/search?q=' + encodeURIComponent(query) + '&top_k=8', {
+            signal: AbortSignal.timeout(10000)
+        });
+        if (!resp.ok) return null;
+        var data = await resp.json();
+        if (!data.results || data.results.length === 0) return null;
+
+        var lines = ["RELEVANT DOCUMENTATION (from hybrid RAG search — BM25 + vector + reranker):\n"];
+        for (var i = 0; i < data.results.length; i++) {
+            var r = data.results[i];
+            lines.push("--- Source: " + r.url + " (" + r.title + ") ---");
+            if (r.snippets && r.snippets.length > 0) {
+                lines.push(r.snippets.join("\n"));
+            }
+            lines.push("");
+        }
+        return lines.join("\n");
+    } catch(e) {
+        console.warn("Search API unavailable:", e.message);
+        return null;
+    }
+}
+
+var HELPER_SYSTEM = "You are a RevenueCat developer support assistant. A user has submitted a GitHub issue or developer question. Your job is to provide relevant documentation context and guidance.\n\nRULES:\n1. EVERY factual claim must include a citation as [Doc Title](url) linking to the specific RevenueCat doc page.\n2. If the documentation doesn't cover the issue, say so honestly. Never fabricate features or API behavior.\n3. Include code examples when relevant, using the correct SDK/API patterns from the docs.\n4. Structure your answer clearly with headers: ## What the Docs Say, ## Possible Cause, ## Suggested Next Steps, ## References.\n5. Format as proper Markdown. Use code blocks for code.\n6. If the issue involves repo-specific code, SDK internals, or undocumented behavior, acknowledge that you only have access to public documentation, not the source code.\n7. Be clear about what you know (from docs) vs what you're inferring. Don't present inferences as facts.\n8. Mention the relevant SDK version or platform if applicable.\n9. You have web search available. Use it to find relevant Stack Overflow answers, GitHub discussions, blog posts, and community solutions when the provided documentation alone doesn't fully address the issue. Cite web sources with their URLs.\n\n";
+
+async function helperSubmit() {
+    var rawInput = document.getElementById('helper-issue').value.trim();
+    if (!rawInput) { alert('Please paste an issue URL or question first.'); return; }
+
+    var key = localStorage.getItem(HELPER_KEY_STORE);
+    if (!key) { helperSaveKey(); key = localStorage.getItem(HELPER_KEY_STORE); if (!key) return; }
+
+    var btn = document.getElementById('helper-submit-btn');
+    var status = document.getElementById('helper-status');
+    btn.disabled = true; btn.textContent = 'Searching docs...';
+
+    // If we have a fetched issue, use its full content
+    var issueText;
+    var searchQuery;
+    if (HELPER_FETCHED_ISSUE) {
+        status.textContent = 'Searching docs for ' + HELPER_FETCHED_ISSUE.repo + '#' + HELPER_FETCHED_ISSUE.url.split('/').pop() + '...';
+        issueText = '## GitHub Issue: ' + HELPER_FETCHED_ISSUE.title
+            + '\nRepo: ' + HELPER_FETCHED_ISSUE.repo
+            + '\nURL: ' + HELPER_FETCHED_ISSUE.url
+            + '\nLabels: ' + HELPER_FETCHED_ISSUE.labels.join(', ')
+            + '\n\n' + HELPER_FETCHED_ISSUE.body
+            + HELPER_FETCHED_ISSUE.comments;
+        searchQuery = HELPER_FETCHED_ISSUE.title + ' ' + (HELPER_FETCHED_ISSUE.body || '').substring(0, 200);
+    } else {
+        status.textContent = 'Searching docs...';
+        issueText = rawInput;
+        searchQuery = rawInput.substring(0, 300);
+    }
+
+    // Step 1: Search docs via hybrid RAG API (server handles BM25 + ChromaDB + HF reranker)
+    var docContext = await helperSearchDocs(searchQuery);
+    var contextSource;
+    if (docContext) {
+        contextSource = 'hybrid RAG search';
+    } else {
+        // Fallback to static doc index
+        docContext = helperBuildFallbackContext();
+        contextSource = 'static index (search API unavailable)';
+    }
+
+    status.textContent = 'Generating cited answer (' + contextSource + ')...';
+    btn.textContent = 'Thinking...';
+
+    var provider = localStorage.getItem(HELPER_PROVIDER_STORE) || 'anthropic';
+    var systemPrompt = HELPER_SYSTEM + docContext;
+
+    try {
+        var answer;
+        if (provider === 'openai') {
+            var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    max_tokens: 2000,
+                    messages: [
+                        {role: 'system', content: systemPrompt},
+                        {role: 'user', content: "Here is the issue/question:\n\n" + issueText + "\n\nProvide a detailed, cited answer."}
+                    ]
+                })
+            });
+            if (!resp.ok) {
+                var err = await resp.json().catch(function() { return {}; });
+                throw new Error(err.error?.message || 'API error ' + resp.status);
+            }
+            var data = await resp.json();
+            answer = data.choices[0].message.content;
+        } else {
+            var resp = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': key,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-6',
+                    max_tokens: 2000,
+                    system: systemPrompt,
+                    tools: [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}],
+                    messages: [{role: 'user', content: "Here is the issue/question:\n\n" + issueText + "\n\nProvide a detailed, cited answer."}]
+                })
+            });
+            if (!resp.ok) {
+                var err = await resp.json().catch(function() { return {}; });
+                throw new Error(err.error?.message || 'API error ' + resp.status);
+            }
+            var data = await resp.json();
+            answer = data.content.filter(function(b) { return b.type === 'text'; }).map(function(b) { return b.text; }).join('\n');
+        }
+
+        document.getElementById('helper-raw-md').textContent = answer;
+        var html = helperMdToHtml(answer);
+        document.getElementById('helper-answer').innerHTML = html;
+        document.getElementById('helper-result').style.display = 'block';
+        status.textContent = 'Done (' + contextSource + '). Review the answer below.';
+        document.getElementById('helper-result').scrollIntoView({behavior: 'smooth'});
+    } catch(e) {
+        status.textContent = 'Error: ' + e.message;
+        if (e.message.includes('401') || e.message.includes('auth')) {
+            localStorage.removeItem(HELPER_KEY_STORE);
+            helperUpdateStatus();
+        }
+    } finally {
+        btn.disabled = false; btn.textContent = 'Get Answer';
+    }
+}
+
+function helperCopy() {
+    var md = document.getElementById('helper-raw-md').textContent;
+    navigator.clipboard.writeText(md).then(function() {
+        var btn = document.getElementById('helper-copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy Markdown'; }, 2000);
+    });
+}
+
+function helperMdToHtml(md) {
+    var html = md
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/```(\w*)\n([\s\S]*?)```/g, function(m, lang, code) {
+            return '<pre><code>' + code + '</code></pre>';
+        })
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2 style="border:none;margin:1rem 0 0.5rem;">$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    return '<p>' + html + '</p>';
+}
+</script>
+
+<style>
+.helper-input-section { margin: 1.5rem 0; }
+.helper-answer-box {
+    background: #fafafa;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.25rem;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+.helper-answer-box h2 { border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
+.helper-answer-box pre {
+    background: var(--code-bg);
+    padding: 0.75rem;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin: 0.5rem 0;
+}
+.helper-answer-box code { font-size: 0.85em; }
+.helper-answer-box a { color: var(--link); }
+.helper-answer-box li { margin-bottom: 0.3rem; }
+.recent-issues-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.recent-issue-card {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+.recent-issue-card:hover {
+    background: #f8f8f8;
+    border-color: var(--link);
+}
+</style>
+{% endblock %}

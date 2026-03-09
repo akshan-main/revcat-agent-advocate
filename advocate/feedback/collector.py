@@ -1,5 +1,5 @@
 from ..models import ProductFeedback, Severity, FeedbackArea
-from ..db import insert_row, query_rows, now_iso
+from ..db import insert_row, query_rows, now_iso, exists_similar
 
 
 def create_feedback(
@@ -27,7 +27,9 @@ def create_feedback(
 
 
 def save_feedback(db_conn, feedback: ProductFeedback) -> int:
-    """Insert feedback into the database. Returns row id."""
+    """Insert feedback into the database. Deduplicates by title. Returns row id or -1 if duplicate."""
+    if exists_similar(db_conn, "product_feedback", {"title": feedback.title}):
+        return -1
     return insert_row(db_conn, "product_feedback", {
         "title": feedback.title,
         "severity": feedback.severity.value,
@@ -63,9 +65,9 @@ def generate_feedback_from_docs(
     count: int = 3,
 ) -> list[ProductFeedback]:
     """Use Claude API to analyze docs and generate structured feedback."""
-    if config and config.has_anthropic:
-        return _generate_with_claude(search_index, config, db_conn, ledger_ctx, count)
-    return _generate_placeholder_feedback(count)
+    if not config or not config.has_anthropic:
+        raise RuntimeError("Anthropic API key required for feedback generation. Set ANTHROPIC_API_KEY.")
+    return _generate_with_claude(search_index, config, db_conn, ledger_ctx, count)
 
 
 def _generate_with_claude(search_index, config, db_conn, ledger_ctx, count):
@@ -119,7 +121,7 @@ def _generate_with_claude(search_index, config, db_conn, ledger_ctx, count):
         end = text.rindex("]") + 1
         items = json.loads(text[start:end])
     except (ValueError, json.JSONDecodeError):
-        return _generate_placeholder_feedback(count)
+        raise RuntimeError(f"Failed to parse Claude feedback response as JSON: {text[:200]}")
 
     feedbacks = []
     for item in items[:count]:
@@ -142,6 +144,3 @@ def _generate_with_claude(search_index, config, db_conn, ledger_ctx, count):
     return feedbacks
 
 
-def _generate_placeholder_feedback(count: int) -> list[ProductFeedback]:
-    """Return empty list when no LLM is available. Feedback requires real doc analysis."""
-    return []

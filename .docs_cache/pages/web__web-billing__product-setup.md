@@ -1,0 +1,191 @@
+---
+id: "web/web-billing/product-setup"
+title: "Configure Products & Prices"
+description: "Web Billing products are created and managed within the RevenueCat Dashboard."
+permalink: "/docs/web/web-billing/product-setup"
+slug: "product-setup"
+version: "current"
+original_source: "docs/web/web-billing/product-setup.md"
+---
+
+# Configure Web Billing products & prices
+
+Web Billing products are created and managed within the RevenueCat Dashboard.
+
+On this page, you can learn how to:
+
+- [Create a product and configure its pricing](#creating-a-new-web-billing-product)
+- [Configure subscription changes](#configure-subscription-changes)
+
+## Creating a new web billing product
+
+To create a new Web Billing product, log in to the RevenueCat dashboard.
+
+1. Go to the **Product catalog**
+2. Select the **Products** tab
+3. Find your web billing config, and click **+ New**:
+
+![New product button in the products screen](/docs_images/web/web-billing/new-product.png)
+
+### Configuring the product & pricing
+
+In the "new product" screen, you can set up the following aspects of the product:
+
+#### Identifier
+
+A unique ID for the Product, accessible from the SDK, events, etc. Can contain up to 100 alphanumeric characters, dots, or underscores.
+
+#### Display name
+
+An optional human readable name for the Product, will be shown on the dashboard instead of the identifier.
+
+#### Name
+
+The customer-facing name of the Product. Will be shown in the checkout form and on invoices.
+
+#### Description
+
+The customer-facing description of the Product. Available from the Web SDK, eg. to show on your paywall.
+
+#### Product type
+
+The type of product being sold:
+
+- *Auto-renewing subscription*: A recurring subscription purchase, that continues on a given interval until canceled.
+- *Consumable*: A non-recurring purchase that can be purchased one or more times (repeated).
+- *Non-consumable*: A non-recurring purchase that can only be purchased once.
+
+#### Duration
+
+The base billing cycle (period length) of the subscription.
+
+:::info Accelerated billing cycles in sandbox
+In sandbox mode, billing cycles are accelerated to enable easier testing. See [Sandbox testing](/web/web-billing/testing#subscription-schedules-in-sandbox) for more information.
+:::
+
+#### Free trial
+
+Check this to enable a free trial period, and choose the duration.
+
+:::info Accelerated trial periods in sandbox
+In sandbox mode, free trial periods are accelerated to enable easier testing. See [Sandbox testing](/web/web-billing/testing#subscription-schedules-in-sandbox) for more information.
+:::
+
+#### Introductory period
+
+Applies a discounted price for a limited time at the beginning of a subscription (AKA introductory offer). Introductory periods are presented to customers in the package selection page (for web purchase links) and the checkout. They automatically renew to the base subscription price at the end of the period.
+
+Introductory periods are always scheduled after a free trial, when both are enabled.
+
+You can configure:
+
+1. **Introductory period length:** How long the discounted price will apply for
+2. **Introductory billing cycle:** Whether customers pay upfront for the entire introductory period, or pay in multiple cycles (e.g. monthly renewals)
+
+You can define introductory prices per-currency in the pricing table (see [prices](#prices)).
+
+:::info Billing cycle options
+
+The available billing cycles for introductory periods depend on the length of the intro period you've selected. For some lengths, only "paid upfront" is available.
+
+:::
+
+:::info Accelerated introductory billing cycles in sandbox
+In sandbox mode, introductory billing cycles are set at 5 mins, regardless of configured length, to enable easier testing. See [Sandbox testing](/web/web-billing/testing#subscription-schedules-in-sandbox) for more information.
+:::
+
+#### Trial / introductory period eligibility
+
+Defines which customers have access to the free trial or introductory period:
+
+- *Everyone*: Every customer will start a subscription to this product with a trial, even if they had a trial before. *Please note:* If you choose this option, it means that customers could continuously cancel their trial and start another trial to keep getting free access.
+- *Has never made any purchase*: Only customers that have never made any purchase in this Project (including non-subscription purchases and purchases in other Apps of this project) are eligible for a trial.
+- *Didn't have any subscription yet*: Only customers that have never had any subscription in this Project (including in other Apps of the project) are eligible for a trial.
+- *Didn't have this subscription yet*: Only customers that have never subscribed to this product are eligible for a trial.
+
+:::info Eligibility for anonymous purchases
+If you're using [Redemption Links](redemption-links) to enable anonymous purchases, it's not possible to assess the eligibility of a customer when they land on your purchase flow, because they're anonymous. If strict eligibility is important to you, we recommend passing App User IDs to the purchase flow so that eligibility can be checked.
+:::
+
+#### Grace period for billing issues
+
+The length of the subscription access retention after a billing issue. *See [Sandbox testing](/web/web-billing/testing#subscription-schedules-in-sandbox) for more information about durations in sandbox mode.*
+
+#### Prices
+
+The price that will be charged for each period of the subscription, for each currency.
+
+You can add prices in additional currencies by clicking "Add new currency", and filling in the price fields.
+
+Only one base price can be set per currency. [Read more about multi-currency support in Web Billing](/web/web-billing/multi-currency-support).
+
+![Pricing table](/docs_images/web/web-billing/pricing-table.png)
+
+:::warning Price changes not currently possible
+Once you've saved the product, it's only possible to add prices for new currencies, and not edit existing ones. If you need to change pricing, we recommend you create a new product with the desired pricing, and replace the existing product in your offering. We're working on fully supporting pricing changes and migrations in the future.
+:::
+
+## Configure subscription changes
+
+You can allow customers to change their subscription from the Customer Portal, and upgrade or downgrade to a different product.
+
+To enable this, you first need to create upgrade or downgrade paths between your web billing products. Subscribers can only move between products when an explicit path is defined between them.
+
+![Subscription Changes in Customer Portal](/docs_images/web/web-billing/customer-portal-subscription-changes.png)
+
+:::info Subscription changes must use same currency
+
+Customers are only able to change to a product that has a price in their existing currency. Products without a price in their currency will not be presented as possible changes.
+
+:::
+
+### Upgrade behavior
+
+When a customer chooses to **upgrade** their subscription:
+
+- Access to their new product is granted immediately
+- Access to their existing product is revoked immediately
+- Existing free trials are ended immediately, and are not carried over to the new product
+- The customer is charged the full amount for the new product's price immediately
+- A partial refund is issued for any unused time on the existing subscription
+
+### Downgrade behavior
+
+When a customer chooses to **downgrade** their subscription:
+
+- Access to their new product is granted at the end of the current subscription cycle
+- Access to their current product is maintained until the end of the current subscription cycle
+- Existing free trials are ended immediately and aren not carried over to the new product
+- The customer is charged the full amount for the new product's price at the end of the current subscription cycle
+- No refunds are issued
+
+#### Canceling a pending downgrade
+
+It's also possible for the customer to cancel a pending downgrade any time before the schedulded renewal date, by accessing the customer portal and choosing "change subscription" after a downgrade has been scheduled.
+
+### Defining subscription change paths
+
+![Subscription changes link](/docs_images/web/web-billing/subscription-changes-link.png)
+
+1. Log in to the RevenueCat dashboard and select your project
+2. Go to the **Product catalog** and select the **Products** tab
+3. Scroll to your web billing provider, and click the **Subscription changes** button in the table header
+4. Click **Edit**
+5. In the first dropdown list, select the product you want customers to be able to upgrade from (source product)
+6. (Optional) In the "can be upgraded to" list, select one or more products you want customers to be able to upgrade to (destination products)
+7. (Optional) do the same to add rules for downgrades
+8. (Optional) add more rules for different products
+9. Click **Save rules**
+
+### Testing subscription changes
+
+Customers subscribed to a product that has any upgrade or downgrade paths defined will see a **Change subscription** option in the [customer portal](customer-portal).
+
+To test this:
+
+1. Complete a sandbox purchase for a product that has upgrade or downgrade paths defined
+2. Open the sandbox purchase receipt email
+3. Click the link to "update or manage your subscription" in the footer
+4. In the customer portal, select **Change subscription**
+5. Verify that the products shown are intended as upgrades or downgrades
+6. Repeat the steps to test changes from any other products

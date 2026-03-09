@@ -1,0 +1,140 @@
+---
+id: "test-and-launch/sandbox/google-play-store"
+title: "Google Play Store"
+description: "This section assumes you've followed our Quickstart section of our Getting Started guide to install and configure our SDK."
+permalink: "/docs/test-and-launch/sandbox/google-play-store"
+slug: "google-play-store"
+version: "current"
+original_source: "docs/test-and-launch/sandbox/google-play-store.mdx"
+---
+
+:::info
+This section assumes you've followed our [Quickstart](/getting-started/quickstart) section of our Getting Started guide to install and configure our SDK.
+:::
+
+## Use a real device
+
+We have been testing on emulators successfully but Google recommends using a real device. If you are using an emulator, make sure it has Google Play Services installed.
+
+## Create a test user and configure licensing testing
+
+In order to be able to test the app in the next steps of the development you are going to need to use a test user. This test user will be the user that you logged in first in your Android testing device. Note that the only way to changing the primary account on a device is to do a factory reset.
+
+In the sidebar, click on **Settings** > **License testing**. Add here the account you are using in your real device (the account you are logged in with).
+
+![](/docs_images/test/google/license-testing.png)
+
+:::warning Only be logged in with one account
+Make sure you are only logged in with one licensed Google Play tester account on your device. Being logged in with multiple accounts when testing can result in purchases not working. Note that this is only an issue in sandbox, in production real users can be logged in with multiple accounts without any issues.
+:::
+
+## Create a closed track and add a tester to it
+
+You are going to need to publish a signed version of the app into a closed track. If you havenât created a closed track yet, you can create one in the **Closed testing** section of the Testing menu.
+
+![2020-10-08 21.49.39 play.google.com f16e0da2a615.png](/docs_images/test/google/closed-track.png)
+
+When creating the closed track, you are given the chance to create a list of testers. Go ahead and create a list and name it Testers.
+
+![](/docs_images/test/google/add-testers.png)
+
+Add again the email account you are using in your testing device to the list of tester emails, press Enter, and click **Save changes**
+
+![](/docs_images/test/google/add-testers-save.png)
+
+Open the Opt-in URL in your testing device (or any browser thatâs logged in with that testing user) to make the user a tester. You can send the URL to your device via email, for example.
+
+:::warning You must open the Opt-in URL
+Opening the opt-in URL marks your Play account for testing. If you don't complete this step, products will not load.
+:::
+
+:::warning Check Your Application ID
+Often developers will use a different application ID for their test builds. This will cause you problems since Google Play Services uses the application ID to find your in-app purchases.
+:::
+
+:::warning Add a PIN to the test device if needed
+There are cases where a test user may be allowed to purchase consumables, but not subscriptions, if the test device does not have a PIN. This may manifest in a cryptic "Something went wrong" message.
+
+Make sure that the test device has a PIN, and that the device is logged into Google Play Store.
+:::
+
+![You must open one of these urls while signed in with the Play account you're testing with.](/docs_images/test/google/add-testers-opt-in.png)
+
+Opening the link in the browser will show a web similar to this, with a become tester button. Press that button and your user will be able to make testing purchases on your testing device.
+
+![](/docs_images/test/google/add-testers-opt-in-success.png)
+
+If you need more help setting this up, you can refer to Googles guide on creating testers [here](https://developer.android.com/google/play/billing/billing_testing#testing-purchases).
+
+:::info Make the release available in at least one country
+If your app is completely new, you may need to make your app available to your country/region. To do this, go to **Testing** > **Closed testing**, click on your test track, and go to **Countries / regions** to add countries and regions.
+:::
+
+## Upload a signed apk to the closed track
+
+Generate a signed APK or use Android App Bundle to upload a signed APK to the alpha track you just created. You donât even need to roll out the release. Just upload the APK. You can find more information about this in this support article [https://support.google.com/googleplay/android-developer/answer/7159011](https://support.google.com/googleplay/android-developer/answer/7159011)
+
+:::info Include BILLING permission for Android projects
+You may need to include the `BILLING` permission in your AndroidManifest.xml file in order to unlock product creating in Google Play Console.
+:::
+
+*Interactive content is available in the web version of this doc.*
+
+## Make a purchase
+
+Before you can make a purchase, make sure your release has been approved and available.
+
+![](/docs_images/test/google/make-a-purchase.png)
+
+Build and run your app on your test device (you don't need to sign it). You should be able to complete all purchases.
+
+## Verify transaction appears in dashboard
+
+After a purchase is successful, you should be able to view the transaction immediately in the RevenueCat dashboard. If the purchase does not appear in the dashboard, it's **not** being tracked by RevenueCat.
+
+:::info
+Make sure the *View Sandbox Data* toggle is enabled in the navigation bar.
+:::
+
+## Working with subscriptions
+
+In the the sandbox environment, subscription renewals happen at an accelerated rate, and auto-renewable subscriptions renew a maximum of six times. This enables you to test how your app handles a subscription renewal, a subscription lapse, and a subscription history that includes gaps.
+
+Because of the accelerated expiration and renewal rates, sometimes not all renewals are reflected in the RevenueCat customer dashboard.
+| Production subscription period | Sandbox subscription renewal |
+|-------------------------------|-----------------------------|
+| 1 week | 5 minutes |
+| 1 month | 5 minutes |
+| 3 months | 10 minutes |
+| 6 months | 15 minutes |
+| 1 year | 30 minutes |
+
+## Deleting test users
+
+When testing, it may be helpful to delete a customer and all their receipts from RevenueCat to simulate a new installation. You can delete a specific user from the customer dashboard in RevenueCat.
+
+Note: Deleting users in RevenueCat does not delete underlying store account purchases.
+
+See our [docs on deleting users](/dashboard-and-metrics/customer-profile#delete-customer) for more information.
+
+## Next Steps
+
+For more information, take a look at the official Google documentation:
+**[Google Play Store: Testing Google Play Billing](https://developer.android.com/google/play/billing/billing_testing)**
+
+## Testing Cards
+
+While testing, you can configure your test users to either use the test cards provided by Google or test on a real card.
+| Debug/release build | Added as tester on closed track | Added as license tester | Card Selection |
+|---------------------|----------------------------------|------------------------|---------------------------------------------|
+| Debug | â | â | Test card |
+| Release | â | â | Test card |
+| Debug | â | â | Item attempting to purchase could not be found |
+| Debug | â | â | Add new card (real purchase) |
+| Release | â | â | Unable to download app |
+| Release | â | â | Add new card (real purchase) |
+
+## Next Steps
+
+For more information, take a look at the official Google documentation:
+**[Google Play Store: Testing Google Play Billing](https://developer.android.com/google/play/billing/billing_testing)**

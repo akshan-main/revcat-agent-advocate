@@ -1,0 +1,89 @@
+---
+id: "tools/offering-metadata"
+title: "Offering metadata"
+description: "Metadata allows you to attach a custom JSON object to your Offering (the paywall entity in RevenueCat) that can be used to control how to display your products inside your app, determine the Offering to show based on provided attributes, and much more. The metadata you configure in an Offering is available from the RevenueCat SDK. For example, you could use it to remotely configure strings on your paywall, or even URLs of images shown on the paywall."
+permalink: "/docs/tools/offering-metadata"
+slug: "offering-metadata"
+version: "current"
+original_source: "docs/tools/offering-metadata.mdx"
+---
+
+Metadata allows you to attach a custom JSON object to your Offering (the paywall entity in RevenueCat) that can be used to control how to display your products inside your app, determine the Offering to show based on provided attributes, and much more. The metadata you configure in an Offering is available from the RevenueCat SDK. For example, you could use it to remotely configure strings on your paywall, or even URLs of images shown on the paywall.
+
+## Supported SDK versions
+
+| RevenueCat SDK           | Version required for Offering Metadata |
+| :----------------------- | :--------------------------------------------- |
+| purchases-ios            | 4.20.0 and up                                  |
+| purchases-android        | 6.3.0 and up                                   |
+| react-native-purchases   | 6.0.0 and up                                   |
+| purchases-flutter        | 5.0.0 and up                                   |
+| cordova-plugin-purchases | 4.0.0 and up                                   |
+| purchases-unity          | 5.0.0 and up                                   |
+| purchases-capacitor      | 6.0.0 and up                                   |
+| purchases-kmp            | 1.0.0 and up                                   |
+
+## Benefits of using Offering metadata
+
+Using Offering metadata has several advantages:
+
+- You can remotely configure aspects of your paywall and upsell messaging and make changes without deploying any code, creating a new app build, or going through app review.
+- You can use offering metadata together with [Offering Override](/dashboard-and-metrics/customer-profile#current-offering) to display messaging for special offers and discounts. For example, you could create a key `discount_message` that, if present, shows a special message about the applied discount on the paywall, and set that on a discounted Offering that you apply as an override to customers who are eligible for the specific discount.
+- You can use [Experiments](/tools/experiments-v1) in conjunction with Offering metadata to not only A/B test different products and prices, but also to test changes to the paywall. To do that, you would create a second Offering with the same products as your default offering, but have different values for the metadata keys in the second Offering.
+
+```json
+{
+    "current_offering_id":"default",
+    "offerings": [{
+        "description": "Standard monthly and annual plans",
+        "identifier": "default",
+        "metadata": {
+            "paywall_cta_copy": "Subscribe",
+            "paywall_title_copy": "Unlock all benefits"
+        },
+        "packages" : [
+            {
+                "identifier":"$rc_annual",
+                "platform_product_identifier":"ios_annual_9999"
+            },
+            {
+                "identifier": "$rc_monthly",
+                "platform_product_identifier":"ios_monthly_999"
+            }
+        ]
+    }]
+}
+```
+
+## How to add metadata to your Offering
+
+Navigate to the offering you'd like to add metadata in Project Settings > Product catalog > Offerings and click either **Edit** or **Configure metadata** (if you haven't configured metadata yet).
+
+![No Metadata](/docs_images/offerings/offering-metadata-configure.png)
+
+Add valid JSON in the **Metadata** field for your Offering, then click **Save** to save your changes.
+
+After saving your changes, you'll be navigated back to the summary page for your Offering, where the new metadata JSON object you've created will be displayed. (NOTE: Objects will be alphabetically ordered)
+
+:::info
+When creating a new Offering, you'll be able to define a JSON object directly from the creation form.
+:::
+
+## Creating a JSON object
+
+- Offering metadata will automatically detect and support any valid JSON data type (booleans, strings, arrays, etc).
+- Nested objects can be used to group together similar keys.
+
+## Accessing metadata from your app
+
+You can access metadata directly from the Offering object in the RevenueCat SDKs.
+
+*Interactive content is available in the web version of this doc.*
+
+## Offering metadata limits
+
+- Offering metadata has a max limit of 4000 characters for the JSON object. If you reach that limit, you'll see an error when you attempt to save the Offering.
+
+## Offering metadata use case examples
+
+You can find some example use cases in action in our [Offering Metadata example use cases](/tools/offering-metadata/offering-metadata-examples) doc.

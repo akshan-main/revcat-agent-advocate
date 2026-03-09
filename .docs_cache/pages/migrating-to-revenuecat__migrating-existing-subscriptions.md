@@ -1,0 +1,65 @@
+---
+id: "migrating-to-revenuecat/migrating-existing-subscriptions"
+title: "Importing your Historical Purchases"
+description: "Importing existing purchase data to RevenueCat can be done server-side, or client-side."
+permalink: "/docs/migrating-to-revenuecat/migrating-existing-subscriptions"
+slug: "migrating-existing-subscriptions"
+version: "current"
+original_source: "docs/migrating-to-revenuecat/migrating-existing-subscriptions.mdx"
+---
+
+Importing existing purchase data to RevenueCat can be done server-side, or client-side.
+
+A server-side migration is preferable whenever possible because it ensures that all subscriptions will be recorded in RevenueCat regardless of any in-app activity, but if you don't have your existing purchase tokens or receipts stored, you can use a client-side migration.
+
+### Server Side Data Import
+
+A server side import involves sending all of the Apple receipts and/or purchase tokens to RevenueCat via the `POST /receipts` REST API endpoint. This will create the customer in RevenueCat, RevenueCat will validate the receipt and keep the subscription up-to-date. Ideally, you set up forwarding of new receipts/tokens first before sending any historic ones. RevenueCat will automatically deduplicate them.
+
+This is the quickest way to get your existing subscribers into RevenueCat. See the [API reference](https://www.revenuecat.com/docs/api-v1#tag/transactions/operation/receipts) for more details.
+
+Afterwards, the purchase data will be up to date in charts, customer lists, REST API etc., and if any of your customers open the version of the app containing the RevenueCat SDK their subscription status will automatically be synced.
+
+:::info Bulk imports
+For extraordinarily large imports, we offer bulk imports as a service on our plans offered via sales. [Contact sales](https://www.revenuecat.com/book-a-demo/) to see how we can help with the process.
+:::
+
+:::warning Limited historical data for Google Play purchases
+Google Play receipts that have been expired for more than 60 days ago can't be imported, and only the current status can be retrieved from each receipt. This means that historical data won't be presented accurately in Charts. To fill the gaps in historical data, you can use [Google Historical Imports](/migrating-to-revenuecat/migrating-existing-subscriptions/google-historical-import).
+:::
+
+### Client-side (SDK) Data Import
+
+A client-side data migration is a technique to sync existing purchases with RevenueCat when the app is first launched. It requires integrating the RevenueCat SDK in your app.
+
+The RevenueCat SDK will automatically detect new transactions and sends them to RevenueCat. However, when migrating from an older system, you need to tell the RevenueCat SDK to sync to ensure we are tracking your subscribers correctly. Keep in mind that with a client-side migration RevenueCat will only ever "see" customers that open the latest version of the app containing RevenueCat and sync their purchases.
+
+The way to do this is: if your existing in-app purchase code knows that the customer has pre-existing purchases, but RevenueCat does not, then programmatically sync purchases.
+
+See the following pseudo example.
+
+*Interactive content is available in the web version of this doc.*
+
+When a customer launches with the first version containing RevenueCat it will trigger a sync. Once the sync is complete, it won't be triggered again.
+
+:::warning Do not sync or restore on every app launch
+It's okay to trigger a sync once per subscriber programmatically the first time they open a version of your app containing RevenueCat. You **should not** call this programmatically on every app launch for every user. This can increase latency in your app and can unintentionally alias customers together.
+:::
+
+:::warning Google Play Billing Library 8 can only import active subscriptions
+Starting with Android SDK v9, only active subscriptions and non-consumed one-time purchases are synchronized when calling `syncPurchases`. This means that historical data won't be presented accurately in Charts. To fill the gaps in historical data, you can use [Google Historical Imports](/migrating-to-revenuecat/migrating-existing-subscriptions/google-historical-import).
+:::
+
+:::warning Google Play Billing can receive purchases from other apps
+In versions prior to Android SDK v9, when syncing purchases, Google Play has shown to display strange behaviors. If you have an app with package name being prefix of another, trying to fetch historic purchases from the Billing Client could cause some errors. For example if you have apps with package names `com.mydomain.myapp` and `com.mydomain.myapp.test`, the Billing Client will receive purchases from `com.mydomain.myapp.test` even when querying historical purchases from the `com.mydomain.myapp` app.
+This won't cause any lose of data since all purchases are still synced, however, purchases in this scenario will fail to sync when validating them in our servers, causing the syncPurchases call to fail. This should be safe to ignore.
+:::
+
+### Data Processing Time
+
+After importing purchase data into RevenueCat (whether via server-side or client-side methods), please note that there may be a delay before this data is fully reflected across all RevenueCat systems:
+
+- **Customer Lists**: It may take several hours for newly imported customers to appear in your Customer Lists.
+- **Charts and Analytics**: Charts and analytics data typically update within 24 hours, but larger imports may take longer to fully process.
+
+During this processing period, you can still access individual customer information through the Customer Profile View or API even if aggregate data is still being updated.

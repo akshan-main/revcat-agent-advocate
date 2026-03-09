@@ -1,0 +1,113 @@
+---
+id: "service-credentials/itunesconnect-app-specific-shared-secret/in-app-purchase-key-configuration"
+title: "In-App Purchase Key Configuration"
+description: "When configuring a new App Store app in your RevenueCat project, you will need to add an in-app purchase key. This is a required configuration step. When using Purchases v5.x+ (i.e., StoreKit 2), transactions will fail to be recorded without this key being set. This can result in users not accessing the purchases they are entitled to."
+permalink: "/docs/service-credentials/itunesconnect-app-specific-shared-secret/in-app-purchase-key-configuration"
+slug: "in-app-purchase-key-configuration"
+version: "current"
+original_source: "docs/service-credentials/itunesconnect-app-specific-shared-secret/in-app-purchase-key-configuration.mdx"
+---
+
+When configuring a new App Store app in your RevenueCat project, you will need to add an in-app purchase key. **This is a required configuration step. When using Purchases v5.x+ (i.e., StoreKit 2), transactions will fail to be recorded without this key being set**. This can result in users not accessing the purchases they are entitled to.
+
+SDK versions that require an in-app purchase key to process transactions:
+
+- Capacitor: 9.0.0+
+- Cordova: 6.0.0+
+- Flutter: 7.0.0+
+- iOS: 5.0.0+
+- React Native: 8.0.0+
+- Unity: 7.0.0+
+
+The key is required for all Apple App Store app configurations.
+
+## Setup
+
+### 1. Generating an In-App Purchase Key
+
+In-app purchase keys are generated App Store Connect under *Users and Access â Integrations â [In-App Purchase](https://appstoreconnect.apple.com/access/integrations/api/subs)*. You can use the same in-app purchase key for all App Store apps belonging to the same App Store Connect account.
+
+![](/docs_images/credentials/apple/generate-iap-key.png)
+
+Select *Generate In-App Purchase Key*, orâif you've generated an In-App Purchase Key in the pastâclick on the "+" symbol next to the *Active* header. You'll be prompted to enter a name for the key.
+
+Once your key is generated, it will appear in *Active Keys* and you get one shot to download it.
+
+Select *Download API Key* and store the file in a safe place, you'll need to upload this to RevenueCat in the next step.
+
+![](/docs_images/credentials/apple/download-api-key.png)
+
+### 2. Uploading the In-App Purchase Key to RevenueCat
+
+Once everything is set up in App Store Connect, you need to upload the In-App Purchase Key from the previous step to RevenueCat.
+
+In the RevenueCat dashboard, select your App Store app from the **Apps & providers** page in your project settings.
+
+Within your app settings, under the tab **In-app purchase key configuration**, you'll see an area to upload your In-App Purchase Key .p8 file that you downloaded from App Store Connect.
+
+![](/docs_images/credentials/apple/iapkey-config.png)
+
+### 3. Providing the Issuer ID to RevenueCat
+
+Once you uploaded the in-app purchase .p8 file, you'll see an area to input 'Issuer ID'.
+
+You can find this Issuer ID in App Store Connect, under *Users and Access â Integrations â In-App Purchase*.
+
+:::info Issuer ID is missing
+
+If you do not see an Issuer ID at the top of the page, create an App Store Connect API key. The key name/access level does not matter.
+
+Once this is generated, the Issuer ID will show at the top of the page. (The Issuer ID is the same for both the In-App Purchase key and the App Store Connect key.)
+
+:::
+
+Copy the Issuer ID and paste into the RevenueCat 'Issuer ID' field.
+
+![](/docs_images/credentials/apple/inapppurchase-issuerid-1.png)
+
+![](/docs_images/credentials/apple/iapkey-config.png)
+
+Remember to select 'Save changes'.
+
+## Check the status of your credentials
+
+With our App Store credential validation, we will validate every time Apple credentials are (re)uploaded or at any time through a click of a button. A summary message will appear with the results of the validation to provide you additional information about the status of your App Store credentials.
+
+Once your credentials are valid, you will see a "Valid credentials" message under your uploaded P8 key file with all permissions checked.
+
+![In-app purchase credential validator](/docs_images/credentials/apple/valid-credentials.png)
+
+### Troubleshooting the credential validation
+
+Before starting to dive deeper in troubleshooting your credentials, you should confirm the following:
+
+- The P8 key file uploaded to RevenueCat is the correct file. You will be able to upload the file downloaded from App Store Connect directly into RevenueCat without changing the file name.
+- You have re-uploaded the credentials into RevenueCat
+
+#### Invalid permissions
+
+If your permissions are invalid, you should double check the following:
+
+- The App Bundle ID is not missing and has correct capitalization
+- The issuer ID is correct
+- The in-app purchase key is active
+
+Your in-app purchase key should be under 'Active'
+![Active in-app purchase key](/docs_images/credentials/apple/inapppurchase-active.png)
+
+If it is not, it's most likely that your in-app purchase key has been revoked and you will need to follow the setup instructions in this documentation.
+![Revoked in-app purchase key](/docs_images/credentials/apple/inapppurchase-revoked.png)
+
+#### Unable to select 'SAVE CHANGES'
+
+If the 'SAVE CHANGES' button is grayed out when trying to add your in-app purchase key, double check that you've filled out all the required fields in the RevenueCat app settings page. You can check this by expanding each section.
+
+## Existing apps without an in-app purchase key
+
+Previously, adding an in-app purchase key was *not* required; the requirement was added because the in-app purchase key allows RevenueCat to validate purchases, provide accurate information about the country, currency, and pricing for purchases, which previously had to be estimated in some cases.
+
+In addition, the in-app purchase key is required for features like [Subscription offers](/subscription-guidance/subscription-offers/ios-subscription-offers#in-app-purchase-keys) or looking up customers by [Order ID](/dashboard-and-metrics/customer-lists#find-an-individual-customer).
+
+### Historical data update
+
+Please note, adding an in-app purchase key to an app with existing transactions may change historic data as we update previously estimated data with corrected data from Apple. As a result, you may see an increased number of updated transactions reported in your [Scheduled Data Exports](/integrations/scheduled-data-exports) and your historical [Charts](/dashboard-and-metrics/charts) data may also gradually update.

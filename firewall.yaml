@@ -1,0 +1,54 @@
+# ── Action Firewall ──────────────────────────────────────────────────
+# Pre-execution rules evaluated before every agent action.
+# allow_if: ALL must be true. deny_if: ANY true blocks.
+
+rules:
+  - action: post_tweet
+    allow_if: ["dry_run == false", "critic_verdict == approved"]
+  - action: call_revenuecat_api
+    deny_if: ["method in [POST,PUT,DELETE] and allow_writes == false"]
+  - action: read_file
+    deny_if: ["path matches .env* or secrets*"]
+  - action: deploy
+    allow_if: ["explicit_user_command == true"]
+  - action: git_push
+    allow_if: ["explicit_user_command == true"]
+  - action: delete_content
+    allow_if: ["explicit_user_command == true"]
+  - action: write_content
+    deny_if: ["word_count < 300"]
+
+# ── Eval Gates ───────────────────────────────────────────────────────
+# Quality thresholds checked after production. Failures trigger rollback.
+
+eval_gates:
+  content:
+    min_citations: 3
+    min_word_count: 500
+    max_unverified_claims: 0
+    required_sections: ["Sources"]
+  tweet:
+    max_chars: 280
+    critic_must_approve: true
+    max_rewrite_attempts: 3
+  feedback:
+    must_have_repro_steps: true
+    must_have_proposed_fix: true
+
+# ── Rollback Policy ──────────────────────────────────────────────────
+# What happens when an eval gate fails post-execution.
+
+rollback:
+  content_below_threshold:
+    action: quarantine        # move to quarantine status, hide from site
+    notify: ledger            # log to tamper-evident audit trail
+    auto_retry: false
+  tweet_rejected_final:
+    action: discard           # don't post, log the draft
+    notify: ledger
+    auto_retry: false
+  deploy_failed:
+    action: revert_site       # rebuild from last known-good DB state
+    notify: ledger
+    auto_retry: true
+    max_retries: 1

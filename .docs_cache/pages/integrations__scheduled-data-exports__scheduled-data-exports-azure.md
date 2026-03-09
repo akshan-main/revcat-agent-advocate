@@ -1,0 +1,28 @@
+---
+id: "integrations/scheduled-data-exports/scheduled-data-exports-azure"
+title: "Azure Blob Storage"
+description: "RevenueCat can automatically send data deliveries of all of your apps' transaction data to an Azure Blob Storage container. These are in the form of .csv files delivered daily."
+permalink: "/docs/integrations/scheduled-data-exports/scheduled-data-exports-azure"
+slug: "scheduled-data-exports-azure"
+version: "current"
+original_source: "docs/integrations/scheduled-data-exports/scheduled-data-exports-azure.md"
+---
+
+RevenueCat can automatically send data deliveries of all of your apps' transaction data to an Azure Blob Storage container. These are in the form of .csv files delivered daily.
+
+To start receiving these deliveries, you'll need the following details:
+
+1. An Azure Storage Account [connection string](https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string)
+2. Azure blob storage container name
+
+Once you have this information, you can add it to the Azure Blob Storage integration settings for your project in RevenueCat.
+
+![New integration](/docs_images/integrations/scheduled-data-exports/new-integration.png)
+
+:::info Allow 24 hours for initial delivery
+Once you've configured the Azure storage integration in RevenueCat, allow up to 24 hours before the first file is delivered.
+:::
+
+### Receive new and updated transactions only
+
+When configuring the deliveries, you have the option to receive a full export daily or only new and updated transactions from the last export. The first delivery will *always* be a full export even if this option is selected.

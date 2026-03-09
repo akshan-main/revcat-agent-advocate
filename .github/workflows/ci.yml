@@ -49,6 +49,19 @@ jobs:
       - name: Install dependencies
         run: pip install -e "."
 
+      - name: Cache docs
+        uses: actions/cache@v4
+        with:
+          path: .docs_cache
+          key: docs-cache-${{ hashFiles('advocate/knowledge/ingest.py') }}
+          restore-keys: docs-cache-
+
+      - name: Ingest docs (incremental — skips already cached)
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: revcat-advocate ingest-docs
+
       - name: Build site
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -62,15 +75,13 @@ jobs:
           DEMO_MODE: ${{ secrets.ANTHROPIC_API_KEY != '' && 'false' || 'true' }}
           DRY_RUN: "true"
           SITE_BASE_URL: "/revcat-agent-advocate"
-        run: |
-          revcat-advocate ingest-docs
-          revcat-advocate generate-application
-          revcat-advocate write-content --topic "RevenueCat Charts API" --type tutorial
-          revcat-advocate write-content --topic "Building Agent-Native Monetization with RevenueCat MCP Server" --type agent_playbook
-          revcat-advocate run-experiment --name programmatic-seo
-          revcat-advocate generate-feedback --count 3
-          revcat-advocate build-site
-          revcat-advocate verify-ledger
+        run: revcat-advocate build-site --clean
+
+      - name: Publish gate
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: revcat-advocate publish-gate
 
       - name: Upload site artifact
         uses: actions/upload-artifact@v4

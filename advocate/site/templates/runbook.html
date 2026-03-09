@@ -5,7 +5,9 @@
 
 <section>
 <h2>Quick Start (Demo Mode)</h2>
-<pre><code>pip install -e .
+<pre><code>git clone https://github.com/akshan-main/revcat-agent-advocate.git
+cd revcat-agent-advocate
+pip install -e .
 export DEMO_MODE=true
 export ANTHROPIC_API_KEY=sk-ant-...
 revcat-advocate demo-run
@@ -14,7 +16,9 @@ python -m http.server -d site_output 8000</code></pre>
 
 <section>
 <h2>Quick Start (Real Mode)</h2>
-<pre><code>pip install -e .
+<pre><code>git clone https://github.com/akshan-main/revcat-agent-advocate.git
+cd revcat-agent-advocate
+pip install -e .
 export REVENUECAT_API_KEY=sk_your_key
 export ANTHROPIC_API_KEY=sk-ant-...
 export DEMO_MODE=false
@@ -32,19 +36,97 @@ revcat-advocate build-site</code></pre>
     <tbody>
         <tr><td><code>DRY_RUN</code></td><td><code>true</code></td><td>No external posts, no GitHub issues. Drafts only</td></tr>
         <tr><td><code>ALLOW_WRITES</code></td><td><code>false</code></td><td>Blocks POST/PUT/DELETE to RevenueCat API</td></tr>
-        <tr><td><code>DEMO_MODE</code></td><td><code>false</code></td><td>Uses mock API responses, labels all output [DEMO]</td></tr>
+        <tr><td><code>DEMO_MODE</code></td><td><code>false</code></td><td>Uses mock API responses and local fixture data for testing</td></tr>
     </tbody>
 </table>
-<p>Governance tested with a 16-case red-team suite covering prompt injection, PII extraction, competitor bashing, and brand safety.</p>
+<p>Governance tested with a 17-case red-team suite covering prompt injection, PII extraction, competitor bashing, and brand safety.</p>
+
+<h3>Autonomy Model</h3>
+<table>
+    <thead>
+        <tr><th>Runs Autonomously</th><th>Operator-Gated</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                <ul>
+                    <li>Documentation ingestion and indexing</li>
+                    <li>Hybrid search (BM25 + semantic vectors)</li>
+                    <li>Content drafting with citations</li>
+                    <li>Content verification (link checks, hash matching)</li>
+                    <li>Product feedback generation from doc analysis</li>
+                    <li>Growth experiment execution</li>
+                    <li>Site builds</li>
+                    <li>Ledger recording and chain verification</li>
+                </ul>
+            </td>
+            <td>
+                <ul>
+                    <li>Publishing content to the live site (<code>DRY_RUN</code>)</li>
+                    <li>Posting tweets (<code>DRY_RUN</code> + critic gate)</li>
+                    <li>API write operations (<code>ALLOW_WRITES</code>)</li>
+                    <li>Deployment to GitHub Pages (explicit <code>deploy</code> command)</li>
+                    <li>GitHub issue creation (<code>DRY_RUN</code>)</li>
+                </ul>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</section>
+
+<section>
+<h2>Reliability Engineering</h2>
+
+<h3>Pre-Execution Action Firewall</h3>
+<p>Every external action passes through a layered gate before execution:</p>
+<table>
+    <thead><tr><th>Layer</th><th>Gate</th><th>Blocks</th></tr></thead>
+    <tbody>
+        <tr><td>1. Config</td><td><code>DRY_RUN</code> / <code>ALLOW_WRITES</code></td><td>All external writes, API mutations, social posts</td></tr>
+        <tr><td>2. Safety</td><td><code>SafetyError</code> exception</td><td>POST/PUT/DELETE to RC API, write-capable MCP tools</td></tr>
+        <tr><td>3. Publish Gate</td><td>Banned phrase + citation check</td><td>Deployment if letter contains overclaims or too few citations</td></tr>
+        <tr><td>4. Tweet Critic</td><td>Programmatic + LLM review</td><td>Tweets that fail length, code detection, or quality checks</td></tr>
+        <tr><td>5. Governance Suite</td><td>17-case red-team</td><td>Prompt injection, PII leaks, competitor attacks, brand violations</td></tr>
+    </tbody>
+</table>
+<p>No action reaches an external system without passing every applicable layer. The firewall is enforced in code, not configuration.</p>
+
+<h3>Failure Categories and Retry Strategy</h3>
+<table>
+    <thead><tr><th>Failure Type</th><th>Example</th><th>Strategy</th></tr></thead>
+    <tbody>
+        <tr><td>Transient API</td><td>429 rate limit, 502 gateway</td><td>Exponential backoff, 3 retries with jitter</td></tr>
+        <tr><td>Auth failure</td><td>401 expired token</td><td>Fail fast, log to ledger, surface to operator</td></tr>
+        <tr><td>Content quality</td><td>Publish gate rejects letter</td><td>Regen loop: up to N attempts with gate feedback injected into prompt</td></tr>
+        <tr><td>Tweet quality</td><td>Critic rejects draft</td><td>Rewrite loop: up to 3 rewrites with critic feedback</td></tr>
+        <tr><td>Doc fetch</td><td>Page 404 or changed</td><td>Skip page, log changed SHA256, continue ingest</td></tr>
+        <tr><td>LLM refusal</td><td>Claude declines generation</td><td>Log refusal reason, mark run as failed, no retry</td></tr>
+    </tbody>
+</table>
+
+<h3>Rollback Criteria</h3>
+<ul>
+    <li><strong>Ledger chain break:</strong> If <code>verify-ledger</code> reports breaks, the site build includes a red "BROKEN" badge. Deployment proceeds but the break is visible to reviewers.</li>
+    <li><strong>Publish gate failure:</strong> <code>submit</code> command will not deploy if the letter fails gate checks after max regen attempts. The previous deployed version remains live.</li>
+    <li><strong>Tweet rejection:</strong> If the critic agent rejects a tweet 3 times, it is logged as "skipped" and never posted. No partial posts.</li>
+    <li><strong>Failed run:</strong> Every failed run is logged to the ledger with <code>success=0</code>. Failed runs are shown on the <a href="{{ base_url }}/scorecard/">scorecard</a> with timestamps for post-mortem.</li>
+</ul>
+
+<h3>Eval and Observability</h3>
+<ul>
+    <li><strong>Hash-chained ledger:</strong> Every CLI command produces a <code>RunEntry</code> with inputs, tool calls, sources, outputs, and SHA256 hash linking to the previous entry. Tamper detection is automatic.</li>
+    <li><strong>Citation verification:</strong> Content verifier HEAD-checks every cited URL, matches quoted snippets against cached doc hashes, and validates code snippet syntax.</li>
+    <li><strong>Scorecard metrics:</strong> Success rate, word count, citation count, experiment outcomes, and failure log are computed live from the database on every site build.</li>
+    <li><strong>Staged rollout:</strong> <code>build-site</code> renders locally for inspection. <code>deploy</code> is a separate, explicit command. The <code>submit</code> pipeline gates deployment on publish-gate pass.</li>
+</ul>
 </section>
 
 <section>
 <h2>Where the Receipts Are</h2>
 <ul>
-    <li><a href="{{ base_url }}/ledger/">/ledger</a>: Every action logged with hash chain. Click any entry to see full JSON.</li>
-    <li><a href="{{ base_url }}/content/">/content</a>: Every post has a Sources section with cited doc URLs and SHA256 hashes.</li>
+    <li><a href="{{ base_url }}/content/">/content</a>: Posts have a Sources section with cited doc URLs. SHA256 hashes shown when available.</li>
     <li><a href="{{ base_url }}/experiments/">/experiments</a>: Every experiment has hypothesis, metric, and results.</li>
-    <li><a href="{{ base_url }}/feedback/">/feedback</a>: Every feedback item has repro steps and evidence links.</li>
+    <li><a href="{{ base_url }}/feedback/">/feedback</a>: Feedback items include repro steps and evidence links where available.</li>
 </ul>
 </section>
 
@@ -66,11 +148,10 @@ revcat-advocate build-site</code></pre>
         <tr><td><code>weekly-report</code></td><td>Weekly activity summary</td></tr>
         <tr><td><code>build-site</code></td><td>Build static site</td></tr>
         <tr><td><code>deploy --repo owner/name</code></td><td>Deploy to GitHub Pages</td></tr>
-        <tr><td><code>verify-ledger</code></td><td>Verify hash chain integrity</td></tr>
         <tr><td><code>chat</code></td><td>Interactive doc-grounded chat</td></tr>
         <tr><td><code>serve</code></td><td>HTTP API server</td></tr>
         <tr><td><code>mcp-serve</code></td><td>MCP server for other agents</td></tr>
-        <tr><td><code>auto --interval 6h</code></td><td>Autonomous scheduled operation</td></tr>
+        <tr><td><code>auto --interval 6h</code></td><td>Scheduled task loop (content, experiments, feedback, site build)</td></tr>
         <tr><td><code>demo-run</code></td><td>Full pipeline end-to-end</td></tr>
     </tbody>
 </table>
@@ -91,12 +172,6 @@ revcat-advocate build-site</code></pre>
 </section>
 
 <section>
-<h2>Verify the Ledger</h2>
-<pre><code>revcat-advocate verify-ledger
-# Expected: "Chain verified: N entries, 0 breaks"</code></pre>
-</section>
-
-<section>
 <h2>Architecture</h2>
 <pre><code>Docs (LLM Index + .md mirrors)
     -> Knowledge Engine (BM25 + RAG hybrid search)
@@ -105,12 +180,83 @@ revcat-advocate build-site</code></pre>
         -> Feedback Engine (doc analysis + repro harness)
         -> Social (GitHub, Reddit, X; all DRY_RUN gated)
     -> Governance (red-team suite, safety gates)
-    -> Ledger (hash-chained, HMAC-signed)
         -> Static Site (GitHub Pages)</code></pre>
 </section>
 
 <section>
-<h2>MCP Setup (for Claude Code users)</h2>
+<h2>Claude Code Skills</h2>
+<p>
+    Clone this repo into any project and get RevenueCat developer tools as Claude Code slash commands.
+    These aren't wrappers. Each skill adds a new capability that combines the agent's ingested doc knowledge base
+    with your actual codebase to solve real developer problems.
+</p>
+<div class="skills-grid">
+    {% for skill in skills %}
+    <div class="skill-card">
+        <div class="skill-name"><code>/{{ skill.name }}</code></div>
+        <div class="skill-desc">{{ skill.description }}</div>
+    </div>
+    {% endfor %}
+</div>
+<h3>Try it</h3>
+<pre><code>git clone https://github.com/akshan-main/revcat-agent-advocate.git
+cd revcat-agent-advocate && pip install -e .
+
+# In Claude Code, inside any project:
+/review-rc          # Review your RC integration against docs
+/migrate            # Generate migration plan from StoreKit/Stripe/Adapty
+/paywall            # Generate paywall UI code for your platform
+/debug-webhook      # Paste a webhook payload, get plain-English explanation
+/rc-audit           # Full integration audit with scored report
+/pricing-strategy   # Pricing optimization based on category benchmarks
+/search-docs        # Search ingested RC docs with hybrid RAG
+/quiz               # Product comprehension quiz on your code changes</code></pre>
+</section>
+
+<section>
+<h2>MCP Server Integration</h2>
+<p>
+    The agent also runs as an MCP server with 22 tools. MCP clients like Claude Desktop and Claude Code
+    can connect and use the agent's capabilities.
+</p>
+<h3>Connect via stdio (local)</h3>
+<pre><code>claude mcp add revcat-agent-advocate -- revcat-advocate mcp-serve</code></pre>
+<h3>Connect via SSE (remote)</h3>
+<pre><code>revcat-advocate mcp-serve --transport sse --port 8090
+claude mcp add revcat-agent-advocate -t http -- http://localhost:8090/mcp</code></pre>
+
+<h3>Available MCP Tools (22)</h3>
+<table>
+    <thead><tr><th>Tool</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td><code>search_docs</code></td><td>Hybrid RAG search over ingested doc pages</td></tr>
+        <tr><td><code>ask_question</code></td><td>Doc-grounded Q&A with citations</td></tr>
+        <tr><td><code>suggest_topics</code></td><td>Suggest content topics based on doc coverage</td></tr>
+        <tr><td><code>generate_content</code></td><td>Content pipeline: outline → draft (no auto-verify)</td></tr>
+        <tr><td><code>generate_feedback_mcp</code></td><td>Doc analysis → structured feedback</td></tr>
+        <tr><td><code>run_experiment_mcp</code></td><td>Start a growth experiment (hypothesis + artifacts)</td></tr>
+        <tr><td><code>verify_ledger</code></td><td>Hash chain integrity check</td></tr>
+        <tr><td><code>get_agent_stats</code></td><td>System statistics and counts</td></tr>
+        <tr><td><code>get_architecture</code></td><td>Full architecture and tech stack</td></tr>
+        <tr><td><code>list_content</code></td><td>All generated content pieces</td></tr>
+        <tr><td><code>list_experiments</code></td><td>Experiment registry and results</td></tr>
+        <tr><td><code>list_feedback</code></td><td>Filed product feedback</td></tr>
+        <tr><td><code>get_content_body</code></td><td>Full article markdown by slug</td></tr>
+        <tr><td><code>get_experiment_details</code></td><td>Experiment hypothesis, inputs, results</td></tr>
+        <tr><td><code>get_feedback_details</code></td><td>Feedback repro steps and evidence</td></tr>
+        <tr><td><code>get_ledger_entries</code></td><td>Recent ledger entries with hashes</td></tr>
+        <tr><td><code>get_weekly_report</code></td><td>Weekly activity summary</td></tr>
+        <tr><td><code>read_source_file</code></td><td>Read source files in the agent's codebase (sensitive files blocked)</td></tr>
+        <tr><td><code>list_source_files</code></td><td>Browse the agent's source tree</td></tr>
+        <tr><td><code>list_skills</code></td><td>List available developer skills with capabilities and scopes</td></tr>
+        <tr><td><code>run_skill</code></td><td>Prepare a skill's context, prompt, and scoped tools for the caller to drive</td></tr>
+        <tr><td><code>run_skill_chain</code></td><td>Chain multiple skills in sequence, passing context forward</td></tr>
+    </tbody>
+</table>
+</section>
+
+<section>
+<h2>RevenueCat MCP (upstream)</h2>
 <pre><code>claude mcp add revenuecat -t http -- https://mcp.revenuecat.ai/mcp \
   --header "Authorization: Bearer YOUR_API_KEY"</code></pre>
 </section>

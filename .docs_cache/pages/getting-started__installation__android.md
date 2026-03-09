@@ -1,0 +1,72 @@
+---
+id: "getting-started/installation/android"
+title: "Android"
+description: "What is RevenueCat?"
+permalink: "/docs/getting-started/installation/android"
+slug: "android"
+version: "current"
+original_source: "docs/getting-started/installation/android.mdx"
+---
+
+## What is RevenueCat?
+
+RevenueCat provides a backend and a wrapper around StoreKit and Google Play Billing to make implementing in-app purchases and subscriptions easy. With our SDK, you can build and manage your app business on any platform without having to maintain IAP infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/growth/where-does-revenuecat-fit-in-your-app/) or you can [sign up free](https://app.revenuecat.com/signup) to start building.
+
+## Android
+
+### Installation
+
+Purchases for Android (Google Play and Amazon Appstore) is available on Maven and can be included via Gradle.
+
+You can find the latest version below, and for more details, visit the [Releases page](https://github.com/RevenueCat/purchases-android/releases).
+
+[![Release](https://img.shields.io/github/v/release/RevenueCat/purchases-android.svg?\&style=flat)](https://github.com/RevenueCat/purchases-android/releases)
+
+*Interactive content is available in the web version of this doc.*
+
+### Import Purchases
+
+You should now be able to import `Purchases`.
+
+*Interactive content is available in the web version of this doc.*
+
+### Configure Proguard (Optional)
+
+We are adding Proguard rules to the library so you don't need to do anything. If you have any issues finding classes in our SDK, try adding `-keep class com.revenuecat.purchases.** { *; }` to your Proguard configuration.
+
+:::warning
+Purchases uses AndroidX App Startup under the hood. Make sure you have not removed the `androidx.startup.InitializationProvider` completely in your manifest. If you need to remove specific initializers, such as `androidx.work.WorkManagerInitializer`, set `tools:node="merge"` on the provider, and `tools:node="remove"` on the meta-data of the initializer you want to remove.
+
+*Interactive content is available in the web version of this doc.*
+
+:::
+
+### Set the correct launchMode
+
+Depending on your user's payment method, they may be asked by Google Play to verify their purchase in their (banking) app. This means they will have to background your app and go to another app to verify the purchase. If your Activity's `launchMode` is set to anything other than `standard` or `singleTop`, backgrounding your app can cause the purchase to get cancelled. To avoid this, set the `launchMode` of your Activity to `standard` or `singleTop` in your `AndroidManifest.xml` file, like so:
+
+*Interactive content is available in the web version of this doc.*
+
+You can find Android's documentation on the various `launchMode` options [here](https://developer.android.com/guide/topics/manifest/activity-element#lmode).
+
+## Amazon
+
+### Additional Dependencies
+
+Add a new dependency to the `build.gradle` apart from the regular `purchases` dependency. These new dependencies have the classes needed to use Amazon IAP:
+
+You can find the latest version below, and for more details, visit the [Releases page](https://github.com/RevenueCat/purchases-android/releases).
+
+[![Release](https://img.shields.io/github/v/release/RevenueCat/purchases-android.svg?\&style=flat)](https://github.com/RevenueCat/purchases-android/releases)
+
+*Interactive content is available in the web version of this doc.*
+
+### Add Amazon public key
+
+Adding support for Amazon requires adding a `.pem` public key to your project. You can configure this key by following Amazon's guide [here](https://developer.amazon.com/es/docs/in-app-purchasing/integrate-appstore-sdk.html#configure_key).
+
+Due to some limitations, RevenueCat will only validate purchases made in production or in Live App Testing and won't validate purchases made with the Amazon App Tester.
+
+## Next Steps
+
+- Now that you've installed the Purchases SDK in your Android app, get started by [configuring an instance of Purchases ](/getting-started/quickstart#3-using-revenuecats-purchases-sdk)

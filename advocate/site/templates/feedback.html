@@ -1,31 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Product Feedback</h1>
+<p class="page-intro">
+    The agent analyzes RevenueCat's documentation and API surface to find inconsistencies, gaps, and developer friction points.
+    Each item below has reproduction steps, evidence links, and a proposed fix, ready for the product team to triage.
+</p>
 
 {% if feedbacks %}
+<div class="feedback-summary">
+    <span><strong>{{ feedbacks | length }}</strong> issues filed</span>
+    <span>{% set critical = feedbacks | selectattr('severity', 'equalto', 'critical') | list %}{% set major = feedbacks | selectattr('severity', 'equalto', 'major') | list %}{{ critical | length }} critical, {{ major | length }} major</span>
+</div>
+
 <div class="feedback-grid">
     {% for fb in feedbacks %}
+    {% if not fb.title.startswith('Missing fields in') %}
     <div class="feedback-card">
         <div class="feedback-header">
             <h3>{{ fb.title }}</h3>
             <div class="feedback-badges">
                 <span class="badge badge-{{ fb.severity }}">{{ fb.severity }}</span>
                 <span class="badge badge-area">{{ fb.area }}</span>
-                <span class="badge {% if fb.status == 'submitted' %}badge-verified{% else %}badge-draft{% endif %}">{{ fb.status }}</span>
             </div>
         </div>
         <div class="feedback-body">
             {% if fb.repro_steps %}
             <h4>Reproduction Steps</h4>
-            <p>{{ fb.repro_steps }}</p>
+            <div class="feedback-text">{{ fb.repro_steps | nl2br }}</div>
             {% endif %}
             {% if fb.expected %}
             <h4>Expected</h4>
-            <p>{{ fb.expected }}</p>
+            <div class="feedback-text">{{ fb.expected | nl2br }}</div>
             {% endif %}
             {% if fb.actual %}
             <h4>Actual</h4>
-            <p>{{ fb.actual }}</p>
+            <div class="feedback-text">{{ fb.actual | nl2br }}</div>
             {% endif %}
             {% if fb.evidence_links_json %}
             <h4>Evidence</h4>
@@ -38,7 +47,7 @@
             {% endif %}
             {% if fb.proposed_fix %}
             <h4>Proposed Fix</h4>
-            <p>{{ fb.proposed_fix }}</p>
+            <div class="feedback-text">{{ fb.proposed_fix | nl2br }}</div>
             {% endif %}
         </div>
         <div class="feedback-footer">
@@ -46,8 +55,34 @@
             {% if fb.github_issue_url %}<a href="{{ fb.github_issue_url }}">GitHub Issue</a>{% endif %}
         </div>
     </div>
+    {% endif %}
     {% endfor %}
 </div>
+
+{% set api_checks = [] %}
+{% for fb in feedbacks %}
+{% if fb.title.startswith('Missing fields in') %}
+{% set _ = api_checks.append(fb) %}
+{% endif %}
+{% endfor %}
+{% if api_checks %}
+<details class="api-validation-section">
+    <summary>API Validation Checks ({{ api_checks | length }} automated tests)</summary>
+    <p class="api-validation-note">These are automated checks from testing API endpoints against documented schemas.</p>
+    <table class="ledger-table" style="font-size:0.8rem;">
+        <thead><tr><th>Endpoint</th><th>Severity</th><th>Finding</th></tr></thead>
+        <tbody>
+        {% for fb in api_checks %}
+        <tr>
+            <td><code>{{ fb.area }}</code></td>
+            <td><span class="badge badge-{{ fb.severity }}">{{ fb.severity }}</span></td>
+            <td>{{ fb.title }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</details>
+{% endif %}
 {% else %}
 <p class="placeholder">No feedback yet. Run: <code>revcat-advocate generate-feedback --count 3</code></p>
 {% endif %}

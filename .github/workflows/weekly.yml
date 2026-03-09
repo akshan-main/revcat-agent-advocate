@@ -1,0 +1,73 @@
+name: Weekly — Autonomous Agent Cycle
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday 9:00 UTC
+  workflow_dispatch:       # Also runnable manually
+
+jobs:
+  weekly-cycle:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e "."
+
+      - name: Cache docs
+        uses: actions/cache@v4
+        with:
+          path: .docs_cache
+          key: docs-cache-${{ hashFiles('advocate/knowledge/ingest.py') }}
+          restore-keys: docs-cache-
+
+      - name: Autonomous cycle (content → experiments → feedback → site)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: revcat-advocate auto --once
+
+      - name: Build site
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          DEMO_MODE: "false"
+          DRY_RUN: "true"
+          SITE_BASE_URL: "/revcat-agent-advocate"
+          SEARCH_API_URL: ${{ secrets.SEARCH_API_URL }}
+        run: revcat-advocate build-site --clean
+
+      - name: Publish gate
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: revcat-advocate publish-gate
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload to Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site_output/
+
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,45 @@
+---
+id: "tools/customer-center/customer-center-promo-offers-apple"
+title: "Configuring Apple Promotional Offers for Customer Center"
+description: "Promotional Offers allow developers to apply custom pricing and trials to new customers and to existing and lapsed subscriptions. Unique promotional offers can be assigned to different paths and survey responses in the Customer Center, but first they must be setup in App Store Connect."
+permalink: "/docs/tools/customer-center/customer-center-promo-offers-apple"
+slug: "customer-center-promo-offers-apple"
+version: "current"
+original_source: "docs/tools/customer-center/customer-center-promo-offers-apple.mdx"
+---
+
+Promotional Offers allow developers to apply custom pricing and trials to new customers and to existing and lapsed subscriptions. Unique promotional offers can be assigned to different paths and survey responses in the Customer Center, but first they must be setup in App Store Connect.
+
+The Customer Center will automatically show offers based on specific user actions. By default we have defined it for refunds and cancellations but it can be modified to any of the defined paths. Hereâs how it works:
+
+![Promotional Offers Configuration](/docs_images/customer-center/customer-center-promo-offers-config.png)
+
+- **Cancellation Retention Discount**: By default, for responses in the cancellation survey, RevenueCat will use a promotional offer that you can customize in the Offers tab of the Customer Center settings.
+
+- **Refund Retention Discount**: By default, when a user requests a refund in iOS, RevenueCat will use a promotional offer that you can customize in the Offers tab of the Customer Center settings.
+
+This setup enables RevenueCat to automatically match the right offer based on a userâs actions, providing a seamless experience for both cancellation and refund requests.
+
+The SDK will automatically match the right offer based on a userâs actions and its active subscription. If the SDK cannot locate a matching promotional offer id for the currently active user's subscription, it will bypass the survey and proceed with the userâs requested actionâeither canceling or refunding the subscription.
+
+You can configure a promotional offer from either the same product as the userâs active subscription or from a different product within the same subscription group. For example, you can offer a discounted annual product to a user who is currently subscribed to a monthly product within the same subscription group.
+
+**These promotional offers must be created in App Store Connect in order to be shown to customers**
+
+## Setting up promotional offers
+
+We detail the steps to setup promotional offers in App Store Connect in our [guide on iOS subscription offers](/subscription-guidance/subscription-offers/ios-subscription-offers#promotional-offers).
+
+## Displaying the promotional offer
+
+After creating a promotional offer for a product in App Store Connect, it needs to be assigned to a particular offer in the Offers tab of the Customer Center settings.
+
+For example, if you just created an offer with id `monthly_subscription_refund_offer` in App Store Connect for your monthly subscription product, edit the `Refund Retention Discount` offer in the Offers tab of the Customer Center settings, and assign the id of the promotional offer id to that monthly subscription product.
+
+![Assigning an Apple promotional offer](/docs_images/customer-center/customer-center-assign-promo-offer.png)
+
+You may also customize your configuration to provide other offers, or provide them when the user performs other actions. [Learn more about configuring the Customer Center.](/tools/customer-center/customer-center-configuration)
+
+You can customize a promotional offer's eligibility by setting conditions in the eligibility criteria. This allows you to control when and to whom the offer is presented. By using these eligibility conditions, you can create targeted offers for different segments of your user base, potentially increasing the effectiveness of your retention strategies.
+
+Refer to [Configuring promotional offers](/tools/customer-center/customer-center-configuration#promotional-offers-1) for more configuration options

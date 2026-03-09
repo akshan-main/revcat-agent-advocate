@@ -1,0 +1,86 @@
+---
+id: "getting-started/installation/cordova"
+title: "Cordova"
+description: "What is RevenueCat?"
+permalink: "/docs/getting-started/installation/cordova"
+slug: "cordova"
+version: "current"
+original_source: "docs/getting-started/installation/cordova.mdx"
+---
+
+## What is RevenueCat?
+
+RevenueCat provides a backend and a wrapper around StoreKit and Google Play Billing to make implementing in-app purchases and subscriptions easy. With our SDK, you can build and manage your app business on any platform without having to maintain IAP infrastructure. You can read more about [how RevenueCat fits into your app](https://www.revenuecat.com/blog/growth/where-does-revenuecat-fit-in-your-app/) or you can [sign up free](https://app.revenuecat.com/signup) to start building.
+
+:::danger The Cordova SDK is deprecated
+The Cordova SDK is now deprecated. We suggest using our [Capacitor SDK](/getting-started/installation/capacitor) instead.
+
+The Cordova SDK will receive maintenance updates, but new RevenueCat features and new major versions will not be made available. Billing Client v7 will be the latest version this SDK will ever support (it won't be updated to v8), which means that Google will not allow updates to your app after August 31st, 2026 [Read more about Google's Billing Client deprecation schedule](https://developer.android.com/google/play/billing/deprecation-faq)
+:::
+
+## Installation
+
+*Interactive content is available in the web version of this doc.*
+
+## Additional Android Setup
+
+### Set the correct launchMode
+
+Depending on your user's payment method, they may be asked by Google Play to verify their purchase in their (banking) app. This means they will have to background your app and go to another app to verify the purchase. If your Activity's `launchMode` is set to anything other than `standard` or `singleTop`, backgrounding your app can cause the purchase to get cancelled. To avoid this, set the `launchMode` of your Activity to `standard` or `singleTop` in your Android app's `AndroidManifest.xml` file:
+
+*Interactive content is available in the web version of this doc.*
+
+You can find Android's documentation on the various `launchMode` options [here](https://developer.android.com/guide/topics/manifest/activity-element#lmode).
+
+## Additional iOS Setup
+
+:::info Enable In-App Purchase capability for iOS projects in Xcode
+Don't forget to enable the In-App Purchase capability for your iOS project under `Project Target -> Capabilities -> In-App Purchase`
+:::
+
+### Add Strip Frameworks Phase if using cordova-plugin-purchases 1.1.0 or lower
+
+The App Store, in its infinite wisdom, still rejects fat frameworks, so we need to strip our framework before it is deployed. To do this, add the following script phase to your build.
+
+1. In Xcode, in project manager, select your app target.
+2. Open the `Build Phases` tab
+3. Add a new `Run Script`, name it `Strip Frameworks`
+4. Add the following command `"${PROJECT_DIR}/../../node_modules/cordova-plugin-purchases/src/ios/strip-frameworks.sh"` (quotes included)
+
+![](/docs_images/sdk/cordova/strip-frameworks.gif)
+
+### Set `SWIFT_LANGUAGE_VERSION`
+
+You have to make sure that the `SWIFT_LANGUAGE_VERSION` is set if it's not already. `cordova-plugin-purchases` needs Swift >= 5.0.
+
+You can either set it in the project yourself, or use an external plugin like https://www.npmjs.com/package/cordova-plugin-add-swift-support.
+In order to set it yourself:
+
+1. In Xcode, in project manager, select your app target.
+2. Open the `Build Settings` tab
+3. Look for the `Swift Language Version` setting.
+4. Set it to 5.0.
+
+## Import Purchases
+
+## TypeScript
+
+The types are shipped inside the npm package. You can import them like this:
+
+*Interactive content is available in the web version of this doc.*
+
+## Angular
+
+Wait for the Platform to be ready, then configure the plugin in your `src/app/app.component.ts`:
+
+*Interactive content is available in the web version of this doc.*
+
+## React
+
+Import the plugin object then use its static methods:
+
+*Interactive content is available in the web version of this doc.*
+
+## Next Steps
+
+- Now that you've installed the Purchases SDK in your Cordova app, get started by [initializing an instance of Purchases â](/getting-started/quickstart#3-using-revenuecats-purchases-sdk)

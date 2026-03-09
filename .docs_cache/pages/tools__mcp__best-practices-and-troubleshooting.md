@@ -1,0 +1,93 @@
+---
+id: "tools/mcp/best-practices-and-troubleshooting"
+title: "Best Practices & Troubleshooting"
+description: "Best Practices"
+permalink: "/docs/tools/mcp/best-practices-and-troubleshooting"
+slug: "best-practices-and-troubleshooting"
+version: "current"
+original_source: "docs/tools/mcp/best-practices-and-troubleshooting.mdx"
+---
+
+## Best Practices
+
+### API Key Management
+
+- **Use dedicated keys**: Create separate API keys for different environments (development, staging, production)
+- **Principle of least privilege**: Use read-only keys when write access isn't needed
+- **Regular rotation**: Periodically rotate your API keys for security
+
+### Naming Conventions
+
+- **Package identifiers**: Follow RevenueCat conventions:
+  - `$rc_monthly` for monthly subscriptions
+  - `$rc_annual` for annual subscriptions
+  - `$rc_three_month`, `$rc_six_month` for other durations
+  - `$rc_lifetime` for lifetime purchases
+  - `$rc_custom_*` for custom packages
+
+## Troubleshooting
+
+### Common Issues
+
+#### OAuth Issues
+
+If you're using OAuth to authenticate with the RevenueCat MCP, you may encounter the following issues:
+
+**Unknown MCP Client**
+
+**Symptoms**: OAuth flow fails with an error indicating the client is not recognized
+**Cause**: RevenueCat uses a simplified public client registration flow and does not allow automatic client additions. Your MCP client may not be registered with our OAuth server.
+**Solution**: Contact [RevenueCat support](https://app.revenuecat.com/settings/support) with your client details so we can allowlist your MCP client.
+
+**Outdated Redirect URIs**
+
+**Symptoms**: OAuth flow fails during the redirect step, or you receive an error about invalid redirect URI
+**Cause**: MCP clients occasionally update their redirect URIs, and our OAuth server configuration may not yet reflect these changes.
+**Solution**: Contact [RevenueCat support](https://app.revenuecat.com/settings/support) with the details of your MCP client and the expected redirect URI so we can update our configuration.
+
+#### API Key Issues
+
+**Symptoms**: Authentication errors or "unauthorized" responses
+**Solution**:
+
+1. Verify your API key is correct
+2. Check key permissions (read vs write)
+3. Ensure the key belongs to the correct project
+4. Update your Authorization header with the correct API key
+
+### Debug Information
+
+For troubleshooting:
+
+1. Test with simple commands like "Show me my project details"
+2. Ensure API key has proper permissions in RevenueCat dashboard
+3. Check your AI assistant's MCP connection logs
+
+## Security Considerations
+
+- **Use environment-specific keys**: Don't use production keys in development
+- **Regular key rotation**: Change API keys periodically
+- **Team access**: Use separate keys for each team member when possible
+- **Monitor usage**: Regularly review API key usage in your RevenueCat dashboard
+- **Secure storage**: Keep your API keys secure and never commit them to version control
+
+## Error Handling
+
+The MCP server provides detailed error responses including:
+
+- Authentication errors for missing or invalid tokens
+- API errors with full RevenueCat API response details
+- Validation errors for invalid parameters
+
+All errors are returned in a consistent format with `isError: true` and descriptive error messages.
+
+## Getting Help
+
+- **RevenueCat Documentation**: [docs.revenuecat.com](https://docs.revenuecat.com)
+- **API Reference**: [docs.revenuecat.com/reference](https://docs.revenuecat.com/reference)
+- **Support**: Contact RevenueCat support through the dashboard
+- **Community**: Join the RevenueCat community discussions
+
+***
+
+*This MCP server leverages the Model Context Protocol to provide seamless integration between RevenueCat's API and your development workflow. Happy monetizing! ð*

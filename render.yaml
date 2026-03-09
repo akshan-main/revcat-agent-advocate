@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: rcagent-search
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: HF_TOKEN
+        sync: false
+      - key: CHROMA_API_KEY
+        sync: false
+      - key: CHROMA_TENANT
+        sync: false
+      - key: CHROMA_DATABASE
+        sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: DOCS_CACHE_DIR
+        value: ./.docs_cache

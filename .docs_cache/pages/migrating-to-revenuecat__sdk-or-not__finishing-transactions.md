@@ -1,0 +1,81 @@
+---
+id: "migrating-to-revenuecat/sdk-or-not/finishing-transactions"
+title: "Using the SDK with your own IAP Code (formerly: Observer Mode)"
+description: "If you already have your own in-app purchase handling logic in your app and want to start using RevenueCat alongside it, you might need to set the SDK configuration option that your app will complete the purchases itself (configuration option purchasesAreCompletedBy, see code below). Completing a purchase tells the device billing library that a purchase has been processed and can be discarded. RevenueCat does this by default, however, this may interfere with pre-existing purchase handling code in your app."
+permalink: "/docs/migrating-to-revenuecat/sdk-or-not/finishing-transactions"
+slug: "finishing-transactions"
+version: "current"
+original_source: "docs/migrating-to-revenuecat/sdk-or-not/finishing-transactions.mdx"
+---
+
+If you already have your own in-app purchase handling logic in your app and want to start using RevenueCat alongside it, you might need to set the SDK configuration option that your app will **complete the purchases itself** (configuration option `purchasesAreCompletedBy`, see code below). Completing a purchase tells the device billing library that a purchase has been processed and can be discarded. RevenueCat does this by default, however, this may interfere with pre-existing purchase handling code in your app.
+
+If you set the SDK option that your app will complete purchases itself, you can still make use of most of RevenueCat's features, without replacing your existing purchase handling code. If you're making purchases on iOS, be sure to set the `storeKitVersion` to the version of StoreKit you're using.
+
+:::info Observer mode
+The setting where your app completes purchases was formerly called "observer mode". Older versions of the SDK (currently including the iOS and cross-platform SDKs) still refer to this terminology.
+:::
+
+:::warning Purchases need to manually be synced on Amazon Appstore
+For Amazon Appstore apps, you will need to [call the `syncAmazonPurchase()` method](/platform-resources/amazon-platform-resources#syncing-purchases-when-your-app-is-completing-transactions) after making a purchase using your own IAP code.
+:::
+
+### SDK Configuration
+
+*Interactive content is available in the web version of this doc.*
+
+## Syncing Past Subscriptions
+
+When using RevenueCat with your own IAP code, historical subscriptions won't automatically appear in the dashboard. To sync past subscriptions, you'll need to call `syncPurchases()` after configuring the SDK. This method will:
+
+- read the local App Store receipt (iOS) or query the billing library (Android) for existing transactions
+- process historical transactions and associate them with the current appUserID
+- activate entitlements and display the data in the dashboard
+
+:::info Best Practice
+Call `syncPurchases()` after a user logs in, rather than on every app launch. Calling it too frequently can cause unnecessary delays or disrupt the user experience, especially if your app has a large user base or complex entitlements.
+:::
+
+:::warning Limitations of syncPurchases()
+`syncPurchases()` only brings in data if the customer opens the app. Anyone inactive won't be included until they return. Additionally:
+
+- On iOS, it only processes what's still in the local App Store receipt
+- On Android, it only queries the BillingClient for currently owned subscriptions or non-consumed purchases
+- It does not pull in all historical orders ever made on the store account â just what's currently accessible on that device/session
+  :::
+
+### Alternative Approaches for Historical Data
+
+If you need to backfill past subscriptions without depending on users launching the updated app, consider these alternative approaches:
+
+1. **Backend Import**: Use our [Migration to RevenueCat](/migrating-to-revenuecat/migration-paths) guide to implement a server-side migration. This approach:
+
+   - Allows you to send Apple receipts or Google purchase tokens directly to RevenueCat using the `POST /receipts` [API reference](https://www.revenuecat.com/docs/api-v1#tag/transactions/operation/receipts).
+   - Gives you complete control and can be scripted to run once or continuously
+   - Is ideal for fully backfilling past subscriptions
+
+     *Interactive content is available in the web version of this doc.*
+     > **Note**: The API has rate limits, so for large-scale migrations,
+     > consider implementing bulk processing with appropriate delays between
+     > batches.
+     *Interactive content is available in the web version of this doc.*
+
+     For more details on importing historical purchases, see our [Importing your
+     Historical
+     Purchases](/migrating-to-revenuecat/migrating-existing-subscriptions)
+     guide.
+
+2. **Google Historical Import**: For Google Play apps, we offer a specialized [Google Historical Import](/migrating-to-revenuecat/migrating-existing-subscriptions/google-historical-import) process that:
+   - Overcomes the 90-day token expiry limitation
+   - Captures a deeper purchase history
+   - Requires additional setup with Google Play Console
+
+:::warning Amazon
+For Amazon Appstore apps, you'll need to manually sync each purchase using `syncAmazonPurchase()` after making a purchase. See our [Amazon Platform Resources](/platform-resources/amazon-platform-resources#syncing-purchases-when-your-app-is-completing-transactions) for more details.
+:::
+
+### Restore Behavior Considerations
+
+When syncing purchases, RevenueCat will handle existing subscriptions based on your [restore behavior](/projects/restore-behavior) setting. This setting determines what happens when a user's purchases are already associated with a different App User ID.
+
+For more information about restoring purchases and best practices, see our [Restoring Purchases](/getting-started/restoring-purchases) guide.

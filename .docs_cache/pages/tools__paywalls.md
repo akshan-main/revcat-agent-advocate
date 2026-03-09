@@ -1,0 +1,66 @@
+---
+id: "tools/paywalls"
+title: "Paywalls"
+description: "RevenueCat's Paywalls allow you to remotely configure your entire paywall view without any code changes or app updates. Whether you're building a new app, exploring new paywall concepts, or diving into experimentation; RevenueCat's Paywalls make it easy to get started."
+permalink: "/docs/tools/paywalls"
+slug: "paywalls"
+version: "current"
+original_source: "docs/tools/paywalls.mdx"
+---
+
+RevenueCat's Paywalls allow you to remotely configure your entire paywall view without any code changes or app updates. Whether you're building a new app, exploring new paywall concepts, or diving into experimentation; RevenueCat's Paywalls make it easy to get started.
+
+**Video:** Watch the video content in the hosted documentation.
+
+You can think of a Paywall as an optional feature of your Offering. An Offering is the collection of Products which are organized into Packages to be displayed to your customers as a single "offer" across platforms. Now, with Paywalls, you can control the actual view that is used to display that "offer" in addition to controlling the products that are offered.
+
+Therefore, you can create a unique Paywall for each of your Offerings, and can create an unlimited number of Offerings & Paywalls for each variation you want to test with Experiments.
+
+### Getting Started
+
+Our paywalls use native code to deliver smooth, intuitive experiences to your customers when you're ready to deliver them an Offering; and you can use our Dashboard to build your paywall from any of our existing templates, or start from scratch to create your own. Either way, you'll have full control of the components and their properties to modify the paywall to meet your needs.
+
+To use RevenueCat Paywalls, simply:
+
+1. [Install the RevenueCat UI SDK](/tools/paywalls/installation)
+
+2. [Create a Paywall](/tools/paywalls/creating-paywalls) on the Dashboard for the [Offering](/getting-started/entitlements) you intend to serve to your customers
+
+3. See [displaying paywalls](/tools/paywalls/displaying-paywalls) for how to display it into your app.
+
+## Limitations
+
+### Required SDK Versions
+
+| RevenueCat SDK           | Minimum recommend version |
+| :----------------------- | :--------------------------------------------- |
+| purchases-ios             | 5.27.1 and up                 |
+| purchases-android         | 8.19.2 and up                  |
+| react-native-purchases | 8.11.3 and up                 |
+| purchases-flutter         | 8.10.1 and up                 |
+| purchases-kmp             | 1.8.2+13.35.0 and up                  |
+| purchases-capacitor       | 10.3.3 and up                        |
+| purchases-unity           | RevenueCatUI package required         |
+| cordova-plugin-purchases  | Not supported                         |
+
+:::info Paywalls on the web
+Paywalls are also available on the web via RevenueCat's Web Purchase Links. [Learn more](https://www.revenuecat.com/docs/web/web-billing/paywalls).
+:::
+
+Prior SDK versions support our beta release of Paywalls, but we recommend updating to at least the recommended version listed above for each SDK to take advantage of all features & fixes from the beta period.
+
+### Platforms
+
+- â iOS 15.0 and higher
+- â Android 7.0 (API level 24) and higher
+- â Mac Catalyst 15.0 and higher
+- â macOS 12.0 and higher
+- â Web (via Web Purchase Links)
+- â watchOS
+- â tvOS
+- â visionOS
+
+## Next Steps
+
+- Now that you know how our paywalls work, read about [creating paywalls](/tools/paywalls/creating-paywalls)
+- Once you're ready to see your paywalls in action, you can follow our guides on [displaying paywalls](/tools/paywalls/displaying-paywalls)

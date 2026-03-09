@@ -1,0 +1,352 @@
+---
+id: "integrations/third-party-integrations/firebase-integration"
+title: "Firebase"
+description: "The Firebase integration is available to all users signed up after September '23, the legacy Starter and Pro plans, and Enterprise plans. If you're on a legacy Free plan and want to access this integration, migrate to our new pricing via your billing settings."
+permalink: "/docs/integrations/third-party-integrations/firebase-integration"
+slug: "firebase-integration"
+version: "current"
+original_source: "docs/integrations/third-party-integrations/firebase-integration.mdx"
+---
+
+:::success Pro Integration
+The Firebase integration is available to all users signed up after September '23, the legacy Starter and Pro plans, and Enterprise plans. If you're on a legacy Free plan and want to access this integration, migrate to our new pricing via your [billing settings](https://app.revenuecat.com/settings/billing).
+:::
+
+This extension uses Firebase services as your RevenueCat backend for in-app purchases on Apple App Store, Google Play Store, and Amazon Appstore to control access to premium content and sync customer purchase information to Firestore. For example, you might want to:
+
+- Store purchase lifecycle events (e.g., trial starts, purchases, subscription renewals, billing issues) in Firestore and react to them.
+- Store and update information about customers and their purchases in Firestore.
+- Update information about customers' entitlements as Firebase Authentication [Custom Claims](https://firebase.google.com/docs/auth/admin/custom-claims).
+
+This Firebase integration has 2 parts that can be used independently of each other: Google Analytics and Firebase Extension. The Google Analytics portion of this integration allows RevenueCat to send subscription lifecycle events to Firebase Analytics / Google Analytics. The Firebase Extension allows RevenueCat to store and update customer information in a Cloud Firestore collection and set custom claims on a user's auth token to check active entitlement status.
+
+Each part of the integration requires additional setup, which you can see outlined in the table below.
+
+| Integration        | What's required                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Google Analytics   | â `$firebaseAppInstanceId` customer attribute (Interactive content is available in the web version of this doc.) â (optional, but highly recommended) Setting Firebase user identity |
+| Firebase Extension | â Setting Firebase user identity                                                                                          |
+
+### Integration at a Glance
+
+| Includes Revenue | Supports Negative Revenue | Sends Sandbox Events | Includes Customer Attributes | Sends Transfer Events | Optional Event Types |
+| :--------------: | :-----------------------: | :------------------: | :--------------------------: | :-------------------: | :------------------: |
+|        â        |            â             |          â          |              â              |          â           |          â          |
+
+## 1. Set up Firebase services in your project
+
+Before installing this extension, set up the following Firebase services in your Firebase project.
+
+- (optional) [Cloud Firestore](https://firebase.google.com/docs/firestore) to store In-App Purchases & Subscriptions details.
+  - Follow the steps in the [documentation](https://firebase.google.com/docs/firestore/quickstart#create) to create a Cloud Firestore database.
+- (optional) [Firebase Authentication](https://firebase.google.com/docs/auth) to enable different sign-up options for your users to enable Custom Claims management.
+  - Enable the sign-in methods in the [Firebase console](https://console.firebase.google.com/project/_/authentication/providers) that you want to offer your users.
+
+:::warning Invalid API Version
+When connecting to Firebase, it's possible that you may see an error like:
+
+"Invalid API Version", with a couple of different version numbers. This is fixed as part of an automatic upgrade process when installing the extension, and generally doesn't indicate there being an issue with your setup.
+:::
+
+## 2. Set Firebase User Identity in RevenueCat
+
+You should make sure to use the Firebase UID as the RevenueCat app user ID when setting the Firebase user identity in RevenueCat. This step is optional, but highly recommended as a best practice for the Google Analytics portion of this integration. The Firebase Extension portion **requires** this step to be completed.
+
+*Interactive content is available in the web version of this doc.*
+
+## 3. Send analytics events to Google Analytics
+
+In order to send subscriber lifecycle events to Google Analytics, you must set the `$firebaseAppInstanceId` as an Attribute for your Customers and enable the integration from the RevenueCat integration settings page.
+
+### Set `$firebaseAppInstanceId` as a customer attribute
+
+Please ensure you're getting the app instance ID from the [Firebase Analytics](https://firebase.google.com/docs/analytics/get-started) package.
+
+*Interactive content is available in the web version of this doc.*
+
+:::warning
+Setting an incorrect app instance ID will prevent events from displaying in Google Analytics.
+:::
+
+### Enable Google Analytics
+
+You can "turn on" the integration from the RevenueCat dashboard.
+
+1. Navigate to your project settings in the RevenueCat dashboard and choose 'Firebase' from the Integrations menu
+
+![Integration setup](/docs_images/integrations/setup-integrations.png)
+
+2. Add your Firebase App ID and API secret for your iOS app and/or Android app
+
+To set up your Firebase App ID, navigate to `Google Analytics > Admin > Data Streams > iOS/Android > Add Stream`. Open the App Stream to find your Firebase App ID. Copy and paste into the RevenueCat settings page.
+
+![Data stream details page](/docs_images/integrations/third-party-integrations/firebase/data-stream-details.png)
+
+To find your API secret, in the same *App stream details* page select "Measure Protocol API secrets". Create an API secret. Copy and paste into the RevenueCat settings page.
+
+3. Select whether you want RevenueCat to report sales in purchased currency (original currency or in US dollar)
+4. Select whether you want sales reported as gross revenue (before app store commission), or after store commission and/or estimated taxes.
+
+### Events
+
+The Google Analytics portion of the Firebase integration tracks the following events:
+
+| Event Type                        | Default Event Name     | Description                                                                                                                                                                                                                                                                                                                                 | App Store | Play Store | Amazon | Stripe | Promo |
+| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- | ------ | ------ | ----- |
+| Initial Purchase                  | purchase               | A new subscription has been purchased.                                                                                                                                                                                                                                                                                                      | â        | â         | â     | â     | â    |
+| Trial Started                     | rc\_trial\_start         | The start of an auto-renewing subscription product free trial.                                                                                                                                                                                                                                                                              | â        | â         | â     | â     | â    |
+| Renewal (incl. trial conversion)  | purchase               | An existing subscription has been renewed or a lapsed user has resubscribed.                                                                                                                                                                                                                                                                | â        | â         | â     | â     | â    |
+| Cancellation (incl. during trial) | rc\_cancellation        | A subscription or non-renewing purchase has been cancelled. See [cancellation reasons](/integrations/webhooks/event-types-and-fields#cancellation-and-expiration-reasons) for more details.                                                                                                                                                 | â        | â         | â     | â     | â    |
+| Uncancellation                    | rc\_uncancellation      | A non-expired cancelled subscription has been re-enabled.                                                                                                                                                                                                                                                                                   | â        | â         | â     | â     | â    |
+| Non Subscription Purchase         | purchase               | A customer has made a purchase that will not auto-renew.                                                                                                                                                                                                                                                                                    | â        | â         | â     | â     | â    |
+| Subscription Paused               | rc\_subscription\_paused | A subscription has been paused.                                                                                                                                                                                                                                                                                                             | â        | â         | â     | â     | â    |
+| Expiration                        | rc\_expiration          | A subscription has expired and access should be removed. If you have [Platform Server Notifications](/platform-resources/server-notifications) configured, this event will occur as soon as we are notified (within seconds to minutes) of the expiration. If you do not have notifications configured, delays may be approximately 1 hour. | â        | â         | â     | â     | â    |
+| Billing Issue                     | rc\_billing\_issue       | There has been a problem trying to charge the subscriber. This does not mean the subscription has expired. Can be safely ignored if listening to CANCELLATION event + cancel\_reason=BILLING\_ERROR.                                                                                                                                          | â        | â         | â     | â     | â    |
+| Product Change                    | rc\_product\_change      | A subscriber has changed the product of their subscription. This does not mean the new subscription is in effect immediately. See [Managing Subscriptions](/subscription-guidance/managing-subscriptions) for more details on updates, downgrades, and crossgrades.                                                                         | â        | â         | â     | â     | â    |
+| Transfer                          | rc\_transfer\_event      | A transfer of transactions and entitlements was initiated between one App User ID(s) to another. Please note: Two events will be sent for each transfer, one for the original user and another for the destination user.                                                                                                                    | â        | â         | â     | â     | â    |
+
+### Testing Google Analytics
+
+#### Make a sandbox purchase with a new user
+
+Simulate a new user installing your app, and go through your app flow to complete the [sandbox purchase](/test-and-launch/sandbox).
+
+#### Check Google Analytics Dashboard
+
+Navigate to Google Analytics > Reports > Realtime. Here you will be able to confirm events have been successfully dispatched to Google Analytics. It can take up to a few seconds or minutes for your events to appear.
+
+![Google Analytics dashboard](/docs_images/integrations/third-party-integrations/firebase/google-analytics-dashboard.png)
+
+### Firebase A/B Testing
+
+While these events will appear in Firebase, Google does not allow events that are submitted via the Google Analytics 4 Measurement Protocol API to be used with Firebase A/B testing at this time. Since the integration uses this API, these events are not yet compatible with Firebase A/B Testing.
+
+:::success
+You have completed the Google Analytics setup! You can stop here or continue with the rest of the documentation to learn how to set up the Firebase Extension.
+:::
+
+## 4. Send customer information to Firestore
+
+### Prerequisites
+
+This section outlines steps that need to be completed in order to enable the Firebase Extension portion of this integration.
+
+#### Billing
+
+Your Firebase project must be on the Blaze (pay-as-you-go) plan to install an extension.
+
+You will be charged a small amount (typically around $0.01/month) for the Firebase resources required by this extension (even if it is not used). In addition, this extension uses the following Firebase services, which may have associated charges if you exceed the service's free tier for low-volume use ([Learn more about Firebase billing](https://firebase.google.com/pricing)):
+
+- Cloud Firestore
+- Cloud Functions
+
+#### Set your Cloud Firestore security rules
+
+Set your security rules so that only authenticated users can access customer information, and that each user can only access their own information.
+
+*Interactive content is available in the web version of this doc.*
+
+### Enable Firebase Extension
+
+You can install this extension either through the [Firebase Console](/integrations/third-party-integrations/firebase-integration#install-firebase-extension-through-firebase-console) or [CLI](/integrations/third-party-integrations/firebase-integration#install-firebase-extension-through-cli) on your OS.
+
+#### Install Firebase Extension through Firebase Console
+
+Follow [this installation link](https://console.firebase.google.com/project/_/extensions/install?ref=revenuecat/firestore-revenuecat-purchases) to start the installation prompts on Firebase Console.
+
+1. Select 'I acknowledge'
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-1.png)
+
+2. If your account is not set up for billing yet, select 'Upgrade project to continue'
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-2.png)
+
+3. Enable Authentication and Secret Manager by selecting 'Enable', then select 'Next'
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-3.png)
+
+4. Select 'Next'
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-4.png)
+
+5. Configure the extension
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-5.png)
+
+- Select a Cloud Functions location
+- (optional) Give a name to the Firestore collection where "events" will be stored
+- (optional) Give a name to the Firestore collection where "customers" will be stored
+- Enable or disable custom claims set in Firebase Auth with user's active entitlements. If set to âENABLEDâ, the extension will consider the `app_user_id` of the user to match the userâs Firebase Authentication UID and set a âCustom Claimâ with their current active entitlements
+- Enter your RevenueCat Firebase Integration Shared Secret. This can be found in the RevenueCat Firebase Extension settings page. Select 'Generate shared secret' and copy it. Paste the generated shared secret in the installation prompt.
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-6.png)
+
+- (optional) Enable events to write custom event handlers via [Eventarc](https://firebase.google.com/docs/extensions/install-extensions?authuser=0\&hl=en\&platform=console#eventarc)
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-7.png)
+
+##### Available Events:
+
+| Event                   | Description                                                                                                                |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------- |
+| `test`                  | Occurs whenever a test event issued through the RevenueCat dashboard.                                                      |
+| `initial_purchase`      | Occurs whenever a new subscription has been purchased or a lapsed user has resubscribed.                                   |
+| `non_renewing_purchase` | Occurs whenever a customer has made a purchase that will not auto-renew.                                                   |
+| `renewal `              | Occurs whenever an existing subscription has been renewed.                                                                 |
+| `product_change`        | Occurs whenever a subscriber has changed the product of their subscription.                                                |
+| `cancellation`          | Occurs whenever a subscription or non-renewing purchase has been cancelled. See cancellation reasons for more details.     |
+| `uncancellation `       | Occurs whenever an auto-renew status has been re-enabled for a subscription.                                               |
+| `billing_issue`         | Occurs whenever there has been a problem trying to charge the subscriber. This does not mean the subscription has expired. |
+| `subscriber_alias`      | Deprecated. Occurs whenever a new app\_user\_id has been registered for an existing subscriber.                              |
+| `subscription_paused`   | Occurs whenever a subscription has been paused.                                                                            |
+| `transfer `             | Occurs whenever a transfer of transactions and entitlements was initiated between one App User ID(s) to another.           |
+| `expiration `           | Occurs whenever a subscription has expired and access should be removed.                                                   |
+
+- Select 'Install extension'. This will take about 3-5 minutes to complete
+
+6. Once the extension is installed, navigate to Firebase > Functions in the sidebar. Copy the 'Trigger URL' and paste this into the RevenueCat Firebase Extension settings page.
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-8.png)
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-9.png)
+
+Remember to select 'Save'
+
+:::success
+You have successfully installed your instance of Enable In-App Purchases with RevenueCat! Skip to [Testing Firebase Extension](/integrations/third-party-integrations/firebase-integration#testing-firebase-extension) section of the docs.
+:::
+
+#### Install Firebase Extension through CLI
+
+If you installed the Firebase Extension through the Firebase Console, skip to [Testing Firebase Extension](/integrations/third-party-integrations/firebase-integration#testing-firebase-extension) of the docs.
+
+This portion of the installation is done through the command-line interface (CLI). Clone this [Github repo](https://github.com/RevenueCat/firestore-revenuecat-purchases) and open the CLI for your respective operating system.
+
+1. Run `firebase ext:install . --project [project-id]`\
+   To find your `project-id`, go to your [Firebase console](https://console.firebase.google.com/u/0/). Select your project and navigate to Project settings to copy the ID and replace `[project-id]` in the command.
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-10.png)
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-11.png)
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-12.png)
+
+2. For the next 2 `Do you wish to continue?` prompts, press `y`
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-13.png)
+
+3. `Please enter a new name for this instance:` Give the extension a name of your choice
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-14.png)
+
+4. `Which option do you want enabled for this parameter (Cloud Functions location)?` Select your desired location
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-15.png)
+
+5. `Enter a value for RevenueCat Webhook Events Firestore collection:` Give a name to the Firestore collection where "events" will be stored. If left blank, RevenueCat will not save events.
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-16.png)
+
+6. `Enter a value for location of the customers collection:` Give a name to the Firestore collection where the customer information will be stored. If left blank, RevenueCat will not save customer information.
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-17.png)
+
+7. `Which option do you want enabled for this parameter (custom claims set in Firebase Auth with the user's active entitlements):` If you want to use the custom claims feature, which allows for automatic checking for Entitlements, select `ENABLED`.
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-18.png)
+
+8. `Enter a value for RevenueCat Firebase Integration Shared Secret:` This can be found in the RevenueCat Firebase Extension settings page. Select 'Generate shared secret' and copy it. Paste the generated shared secret in the installation prompt.
+
+![RevenueCat Firebase Extension page](/docs_images/integrations/third-party-integrations/firebase/firebase-console-19.png)
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-20.png)
+
+9. Wait about 3 to 5 minutes for the installation
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-21.png)
+
+10. Once the extension is installed, navigate to Firebase > Functions in the sidebar. Copy the 'Trigger URL' and paste this into the RevenueCat Firebase Extension settings page.
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-8.png)
+
+##### Note about the App User ID's in the Customers collection
+
+The document ID's in the Customers collection will always be an App User ID. Specifically, it will be the customer's most recently active alias. This means that the document ID for each customer may switch between [anonymous ID's](/customers/user-ids#anonymous-app-user-ids) and [custom ID's](/customers/user-ids#logging-in-with-a-custom-app-user-id), if they are both used in your app. If you would like to only use custom ID's, you can [learn more about that here](/customers/user-ids#how-to-never-see-anonymous-app-user-ids).
+
+![](/docs_images/integrations/third-party-integrations/firebase/firebase-console-9.png)
+
+Remember to select 'Save'.
+
+:::success
+You have successfully installed your instance of Enable In-App Purchases with RevenueCat!
+:::
+
+### Testing Firebase Extension
+
+#### Make a sandbox purchase with a new user
+
+Simulate a new user installing your app, and go through your app flow to complete the [sandbox purchase](/test-and-launch/sandbox).
+
+#### Check that the Firebase event delivered successfully
+
+While still on the Customer View, select the purchase event in the [Customer History](/dashboard-and-metrics/customer-profile) page and make sure that the Firebase (Firebase function) integration event exists and was delivered successfully.
+
+#### Check Firestore Database Collections
+
+Navigate to your Firebase dashboard > Firestore Database to find events sent for your collections.
+
+![Customers collection](/docs_images/integrations/third-party-integrations/firebase/firestore-customers-collection.png)
+
+![Events collection](/docs_images/integrations/third-party-integrations/firebase/firestore-events-collection.png)
+
+### Sample Events
+
+Below are sample JSONs that are delivered to Firestore Database for each event type.
+
+*Interactive content is available in the web version of this doc.*
+
+*Interactive content is available in the web version of this doc.*
+
+### Using the Extension
+
+#### Checking Entitlement access
+
+To check access to entitlements, you can either [use the RevenueCat SDK](/getting-started/quickstart#10-get-subscription-status) or use Firebase Authentication custom claims. For example, to check whether the current user has access to an entitlement called `premium`, you could use the following Firebase code:
+
+*Interactive content is available in the web version of this doc.*
+
+#### List a user's active subscriptions
+
+To list a user's active subscriptions, you could use the following Firebase code:
+
+*Interactive content is available in the web version of this doc.*
+
+#### React to subscription lifecycle events
+
+Subscription lifecycle events get stored as events in the Firestore collection `${param:REVENUECAT_EVENTS_COLLECTION}`. By listening to changes in this collection, for example, through [Cloud Firestore triggered Firebase Cloud Functions](https://firebase.google.com/docs/functions/firestore-events), you can trigger any custom behavior that you want. An example could be sending push notifications to customers with billing issues to prompt them to update their credit cards. To do that, you would:
+
+- Store a push notification token for each of your app users, e.g., using [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging)
+- Create a new Cloud Function triggered whenever a new document is created in the `${param:REVENUECAT_EVENTS_COLLECTION}` collection
+- In the Cloud Function, determine if the `type` field of the new document is `"BILLING_ISSUE"`
+- If so, look up the app user ID from the `app_user_id` field of the new document
+- Look up the push token for that app user ID and send a push notification
+
+## Troubleshooting your Firebase integration
+
+### 403 Permission denied to enable service (eventarcpublishing.googleapis.com)
+
+If you get a 403 error in DeploymentManager when trying to install or uninstall the Firebase extensions, Navigate to [Google Cloud IAM Settings](https://console.cloud.google.com/iam-admin/iam) and follow these steps:
+
+1. Near the top left corner of the page, click **Grant Access**.
+2. Once the "Grant Access" popup shows up on the right side of the page, set `<PROJECT_NUMBER>@cloudservices.gserviceaccount.com` as the principal (replacing \<PROJECT\_NUMBER> with your actual project number.)
+3. Select the **Editor** role.
+4. Click Save.
+
+Now try uninstalling and/or reinstalling the extension.
+
+![](/docs_images/integrations/third-party-integrations/firebase/invalid-api-version-error.png)
+
+### InvalidApiVersionError: The version of this extension is not the same.
+
+This is fixed as part of an automatic upgrade process when installing the extension, and generally doesn't indicate there being an issue with your setup. The error should not affect your integration. This is usually not necessary but if you continue seeing this error you may try to uninstall and reinstall the extension.

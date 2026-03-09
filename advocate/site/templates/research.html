@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>Research Workflow</h1>
+    <p class="page-intro">
+        Content on this site is not randomly chosen. The agent follows a systematic research workflow:
+        scan community signals, identify gaps in existing coverage, then produce targeted content or responses.
+        This page shows the full pipeline from observation to output.
+    </p>
+
+    <h2>How It Works</h2>
+    <div class="scorecard-grid">
+        <div class="score-card">
+            <div class="score-value">1</div>
+            <div class="score-label">Signal Detection</div>
+            <div class="score-detail">Scan Reddit, GitHub, and forums for trending developer pain points in subscriptions and IAP</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">2</div>
+            <div class="score-label">Gap Analysis</div>
+            <div class="score-detail">Search the doc index for existing coverage. If no good answer exists, flag as a content gap</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">3</div>
+            <div class="score-label">Content Production</div>
+            <div class="score-detail">Write a cited article, draft a community response, or file product feedback to close the gap</div>
+        </div>
+    </div>
+
+    {% if agent_cycles %}
+    <h2>Agent Cycle Log</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        Each row is an autonomous agent cycle: the agent observed community signals, decided on an action, and produced an output.
+    </p>
+    <table class="scorecard-table">
+        <thead>
+            <tr>
+                <th>When</th>
+                <th>Command</th>
+                <th>Observed</th>
+                <th>Decided</th>
+                <th>Outcome</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cycle in agent_cycles %}
+            <tr>
+                <td style="white-space:nowrap;">{{ cycle.started_at[:16] }}</td>
+                <td><code>{{ cycle.command }}</code></td>
+                <td style="font-size:0.85rem;">{{ cycle.observed }}</td>
+                <td style="font-size:0.85rem;">{{ cycle.decided }}</td>
+                <td>
+                    {% if cycle.success %}
+                    <span class="badge badge-verified">done</span>
+                    {% else %}
+                    <span class="badge badge-draft">failed</span>
+                    {% endif %}
+                    <span style="font-size:0.82rem;">{{ cycle.produced }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <h2>Agent Cycle Log</h2>
+    <p class="placeholder">No agent cycles recorded yet. Run: <code>python3 -m cli agent --goal "..." --max-turns 3</code></p>
+    {% endif %}
+
+    {% if signals %}
+    <h2>Community Signals</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        Questions and issues detected from GitHub and Reddit. Each signal is a potential content gap.
+    </p>
+    <div class="experiment-grid">
+        {% for signal in signals %}
+        <div class="feedback-card">
+            <div class="experiment-header">
+                <h3 style="font-size:0.95rem;">{{ signal.question[:120] }}{% if signal.question|length > 120 %}...{% endif %}</h3>
+                <span class="badge {% if signal.status == 'sent' %}badge-verified{% elif signal.status == 'draft' %}badge-draft{% else %}badge-running{% endif %}">{{ signal.status }}</span>
+            </div>
+            <div class="experiment-body" style="font-size:0.85rem;">
+                <p>
+                    <strong>Channel:</strong> {{ signal.channel }}
+                    {% if signal.counterpart %} &middot; <strong>From:</strong> {{ signal.counterpart }}{% endif %}
+                    {% if signal.thread_url %}
+                        {% if signal.thread_url.startswith('http') %}
+                            &middot; <a href="{{ signal.thread_url }}" target="_blank">source</a>
+                        {% else %}
+                            &middot; <span style="font-size:0.82rem;color:var(--text-muted);">{{ signal.thread_url[:80] }}{% if signal.thread_url|length > 80 %}…{% endif %}</span>
+                        {% endif %}
+                    {% endif %}
+                </p>
+                {% if signal.intent %}
+                <p><strong>Intent:</strong> {{ signal.intent }}</p>
+                {% endif %}
+                {% if signal.draft_response %}
+                <details>
+                    <summary><strong>Draft Response</strong></summary>
+                    <div style="margin-top:0.5rem;">{{ signal.draft_response | nl2br }}</div>
+                </details>
+                {% endif %}
+            </div>
+            <div class="experiment-footer">
+                <time>{{ signal.created_at[:10] }}</time>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if produced_content %}
+    <h2>Content Produced from Research</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+        Articles and SEO pages created as a result of the research workflow. Each piece traces back to community signals or doc gap analysis.
+    </p>
+    <table class="scorecard-table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Citations</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for piece in produced_content %}
+            <tr>
+                <td><a href="{{ base_url }}/content/{{ piece.slug }}/">{{ piece.title }}</a></td>
+                <td>{{ piece.content_type | default("article") }}</td>
+                <td>
+                    <span class="badge {% if piece.status == 'verified' %}badge-verified{% else %}badge-draft{% endif %}">{{ piece.status }}</span>
+                </td>
+                <td>{{ piece.citations_count | default(0) }}</td>
+                <td>{{ piece.created_at[:10] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Research Pipeline Summary</h2>
+    <div class="scorecard-grid">
+        <div class="score-card">
+            <div class="score-value">{{ signal_count }}</div>
+            <div class="score-label">Signals Detected</div>
+            <div class="score-detail">from GitHub, Reddit, and other channels</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ response_count }}</div>
+            <div class="score-label">Responses Drafted</div>
+            <div class="score-detail">community answers with doc citations</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ content_from_research }}</div>
+            <div class="score-label">Content Pieces</div>
+            <div class="score-detail">articles produced from identified gaps</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ cycle_count }}</div>
+            <div class="score-label">Agent Cycles</div>
+            <div class="score-detail">autonomous research iterations run</div>
+        </div>
+    </div>
+</article>
+{% endblock %}

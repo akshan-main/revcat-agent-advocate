@@ -31,9 +31,9 @@ def generate_draft(
     ledger_ctx=None,
 ) -> str:
     """Generate a full article draft from an outline and doc snippets."""
-    if config and config.has_anthropic:
-        return _generate_with_claude(outline, doc_snippets, config, ledger_ctx)
-    return _generate_from_template(outline, doc_snippets)
+    if not config or not config.has_anthropic:
+        raise RuntimeError("Anthropic API key required for content generation. Set ANTHROPIC_API_KEY.")
+    return _generate_with_claude(outline, doc_snippets, config, ledger_ctx)
 
 
 def _generate_with_claude(
@@ -107,45 +107,6 @@ def _generate_with_claude(
 
     return draft
 
-
-def _generate_from_template(outline: ContentOutline, doc_snippets: dict[str, str]) -> str:
-    """Generate draft from template expansion (no LLM needed)."""
-    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-    lines = [
-        "---",
-        f'title: "{outline.title}"',
-        f'date: "{date}"',
-        f"type: {outline.content_type.value}",
-        "---",
-        "",
-        f"# {outline.title}",
-        "",
-    ]
-
-    for section in outline.sections:
-        lines.append(f"## {section.heading}")
-        lines.append("")
-        for point in section.key_points:
-            lines.append(point)
-            lines.append("")
-        # Add citations
-        for ref in section.source_refs:
-            lines.append(f"[Source]({ref})")
-            lines.append("")
-        lines.append("")
-
-    # Sources section
-    lines.append("## Sources")
-    lines.append("")
-    seen = set()
-    for section in outline.sections:
-        for ref in section.source_refs:
-            if ref not in seen:
-                lines.append(f"- [{ref}]({ref})")
-                seen.add(ref)
-
-    return "\n".join(lines)
 
 
 def save_draft(body_md: str, slug: str, output_dir: str) -> str:

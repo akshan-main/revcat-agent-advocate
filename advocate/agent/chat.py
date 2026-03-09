@@ -10,8 +10,6 @@ from ..config import Config
 from ..db import init_db_from_config, now_iso, count_rows, query_rows
 from ..knowledge.search import build_index, search, SearchIndex
 from ..knowledge.rag import get_context_chunks, format_context, RAGIndex
-from ..models import CommunityInteraction, InteractionChannel, InteractionIntent
-from ..community.tracker import log_interaction
 
 
 AGENT_SYSTEM_PROMPT = """You are the RevenueCat Developer Advocate Agent, an autonomous AI that helps \
@@ -95,7 +93,7 @@ class AdvocateAgent:
             import anthropic
             self._client = anthropic.Anthropic(api_key=self.config.anthropic_api_key)
 
-    def ask(self, question: str, log_to_db: bool = True) -> str:
+    def ask(self, question: str) -> str:
         """Answer a question or execute a command. Returns the response."""
         # Check for slash commands first
         if question.startswith("/"):
@@ -118,23 +116,12 @@ class AdvocateAgent:
                 snippets_text = "\n".join(f"  - {s}" for s in r.snippets[:3])
                 doc_context += f"\n**{r.title}** ({r.url}):\n{snippets_text}\n"
 
-        if self.config.has_anthropic:
-            response = self._ask_claude(question, doc_context)
-        else:
-            response = self._ask_template(question, results)
+        if not self.config.has_anthropic:
+            raise RuntimeError("Anthropic API key required for chat. Set ANTHROPIC_API_KEY.")
+        response = self._ask_claude(question, doc_context)
 
-        # Log interaction
-        if log_to_db:
-            interaction = CommunityInteraction(
-                channel=InteractionChannel.OTHER,
-                intent=InteractionIntent.ANSWER_QUESTION,
-                question=question,
-                draft_response=response,
-                status="sent",
-                notes="interactive_chat",
-                created_at=now_iso(),
-            )
-            log_interaction(self.db, interaction)
+        # Note: Chat Q&A is NOT logged as community_interactions to avoid
+        # inflating community metrics. Conversation history is tracked in memory.
 
         # Track conversation
         self.conversation_history.append({"role": "user", "content": question})
@@ -244,7 +231,7 @@ class AdvocateAgent:
             "slug": slug,
             "title": outline.title,
             "content_type": "tutorial",
-            "status": "verified" if citations > 0 else "draft",
+            "status": "draft",
             "body_md": body,
             "outline_json": outline.model_dump_json(),
             "sources_json": json.dumps([{"url": r.url, "doc_sha256": r.doc_sha256} for r in results]),
@@ -340,25 +327,6 @@ class AdvocateAgent:
 
         return response.content[0].text
 
-    def _ask_template(self, question: str, results) -> str:
-        """Answer without LLM; assemble from search results."""
-        if not results:
-            return (
-                "I couldn't find relevant documentation for your question. "
-                "Try rephrasing, or check https://www.revenuecat.com/docs/ directly."
-            )
-
-        lines = ["Based on the RevenueCat documentation:\n"]
-        for r in results[:3]:
-            if r.snippets:
-                lines.append(f"**{r.title}**")
-                for s in r.snippets[:2]:
-                    lines.append(f"- {s}")
-                lines.append(f"[Source]({r.url})\n")
-
-        lines.append("\nFor more details, see the linked documentation pages.")
-        return "\n".join(lines)
-
     def suggest_topics(self) -> list[str]:
         """Suggest questions the user might want to ask."""
         return [
@@ -377,7 +345,7 @@ class AdvocateAgent:
         self._ensure_index()
         return {
             "docs_indexed": self.index.doc_count if self.index else 0,
-            "questions_answered": count_rows(self.db, "community_interactions"),
+            "conversations": len(self.conversation_history) // 2,
             "content_pieces": count_rows(self.db, "content_pieces"),
             "experiments_run": count_rows(self.db, "growth_experiments"),
             "feedback_filed": count_rows(self.db, "product_feedback"),

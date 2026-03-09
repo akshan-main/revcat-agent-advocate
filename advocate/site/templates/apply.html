@@ -5,28 +5,10 @@
     <header class="apply-hero">
         <h1>Agentic AI Developer &amp; Growth Advocate</h1>
         <p class="thesis">
-            An autonomous agent system that generates cited technical content, runs measurable growth experiments,
-            files structured product feedback, and publishes everything with a tamper-evident audit trail.
+            An autonomous agent system that generates cited technical content, runs hypothesis-driven growth experiments,
+            files structured product feedback, and logs key actions in a tamper-evident audit trail.
         </p>
 
-        <div class="proof-links">
-            <a href="{{ base_url }}/content/" class="proof-card">
-                <strong>Content</strong>
-                <span>Technical posts with snapshot-verified citations</span>
-            </a>
-            <a href="{{ base_url }}/experiments/" class="proof-card">
-                <strong>Experiments</strong>
-                <span>Growth experiments with hypotheses and results</span>
-            </a>
-            <a href="{{ base_url }}/feedback/" class="proof-card">
-                <strong>Feedback</strong>
-                <span>Structured product feedback with repro steps</span>
-            </a>
-            <a href="{{ base_url }}/ledger/" class="proof-card proof-ledger">
-                <strong>Ledger</strong>
-                <span>{{ chain_status.total_entries }} hash-chained entries{% if chain_status.valid %}, chain verified{% endif %}</span>
-            </a>
-        </div>
     </header>
 
     {% if content %}
