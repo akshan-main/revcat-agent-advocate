@@ -297,17 +297,21 @@ def build_rag_index(cache_dir: str, db_conn=None, hf_token: str | None = None,
     client = _get_chroma_client(cache_dir, chroma_api_key, chroma_tenant, chroma_database)
     embedding_fn = _get_embedding_function(api_key=hf_token)
 
-    # Recreate collection to handle doc changes
-    try:
-        client.delete_collection("revenuecat_docs")
-    except Exception:
-        pass
-
-    collection = client.create_collection(
+    # Get or create collection (avoids ChromaDB Cloud soft-delete grace period issues)
+    collection = client.get_or_create_collection(
         name="revenuecat_docs",
         metadata={"hnsw:space": "cosine"},
         embedding_function=embedding_fn,
     )
+
+    # Clear existing data for a fresh rebuild
+    try:
+        existing_ids = collection.get()["ids"]
+        if existing_ids:
+            for i in range(0, len(existing_ids), 500):
+                collection.delete(ids=existing_ids[i:i + 500])
+    except Exception:
+        pass
 
     # Add chunks in batches, truncating any that exceed ChromaDB's limit
     max_doc_bytes = 15000  # ChromaDB Cloud free tier limit is 16384 bytes
@@ -375,8 +379,9 @@ def connect_rag_index(cache_dir: str, db_conn=None, hf_token: str | None = None,
     embedding_fn = _get_embedding_function(api_key=hf_token)
 
     try:
-        collection = client.get_collection(
+        collection = client.get_or_create_collection(
             name="revenuecat_docs",
+            metadata={"hnsw:space": "cosine"},
             embedding_function=embedding_fn,
         )
         count = collection.count()
