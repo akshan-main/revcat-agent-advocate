@@ -887,129 +887,6 @@ footer p { margin-bottom: 0.2rem; }
     line-height: 1.4;
 }
 
-/* Revel chatbot widget */
-.revel-widget {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 1000;
-    font-family: inherit;
-}
-.revel-toggle {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--link);
-    color: #fff;
-    border: none;
-    font-size: 1.4rem;
-    font-weight: 900;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    transition: transform 0.15s;
-}
-.revel-toggle:hover { transform: scale(1.1); }
-
-.revel-panel {
-    position: absolute;
-    bottom: 60px;
-    right: 0;
-    width: 360px;
-    max-height: 450px;
-    background: #fff;
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-    display: flex;
-    flex-direction: column;
-}
-.revel-header {
-    padding: 0.6rem 0.8rem;
-    background: var(--link);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-.revel-header strong { font-size: 0.9rem; }
-.revel-subtitle {
-    font-size: 0.7rem;
-    opacity: 0.85;
-    flex: 1;
-}
-.revel-close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 0 0.2rem;
-}
-.revel-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.6rem;
-    max-height: 300px;
-    min-height: 120px;
-}
-.revel-msg {
-    margin-bottom: 0.5rem;
-    padding: 0.5rem 0.7rem;
-    font-size: 0.82rem;
-    line-height: 1.45;
-    max-width: 90%;
-}
-.revel-bot {
-    background: #f5f5f5;
-    border-left: 3px solid var(--link);
-}
-.revel-user {
-    background: #eef;
-    margin-left: auto;
-    text-align: right;
-    border-right: 3px solid var(--link);
-}
-.revel-input-row {
-    display: flex;
-    border-top: 1px solid var(--border);
-}
-.revel-input-row input {
-    flex: 1;
-    border: none;
-    padding: 0.6rem 0.7rem;
-    font-size: 0.82rem;
-    outline: none;
-}
-.revel-input-row button {
-    border: none;
-    background: var(--link);
-    color: #fff;
-    padding: 0.6rem 1rem;
-    font-size: 0.82rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-.revel-input-row button:hover { opacity: 0.9; }
-.revel-key-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.3rem 0.7rem;
-    border-top: 1px solid var(--border);
-    background: #f8f9fa;
-    font-size: 0.72rem;
-    color: #666;
-}
-.revel-key-btn {
-    border: 1px solid #ccc;
-    background: transparent;
-    border-radius: 3px;
-    padding: 0.15rem 0.5rem;
-    font-size: 0.7rem;
-    cursor: pointer;
-    color: #666;
-}
-.revel-key-btn:hover { background: #eee; }
-
 /* Responsive */
 @media (max-width: 640px) {
     nav { flex-direction: column; gap: 0.5rem; }
@@ -1017,7 +894,6 @@ footer p { margin-bottom: 0.2rem; }
     main { padding: 0 1rem; }
     .experiment-header, .feedback-header { flex-direction: column; }
     .skills-grid { grid-template-columns: 1fr; }
-    .revel-panel { width: 300px; right: -0.5rem; }
     .scorecard-grid { grid-template-columns: 1fr 1fr; }
 }
 

@@ -82,7 +82,7 @@
     </p>
 
     {% if tweets_data %}
-    <div class="tweet-embeds" id="tweet-embeds">
+    <div class="tweet-embeds" id="tweet-embeds" style="max-height:600px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:0.75rem;">
         {% for tweet in tweets_data %}
         <div class="tweet-embed-item" data-index="{{ loop.index0 }}" style="{% if loop.index0 >= 4 %}display:none;{% endif %}">
             <span class="badge {{ 'verified' if tweet.status == 'sent' else 'draft' }}">{{ tweet.status | default('draft') }}</span>
@@ -95,7 +95,7 @@
     </div>
     {% if tweets_data | length > 4 %}
     <div style="text-align:center;margin:1rem 0;">
-        <button id="show-more-tweets" class="show-more-btn" onclick="showMoreTweets()">Show more</button>
+        <button id="show-more-tweets" class="show-more-btn" onclick="showMoreTweets()">Show more ({{ tweets_data | length - 4 }} remaining)</button>
     </div>
     {% endif %}
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
@@ -119,15 +119,20 @@
 var _tweetShowCount = 4;
 function showMoreTweets() {
     var items = document.querySelectorAll('.tweet-embed-item');
-    var nextLimit = _tweetShowCount + 5;
+    var nextLimit = _tweetShowCount + 4;
     for (var i = _tweetShowCount; i < Math.min(nextLimit, items.length); i++) {
         items[i].style.display = '';
     }
     _tweetShowCount = nextLimit;
+    var btn = document.getElementById('show-more-tweets');
     if (_tweetShowCount >= items.length) {
-        var btn = document.getElementById('show-more-tweets');
         if (btn) btn.style.display = 'none';
+    } else if (btn) {
+        btn.textContent = 'Show more (' + (items.length - _tweetShowCount) + ' remaining)';
     }
+    // Scroll to bottom of container to show new tweets
+    var container = document.getElementById('tweet-embeds');
+    if (container) container.scrollTop = container.scrollHeight;
     if (window.twttr && window.twttr.widgets) {
         window.twttr.widgets.load();
     }

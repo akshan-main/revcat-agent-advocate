@@ -237,99 +237,6 @@ def _load_doc_snippets(sources: list, cache_dir: str) -> list[dict]:
     return snippets
 
 
-def _build_revel_prompt(db_conn, config, chain, docs_indexed: int = 0) -> str:
-    """Build the Revel chatbot system prompt from actual DB state."""
-    import glob as _glob
-    import yaml as _yaml
-    from ..db import count_rows
-
-    # Read Claude Code skill descriptions from disk
-    skills_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".claude", "skills")
-    skill_descriptions = []
-    for skill_file in sorted(_glob.glob(os.path.join(skills_dir, "*/SKILL.md"))):
-        try:
-            with open(skill_file, "r") as f:
-                content = f.read()
-            # Parse YAML front matter
-            if content.startswith("---"):
-                parts = content.split("---", 2)
-                if len(parts) >= 3:
-                    meta = _yaml.safe_load(parts[1])
-                    if meta and isinstance(meta, dict):
-                        name = meta.get("name", os.path.basename(os.path.dirname(skill_file)))
-                        desc = meta.get("description", "")
-                        if name and desc:
-                            skill_descriptions.append(f"/{name}: {desc}")
-        except Exception:
-            pass
-
-    all_content = query_rows(db_conn, "content_pieces")
-    content_verified = sum(1 for c in all_content if c.get("status") == "verified")
-    content_draft = sum(1 for c in all_content if c.get("status") == "draft" and c.get("slug") != "application-letter")
-    content_titles = [c.get("title", c.get("slug", "")) for c in all_content if c.get("slug") != "application-letter"]
-
-    experiments = query_rows(db_conn, "growth_experiments")
-    exp_names = [e.get("name", "") for e in experiments]
-
-    feedback_count = count_rows(db_conn, "product_feedback")
-    seo_count = count_rows(db_conn, "seo_pages")
-    doc_count = docs_indexed
-    ledger_count = chain.total_entries
-    chain_valid = chain.valid
-
-    runs = query_rows(db_conn, "run_log", order_by="sequence DESC", limit=5)
-    recent_cmds = [f"seq {r.get('sequence')}: {r.get('command')}" for r in runs]
-
-    return f"""You are Revel, a chatbot embedded on the revcat-agent-advocate site. You answer questions about how this autonomous agent system works — its code, architecture, and actual outputs.
-
-RULES:
-- Only answer questions about this agent system. If someone asks about weather, jokes, recipes, or anything unrelated, say "That's not related to this agent" and suggest what they can ask about.
-- Be concise. 2-4 sentences max unless the question needs more detail.
-- Be honest. If you don't know something specific, say so.
-- For complex questions or hiring inquiries, direct them to akshankrithick305@gmail.com
-- Never make up numbers. Use only the stats below.
-
-REAL STATS FROM DATABASE (as of site build):
-- Doc pages cached: {doc_count}
-- Content pieces: {content_verified} verified, {content_draft} draft
-- Content titles: {', '.join(content_titles)}
-- SEO pages: {seo_count}
-- Experiments: {len(experiments)} ({', '.join(exp_names)})
-- Feedback items: {feedback_count}
-- Ledger entries: {ledger_count}, chain {'verified' if chain_valid else 'BROKEN'}
-- Recent runs: {'; '.join(recent_cmds)}
-
-HOW THE SYSTEM WORKS:
-- Docs: Fetches RevenueCat's LLM index, downloads .md mirror of each doc page, hashes each for change detection, stores in .docs_cache/pages/
-- Search: BM25 ranking (k1=1.2, b=0.75) over cached docs. Optional RAG with HuggingFace embeddings.
-- Content: BM25 search -> Claude Sonnet builds outline -> Claude writes draft with citations -> verifier checks links + doc hashes
-- Tweets: Agent tool-use loop: scan GitHub issues + Reddit -> search docs -> Claude drafts tweet -> critic agent reviews (programmatic + LLM) -> posts via Twitter API v2
-- Ledger: Key CLI commands log a RunEntry. Hash = SHA256(prev_hash + canonical_json). First entry prev_hash='GENESIS'. Optional HMAC signing.
-- Experiments: Agentic tool-use loop — agent researches competitive landscape (web search), analyzes docs (RAG), reviews existing work (DB queries), designs hypothesis, creates content artifacts, concludes with findings
-- Feedback: Agentic tool-use loop — agent explores docs (RAG + reading cached pages), searches web for known issues, reads code, identifies real inconsistencies/gaps, files structured feedback with evidence URLs
-- Safety: DRY_RUN=true (default) blocks external posts. Tweet critic agent reviews every post before publishing. All content must cite documentation.
-- You have web search available. Use it to find relevant information about RevenueCat, subscription billing, or this agent system when your built-in knowledge doesn't cover the question. Cite web sources with URLs.
-- Site: Jinja2 templates rendered with SQLite data -> static HTML on GitHub Pages
-- MCP Server: FastMCP with 22 tools, stdio + SSE transport
-- Application letter: Generated by Claude with agentic tool loop — agent reads its own codebase, queries DB, searches docs, fetches URLs, then writes the letter
-- Claude Code Skills: Slash commands that combine the ingested doc knowledge base with a developer's actual codebase. Any developer using Claude Code can get RevenueCat-specific help grounded in real docs.
-
-CLAUDE CODE SKILLS (installed as slash commands):
-{chr(10).join('- ' + s for s in skill_descriptions) if skill_descriptions else '- No skills found'}
-
-KEY FILES:
-- cli.py: All CLI commands
-- advocate/ledger.py: Hash chain implementation
-- advocate/knowledge/ingest.py: Doc fetching
-- advocate/knowledge/search.py: BM25 search
-- advocate/content/writer.py: Content generation
-- advocate/content/verifier.py: Citation verification
-- advocate/social/twitter.py: Tweet agent
-- advocate/agent/mcp_server.py: MCP server (22 tools)
-- advocate/site/generator.py: Static site builder
-- .claude/skills/*/SKILL.md: Claude Code developer skills"""
-
-
 def _build_scorecard_stats(db_conn, chain, docs_indexed: int) -> dict:
     """Build aggregate stats for the scorecard page."""
     from ..db import count_rows
@@ -486,16 +393,12 @@ def build_site(db_conn, config, clean: bool = False):
     except Exception:
         docs_indexed = 0
 
-    # Build Revel chatbot system prompt from real DB data
-    revel_system_prompt = _build_revel_prompt(db_conn, config, chain, docs_indexed)
-
     # Shared context
     shared = {
         "chain_status": chain,
         "site_title": "revcat-agent-advocate",
         "build_date": build_date,
         "base_url": base_url,
-        "revel_system_prompt": revel_system_prompt,
         "search_api_url": config.search_api_url or "",
     }
 

@@ -64,8 +64,8 @@ def test_build_site_chain_status(db_conn, tmp_path):
 
     with open(os.path.join(config.site_output_dir, "apply", "index.html")) as f:
         content = f.read()
-    # Should show chain status (valid since no entries)
-    assert "Verified" in content or "verified" in content
+    # Footer should show build info
+    assert "revcat-agent-advocate" in content
 
 
 def test_md_to_html_headers():

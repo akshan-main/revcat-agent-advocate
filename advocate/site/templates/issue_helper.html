@@ -13,18 +13,11 @@
     </p>
 
     <div class="helper-input-section">
-        <div class="api-key-section">
-            <label>Provider:</label>
-            <select id="helper-provider" onchange="helperProviderChange()">
-                <option value="anthropic">Anthropic (Claude)</option>
-                <option value="openai">OpenAI (GPT-4o-mini)</option>
-            </select>
-            <label>API Key:</label>
-            <input type="password" id="helper-key" placeholder="sk-ant-... or sk-..." />
-            <button onclick="helperSaveKey()">Save</button>
-            <span id="helper-key-status" class="key-status"></span>
+        <div class="api-key-section" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <button onclick="helperSetKey()" style="padding:0.4rem 1rem;border:1px solid var(--border);border-radius:4px;background:#f5f5f5;cursor:pointer;font-size:0.85rem;">Set API Key</button>
+            <span id="helper-key-status" class="key-status" style="font-size:0.85rem;"></span>
         </div>
-        <p class="key-notice">Your key is stored in your browser only. It goes directly to the AI provider, never to our server.</p>
+        <p class="key-notice" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem;">Your key is stored in your browser only. It goes directly to the AI provider (Anthropic or OpenAI), never to our server.</p>
 
         <label for="helper-issue"><strong>Paste a GitHub issue URL or describe the problem:</strong></label>
         <textarea id="helper-issue" rows="5" placeholder="https://github.com/RevenueCat/purchases-ios/issues/1234
@@ -61,14 +54,6 @@ or paste the issue text directly:
         </div>
         <div id="helper-answer" class="helper-answer-box"></div>
         <div id="helper-raw-md" style="display:none;"></div>
-    </div>
-
-    <h2>Recent Open Issues</h2>
-    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
-        Live from RevenueCat's GitHub repos (fetched client-side). Click any issue to load it into the helper.
-    </p>
-    <div id="recent-issues-list">
-        <p style="font-size:0.82rem;color:var(--text-muted);">Loading from GitHub API...</p>
     </div>
 
     <h2>How It Works</h2>
@@ -122,33 +107,9 @@ var HELPER_DOC_INDEX = {{ doc_index_json }};
 var HELPER_FETCHED_ISSUE = null;
 var SEARCH_API_URL = {{ search_api_url | default('') | tojson }};
 
-var RC_REPOS = [
-    'RevenueCat/purchases-ios',
-    'RevenueCat/purchases-android',
-    'RevenueCat/purchases-flutter',
-    'RevenueCat/purchases-unity',
-    'RevenueCat/purchases-kmp',
-    'RevenueCat/purchases-react-native'
-];
-
 // Init
 (function() {
-    var k = localStorage.getItem(HELPER_KEY_STORE);
-    var p = localStorage.getItem(HELPER_PROVIDER_STORE) || 'anthropic';
-    if (k) {
-        document.getElementById('helper-key').value = '••••••••' + k.slice(-4);
-        document.getElementById('helper-provider').value = p;
-    }
     helperUpdateStatus();
-    loadRecentIssues();
-    // Fallback if loading takes too long
-    setTimeout(function() {
-        var el = document.getElementById('recent-issues-list');
-        if (el && el.innerHTML.indexOf('Loading') !== -1) {
-            el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-muted);">GitHub API rate limit reached (60 req/hr unauthenticated). Paste an issue URL directly above.</p>';
-        }
-    }, 8000);
-
     // Auto-detect GitHub URL on paste
     document.getElementById('helper-issue').addEventListener('input', function() {
         var val = this.value.trim();
@@ -211,88 +172,12 @@ async function fetchGitHubIssue(owner, repo, number) {
     }
 }
 
-async function loadRecentIssues() {
-    var container = document.getElementById('recent-issues-list');
-    var allIssues = [];
-
-    // Fetch from first 3 repos in parallel with timeout
-    var fetches = RC_REPOS.slice(0, 3).map(function(repo, i) {
-        var controller = new AbortController();
-        setTimeout(function() { controller.abort(); }, 5000);
-        return fetch('https://api.github.com/repos/' + repo + '/issues?state=open&per_page=5&sort=created', {
-            headers: {'Accept': 'application/vnd.github.v3+json'},
-            signal: controller.signal
-        }).then(function(resp) {
-            if (!resp.ok) return [];
-            return resp.json();
-        }).then(function(issues) {
-            return (issues || []).filter(function(iss) { return !iss.pull_request; }).map(function(iss) {
-                return {
-                    title: iss.title,
-                    url: iss.html_url,
-                    repo: repo.split('/')[1],
-                    number: iss.number,
-                    created: iss.created_at.substring(0, 10),
-                    labels: (iss.labels || []).map(function(l) { return l.name; }).join(', '),
-                    comments: iss.comments,
-                };
-            });
-        }).catch(function() { return []; });
-    });
-
-    try {
-        var results = await Promise.all(fetches);
-        results.forEach(function(issues) { allIssues = allIssues.concat(issues); });
-    } catch(e) {}
-
-    if (allIssues.length === 0) {
-        container.innerHTML = '<p style="font-size:0.82rem;color:var(--text-muted);">Could not load issues (GitHub API rate limit). Paste an issue URL directly above.</p>';
-        return;
-    }
-
-    // Sort by date, show latest 10
-    allIssues.sort(function(a, b) { return b.created.localeCompare(a.created); });
-    allIssues = allIssues.slice(0, 10);
-
-    var html = '<div class="recent-issues-grid">';
-    allIssues.forEach(function(iss) {
-        html += '<div class="recent-issue-card" onclick="loadIssueFromCard(\'' + iss.url + '\')" style="cursor:pointer;">'
-            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-            + '<strong style="font-size:0.85rem;color:var(--link);">' + iss.repo + '#' + iss.number + '</strong>'
-            + '<span style="font-size:0.72rem;color:var(--text-muted);">' + iss.created + '</span>'
-            + '</div>'
-            + '<div style="font-size:0.85rem;margin-top:0.2rem;">' + iss.title + '</div>'
-            + '<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem;">'
-            + (iss.labels ? iss.labels : '') + (iss.comments > 0 ? ' · ' + iss.comments + ' comments' : '')
-            + '</div></div>';
-    });
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-function loadIssueFromCard(url) {
-    document.getElementById('helper-issue').value = url;
-    var gh = parseGitHubUrl(url);
-    if (gh) fetchGitHubIssue(gh.owner, gh.repo, gh.number);
-    window.scrollTo({top: 0, behavior: 'smooth'});
-}
-
-function helperProviderChange() {
-    localStorage.setItem(HELPER_PROVIDER_STORE, document.getElementById('helper-provider').value);
-    helperUpdateStatus();
-}
-
-function helperSaveKey() {
-    var k = document.getElementById('helper-key').value.trim();
-    if (!k || k.startsWith('••')) {
-        k = prompt('Enter your API key:\n• Anthropic: starts with sk-ant-\n• OpenAI: starts with sk-');
-    }
+function helperSetKey() {
+    var k = prompt('Enter your API key:\n\n• Anthropic: starts with sk-ant- (uses Claude Sonnet)\n• OpenAI: starts with sk- (uses GPT-4o-mini)\n\nStored in your browser only, sent directly to the AI provider.');
     if (!k) return;
     var p = k.startsWith('sk-ant-') ? 'anthropic' : 'openai';
     localStorage.setItem(HELPER_KEY_STORE, k);
     localStorage.setItem(HELPER_PROVIDER_STORE, p);
-    document.getElementById('helper-provider').value = p;
-    document.getElementById('helper-key').value = '••••••••' + k.slice(-4);
     helperUpdateStatus();
 }
 
@@ -302,10 +187,10 @@ function helperUpdateStatus() {
     var p = localStorage.getItem(HELPER_PROVIDER_STORE) || 'anthropic';
     if (k) {
         var model = p === 'openai' ? 'GPT-4o-mini' : 'Claude Sonnet';
-        el.textContent = 'Ready (' + model + ')';
+        el.textContent = 'Ready (' + model + ', key: ...' + k.slice(-4) + ')';
         el.style.color = 'var(--green)';
     } else {
-        el.textContent = 'No key set';
+        el.textContent = 'No key set — click "Set API Key" or just click "Get Answer"';
         el.style.color = 'var(--text-muted)';
     }
 }
@@ -355,7 +240,16 @@ async function helperSubmit() {
     if (!rawInput) { alert('Please paste an issue URL or question first.'); return; }
 
     var key = localStorage.getItem(HELPER_KEY_STORE);
-    if (!key) { helperSaveKey(); key = localStorage.getItem(HELPER_KEY_STORE); if (!key) return; }
+    if (!key) {
+        key = prompt('Enter your API key to use Issue Helper:\n\n• Anthropic: starts with sk-ant-\n• OpenAI: starts with sk-\n\nYour key is stored ONLY in your browser\'s localStorage.\nIt goes directly to the AI provider, never to our server.');
+        if (!key) return;
+        var p = key.startsWith('sk-ant-') ? 'anthropic' : 'openai';
+        localStorage.setItem(HELPER_KEY_STORE, key);
+        localStorage.setItem(HELPER_PROVIDER_STORE, p);
+        document.getElementById('helper-provider').value = p;
+        document.getElementById('helper-key').value = '••••••••' + key.slice(-4);
+        helperUpdateStatus();
+    }
 
     var btn = document.getElementById('helper-submit-btn');
     var status = document.getElementById('helper-status');
@@ -511,20 +405,5 @@ function helperMdToHtml(md) {
 .helper-answer-box code { font-size: 0.85em; }
 .helper-answer-box a { color: var(--link); }
 .helper-answer-box li { margin-bottom: 0.3rem; }
-.recent-issues-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-.recent-issue-card {
-    padding: 0.6rem 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    transition: background 0.15s;
-}
-.recent-issue-card:hover {
-    background: #f8f8f8;
-    border-color: var(--link);
-}
 </style>
 {% endblock %}
