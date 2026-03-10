@@ -473,7 +473,7 @@ def run_experiment(ctx, name, inputs):
                      ),
                      verification=None)
 
-        console.print(f"  [yellow]Experiment running[/yellow] — outputs recorded, awaiting engagement data to conclude.")
+        console.print("  [yellow]Experiment running[/yellow] — outputs recorded, awaiting engagement data to conclude.")
         console.print(f"  Outputs: {json.dumps(results)}")
 
 
