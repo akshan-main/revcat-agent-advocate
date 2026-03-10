@@ -256,7 +256,7 @@ def run_experiment(ctx, name, inputs):
     inputs_dict = json.loads(inputs) if isinstance(inputs, str) else inputs
 
     with start_run(db, "run-experiment", {"name": name, "inputs": inputs_dict}, config) as run_ctx:
-        from advocate.growth.experiments import start_experiment, conclude_experiment
+        from advocate.growth.experiments import start_experiment, record_experiment_output
         from advocate.knowledge.search import build_index, search
 
         console.print(f"\n[bold]Running experiment: {name}[/bold]")
@@ -464,7 +464,7 @@ def run_experiment(ctx, name, inputs):
                 outputs = agentic_results.get("outputs", {})
                 results = agentic_results.get("results", {})
 
-        conclude_experiment(db, exp_id, outputs, results)
+        record_experiment_output(db, exp_id, outputs, results)
 
         finalize_run(run_ctx, config, db,
                      outputs=LedgerOutputs(
@@ -473,7 +473,8 @@ def run_experiment(ctx, name, inputs):
                      ),
                      verification=None)
 
-        console.print(f"  [green]Experiment concluded[/green]: {json.dumps(results)}")
+        console.print(f"  [yellow]Experiment running[/yellow] — outputs recorded, awaiting engagement data to conclude.")
+        console.print(f"  Outputs: {json.dumps(results)}")
 
 
 @main.command("generate-feedback")
@@ -912,19 +913,20 @@ def _run_agentic_experiment(config, db, run_ctx, exp_id):
             },
         },
         {
-            "name": "conclude_experiment",
-            "description": "Conclude the experiment with your findings. Call this LAST after all content is generated.",
+            "name": "record_experiment_output",
+            "description": "Record experiment outputs and findings. The experiment stays 'running' — it can only be concluded later when real engagement data (page views, clicks, search rankings) is measured.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "hypothesis": {"type": "string", "description": "The hypothesis you tested"},
                     "tactic": {"type": "string", "description": "What you actually did"},
                     "findings": {"type": "string", "description": "What you found — be specific with evidence"},
-                    "metric_name": {"type": "string", "description": "What you measured"},
-                    "metric_value": {"type": "string", "description": "The measurement"},
+                    "output_metric": {"type": "string", "description": "What you produced (e.g. content_pieces, seo_pages)"},
+                    "output_value": {"type": "string", "description": "The production output (e.g. '3 articles with 24 citations')"},
+                    "pending_engagement": {"type": "array", "items": {"type": "string"}, "description": "What engagement metrics need to be tracked to conclude this experiment"},
                     "artifacts_produced": {"type": "array", "items": {"type": "string"}, "description": "List of content slugs or other artifacts"},
                 },
-                "required": ["hypothesis", "tactic", "findings", "metric_name", "metric_value"],
+                "required": ["hypothesis", "tactic", "findings", "output_metric", "output_value", "pending_engagement"],
             },
         },
     ]
@@ -1029,7 +1031,7 @@ def _run_agentic_experiment(config, db, run_ctx, exp_id):
             record_content(db_conn, piece)
             return f"Content saved: '{title}' (slug: {slug}, {piece.word_count} words, {piece.citations_count} citations)"
 
-        elif name == "conclude_experiment":
+        elif name == "record_experiment_output":
             experiment_result["outputs"] = {
                 "hypothesis": inp["hypothesis"],
                 "tactic": inp["tactic"],
@@ -1037,17 +1039,18 @@ def _run_agentic_experiment(config, db, run_ctx, exp_id):
                 "artifacts": inp.get("artifacts_produced", []),
             }
             experiment_result["results"] = {
-                "metric": inp["metric_name"],
-                "value": inp["metric_value"],
-                "hypothesis": inp["hypothesis"],
+                "output_metric": inp["output_metric"],
+                "output_value": inp["output_value"],
+                "pending_engagement": inp.get("pending_engagement", []),
+                "note": "Experiment running — outputs recorded, awaiting engagement data to conclude.",
             }
             # Update the experiment row with the agent's actual hypothesis/tactic
             update_row(db_conn, "growth_experiments", exp_id, {
                 "hypothesis": inp["hypothesis"],
                 "tactic": inp["tactic"],
-                "metric": inp["metric_name"],
+                "metric": inp["output_metric"],
             })
-            return "Experiment concluded."
+            return "Experiment outputs recorded. Status remains 'running' — conclude only when engagement data is available."
 
         return "Unknown tool"
 
@@ -1062,7 +1065,7 @@ You have tools to:
 - read_file: Read cached doc files or codebase
 - query_database: Check what experiments have already been run
 - write_content: Create content pieces as experiment outputs (articles, guides, analyses)
-- conclude_experiment: Submit your experiment conclusion
+- record_experiment_output: Record outputs and findings (experiment stays running until engagement is measured)
 
 PROCESS:
 1. query_database for growth_experiments to see what's been done before
@@ -1071,7 +1074,7 @@ PROCESS:
 4. Based on research, design a specific hypothesis and tactic
 5. Execute the tactic — create 1-3 content pieces using write_content
 6. Each piece must have [Source](url) citations from search_docs results
-7. conclude_experiment with specific findings and evidence
+7. record_experiment_output with specific findings, outputs, and what engagement metrics are pending
 
 WHAT MAKES A GOOD EXPERIMENT:
 - Specific, testable hypothesis (not "content is good")

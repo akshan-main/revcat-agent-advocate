@@ -103,20 +103,19 @@ or paste the issue text directly:
 <script>
 var HELPER_KEY_STORE = 'helper_api_key';
 var HELPER_PROVIDER_STORE = 'helper_provider';
-var HELPER_DOC_INDEX = {{ doc_index_json }};
+var HELPER_DOC_INDEX = {{ doc_index_json | safe }};
 var HELPER_FETCHED_ISSUE = null;
 var SEARCH_API_URL = {{ search_api_url | default('') | tojson }};
 
-// Init
-(function() {
+// Init — deferred to ensure all functions are defined first
+document.addEventListener('DOMContentLoaded', function() {
     helperUpdateStatus();
-    // Auto-detect GitHub URL on paste
     document.getElementById('helper-issue').addEventListener('input', function() {
         var val = this.value.trim();
         var gh = parseGitHubUrl(val);
         if (gh) { fetchGitHubIssue(gh.owner, gh.repo, gh.number); }
     });
-})();
+});
 
 function parseGitHubUrl(text) {
     var m = text.match(/github\.com\/([^\/]+)\/([^\/]+)\/issues\/(\d+)/);
@@ -246,8 +245,6 @@ async function helperSubmit() {
         var p = key.startsWith('sk-ant-') ? 'anthropic' : 'openai';
         localStorage.setItem(HELPER_KEY_STORE, key);
         localStorage.setItem(HELPER_PROVIDER_STORE, p);
-        document.getElementById('helper-provider').value = p;
-        document.getElementById('helper-key').value = '••••••••' + key.slice(-4);
         helperUpdateStatus();
     }
 

@@ -82,11 +82,27 @@ def get_experiment(db_conn, experiment_id: int) -> dict | None:
     return rows[0] if rows else None
 
 
-def conclude_experiment(db_conn, experiment_id: int, outputs: dict, results: dict):
-    """Mark an experiment as concluded with results."""
+def record_experiment_output(db_conn, experiment_id: int, outputs: dict, results: dict):
+    """Record experiment outputs. Status stays 'running' — conclusion requires measured engagement data."""
+    update_row(db_conn, "growth_experiments", experiment_id, {
+        "outputs_json": outputs,
+        "results_json": results,
+    })
+
+
+def conclude_experiment(db_conn, experiment_id: int, results: dict):
+    """Mark an experiment as concluded. Requires actual measured engagement data."""
+    required_engagement_keys = {"page_views", "clicks", "impressions", "engagement_rate",
+                                "search_ranking", "shares", "conversions", "return_visitors"}
+    has_engagement = any(k in results for k in required_engagement_keys)
+    if not has_engagement:
+        raise ValueError(
+            "Cannot conclude experiment without measured engagement data. "
+            f"Results must include at least one of: {', '.join(sorted(required_engagement_keys))}. "
+            "Use record_experiment_output() to save production outputs while the experiment is still running."
+        )
     update_row(db_conn, "growth_experiments", experiment_id, {
         "status": ExperimentStatus.CONCLUDED.value,
-        "outputs_json": outputs,
         "results_json": results,
         "concluded_at": now_iso(),
     })
