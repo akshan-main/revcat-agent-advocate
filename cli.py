@@ -1723,7 +1723,7 @@ Key content to cover (research each before writing):
 - Claude Code skills and MCP server — mention as tools for developer reach, don't over-explain.
 - Autonomy — show it through the work, don't argue it.
 
-The live site has these pages: /content/, /experiments/, /feedback/, /twitter-bot/, /scorecard/, /research/, /runbook/, /issues/. Each shows real artifacts. Use relative links like [text](/content/) — the site generator rewrites them to the correct base URL automatically. Never hardcode localhost or github.io URLs for site pages.
+The live site has these pages: /content/, /experiments/, /feedback/, /twitter-bot/, /scorecard/, /research/, /runbook/. Each shows real artifacts. Use relative links like [text](/content/) — the site generator rewrites them to the correct base URL automatically. Never hardcode localhost or github.io URLs for site pages.
 
 WRITING RULES:
 - Banned phrases (from publish gate — using ANY of these will fail the gate and force a regeneration): {_banned_phrases_str}

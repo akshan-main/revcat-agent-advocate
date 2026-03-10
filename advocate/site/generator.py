@@ -45,7 +45,7 @@ def _md_to_html(md_text: str, base_url: str = "") -> Markup:
     # Normalize absolute GitHub Pages URLs to relative paths first
     # This ensures the site works regardless of who deploys it
     html = re.sub(
-        r'href="https?://[^"]*\.github\.io/[^"/]*/((content|experiments|feedback|runbook|apply|twitter-bot|issues|scorecard|research)(?:/[^"]*)?)"',
+        r'href="https?://[^"]*\.github\.io/[^"/]*/((content|experiments|feedback|runbook|apply|twitter-bot|scorecard|research)(?:/[^"]*)?)"',
         r'href="/\1"',
         html,
     )
@@ -58,7 +58,7 @@ def _md_to_html(md_text: str, base_url: str = "") -> Markup:
     # Rewrite internal links (e.g. /content/ -> /revcat-agent-advocate/content/)
     if base_url:
         html = re.sub(
-            r'href="/((?:content|experiments|feedback|runbook|apply|twitter-bot|issues|scorecard|research)(?:/[^"]*)?)"',
+            r'href="/((?:content|experiments|feedback|runbook|apply|twitter-bot|scorecard|research)(?:/[^"]*)?)"',
             f'href="{base_url}/\\1"',
             html,
         )
@@ -410,7 +410,7 @@ def build_site(db_conn, config, clean: bool = False):
         site_dir = output_dir
 
     # Ensure output dirs
-    for subdir in ["apply", "content", "experiments", "feedback", "runbook", "assets", "twitter-bot", "issues", "scorecard", "research"]:
+    for subdir in ["apply", "content", "experiments", "feedback", "runbook", "assets", "twitter-bot", "scorecard", "research"]:
         os.makedirs(os.path.join(site_dir, subdir), exist_ok=True)
 
     # Root redirect (at site_output/index.html)
@@ -595,20 +595,7 @@ def build_site(db_conn, config, clean: bool = False):
             docs_indexed=docs_indexed,
         ))
 
-    # 6c. Issue Helper page — interactive doc-grounded issue answerer
-    doc_index_for_helper = _build_doc_index_json(config.docs_cache_dir, db_conn)
-    doc_categories = _build_doc_categories(config.docs_cache_dir)
-    issue_helper_template = env.get_template("issue_helper.html")
-    with open(os.path.join(site_dir, "issues", "index.html"), "w") as f:
-        f.write(issue_helper_template.render(
-            **shared,
-            page_title="Issue Helper",
-            doc_count=docs_indexed,
-            doc_index_json=json.dumps(doc_index_for_helper),
-            doc_categories=doc_categories,
-        ))
-
-    # 6d. Scorecard page — live operational metrics from DB
+    # 6c. Scorecard page — live operational metrics from DB
     scorecard_stats = _build_scorecard_stats(db_conn, chain, docs_indexed)
     command_stats = _build_command_stats(db_conn)
     failed_runs = [dict(r) for r in query_rows(db_conn, "run_log", where={"success": 0}, order_by="started_at DESC")]
@@ -759,7 +746,6 @@ def _generate_sitemap(output_dir: str, base_url: str, content_slugs: list[str], 
         ("experiments/", "0.7"),
         ("feedback/", "0.7"),
         ("twitter-bot/", "0.8"),
-        ("issues/", "0.9"),
         ("scorecard/", "0.8"),
         ("research/", "0.7"),
         ("runbook/", "0.5"),

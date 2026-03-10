@@ -79,6 +79,7 @@ jobs:
           DEMO_MODE: ${{ secrets.ANTHROPIC_API_KEY != '' && 'false' || 'true' }}
           DRY_RUN: "true"
           SITE_BASE_URL: "/revcat-agent-advocate"
+          SEARCH_API_URL: ${{ secrets.SEARCH_API_URL }}
         run: revcat-advocate build-site --clean
 
       - name: Publish gate
