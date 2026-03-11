@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS product_feedback (
 CREATE TABLE IF NOT EXISTS run_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id TEXT UNIQUE NOT NULL,
-    sequence INTEGER NOT NULL,
+    sequence INTEGER NOT NULL UNIQUE,
     command TEXT NOT NULL,
     started_at TEXT NOT NULL,
     ended_at TEXT,
