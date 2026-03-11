@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from advocate.config import Config
-from advocate.db import init_db, now_iso
+from advocate.db import now_iso
 from advocate.ledger import start_run, finalize_run, log_tool_call, log_source, verify_chain
 from advocate.models import (
     ContentPiece, ContentType, LedgerOutputs,
@@ -30,11 +30,8 @@ class _LazyDB:
 
     def _init(self):
         if self._conn is None:
-            self._conn = init_db(
-                self._config.db_path,
-                turso_url=self._config.turso_database_url,
-                turso_token=self._config.turso_auth_token,
-            )
+            from advocate.db import init_db_from_config
+            self._conn = init_db_from_config(self._config)
         return self._conn
 
     def __getattr__(self, name):
@@ -466,15 +463,22 @@ def run_experiment(ctx, name, inputs):
 
         record_experiment_output(db, exp_id, outputs, results)
 
+        # Auto-evaluate and conclude with verdict
+        from advocate.growth.experiments import evaluate_experiment
+        try:
+            verdict = evaluate_experiment(db, exp_id, config)
+            console.print(f"  [bold]Verdict: {verdict['verdict'].upper()}[/bold] ({int(verdict['confidence']*100)}% confidence)")
+            console.print(f"  Reasoning: {verdict['reasoning'][:200]}")
+            console.print(f"  Next action: {verdict['next_action']}")
+        except Exception as e:
+            console.print(f"  [yellow]Could not generate verdict: {e}[/yellow]")
+
         finalize_run(run_ctx, config, db,
                      outputs=LedgerOutputs(
                          artifact_type="experiment",
                          additional={"experiment_id": exp_id, **outputs},
                      ),
                      verification=None)
-
-        console.print("  [yellow]Experiment running[/yellow] — outputs recorded, awaiting engagement data to conclude.")
-        console.print(f"  Outputs: {json.dumps(results)}")
 
 
 @main.command("generate-feedback")
@@ -627,7 +631,7 @@ def _generate_feedback_with_claude(config, db, run_ctx, count):
                     chunks = get_context_chunks(inp["query"], _rag_index, max_chunks=10, max_words=4000)
                     out = []
                     for chunk in chunks:
-                        out.append(f"**{chunk.doc_title}** (score: {chunk.score:.3f})\nURL: {chunk.doc_url}\n\n{chunk.text}")
+                        out.append(f"**{chunk.doc_title}**\nURL: {chunk.doc_url}\n\n{chunk.text}")
                     bm25_results = search_docs(inp["query"], index, config.docs_cache_dir, top_k=5)
                     for r in bm25_results:
                         if not any(r.url in o for o in out):
@@ -940,7 +944,7 @@ def _run_agentic_experiment(config, db, run_ctx, exp_id):
                     chunks = get_context_chunks(inp["query"], _rag_index, max_chunks=8, max_words=3000)
                     out = []
                     for chunk in chunks:
-                        out.append(f"**{chunk.doc_title}** (score: {chunk.score:.3f})\nURL: {chunk.doc_url}\n\n{chunk.text}")
+                        out.append(f"**{chunk.doc_title}**\nURL: {chunk.doc_url}\n\n{chunk.text}")
                     bm25_results = search_docs(inp["query"], index, config.docs_cache_dir, top_k=5)
                     for r in bm25_results:
                         if not any(r.url in o for o in out):
@@ -1248,11 +1252,24 @@ def publish_site(ctx):
     from datetime import datetime, timezone
 
     with start_run(db, "publish-site", {"repo": config.github_repo}, config) as run_ctx:
+        # Run publish gate before pushing
+        from advocate.site.publish_gate import run_publish_gate
+        gate = run_publish_gate(config.site_output_dir, db, config)
+        log_tool_call(run_ctx, "publish_gate", "", gate.summary)
+        if not gate.passed:
+            console.print(f"[red]Publish gate FAILED:[/red] {gate.summary}")
+            for v in gate.violations:
+                console.print(f"  [red]- {v.phrase}:[/red] {v.reason}")
+            finalize_run(run_ctx, config, db,
+                         outputs=LedgerOutputs(artifact_type="publish", additional={"gate": "failed"}),
+                         verification=None, success=False)
+            return
+
         date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         success = True
 
         try:
-            subprocess.run(["git", "add", config.site_output_dir], check=True, cwd=".")
+            subprocess.run(["git", "add", "-f", config.site_output_dir], check=True, cwd=".")
             log_tool_call(run_ctx, "git.add", config.site_output_dir, "staged")
             subprocess.run(["git", "commit", "-m", f"Update revcat-agent-advocate site, {date}"], check=True, cwd=".")
             log_tool_call(run_ctx, "git.commit", date, "committed")
@@ -1571,7 +1588,7 @@ def _generate_application_with_claude(config, doc_snippets, run_ctx, gate_feedba
                     chunks = get_context_chunks(inp["query"], _rag_index, max_chunks=10, max_words=4000)
                     out = []
                     for chunk in chunks:
-                        out.append(f"**{chunk.doc_title}** (score: {chunk.score:.3f})\nURL: {chunk.doc_url}\n\n{chunk.text}")
+                        out.append(f"**{chunk.doc_title}**\nURL: {chunk.doc_url}\n\n{chunk.text}")
                     # Also add BM25 results for URL/SHA256 info
                     bm25_results = search_docs(inp["query"], index, config.docs_cache_dir, top_k=5)
                     for r in bm25_results:
@@ -2364,8 +2381,9 @@ def mcp_serve_cmd(ctx, transport, port):
     mcp = create_mcp_server(config)
 
     if transport == "stdio":
-        console.print("[bold]revcat-agent-advocate: MCP Server (stdio)[/bold]", stderr=True)
-        console.print("Waiting for MCP client connection...", stderr=True)
+        import sys
+        print("revcat-agent-advocate: MCP Server (stdio)", file=sys.stderr)
+        print("Waiting for MCP client connection...", file=sys.stderr)
         mcp.run(transport="stdio")
     else:
         console.print(f"[bold]revcat-agent-advocate: MCP Server (SSE on port {port})[/bold]")
@@ -2498,8 +2516,9 @@ def auto_mode(ctx, interval, once, agentic):
 @click.option("--thread", is_flag=True, help="Generate a thread instead of a single tweet")
 @click.option("--count", default=5, help="Number of tweets in thread")
 @click.option("--post", is_flag=True, help="Actually post the tweet (requires credentials and DRY_RUN=false)")
+@click.option("--community", default=None, help="Twitter Community ID to post into (e.g. 1234567890)")
 @click.pass_context
-def tweet_cmd(ctx, topic, thread, count, post):
+def tweet_cmd(ctx, topic, thread, count, post, community):
     """Draft and optionally post tweets about RevenueCat."""
     config = ctx.obj["config"]
     console = ctx.obj["console"]
@@ -2527,8 +2546,9 @@ def tweet_cmd(ctx, topic, thread, count, post):
             console.print(f"\n[dim]{len(tweets)} tweets drafted.[/dim]")
             if post:
                 last_id = None
-                for t in tweets:
-                    post_result = client.post_tweet(t['tweet'], reply_to=last_id)
+                for i, t in enumerate(tweets):
+                    post_result = client.post_tweet(t['tweet'], reply_to=last_id,
+                                                     community_id=community if i == 0 else None)
                     if post_result and post_result.get("status") == "posted":
                         last_id = post_result["id"]
                         tweets_posted += 1
@@ -2543,7 +2563,7 @@ def tweet_cmd(ctx, topic, thread, count, post):
             console.print(f"  {result['tweet']}")
             console.print(f"\n[dim]Topic: {result['topic']}[/dim]")
             if post:
-                post_result = client.post_tweet(result['tweet'])
+                post_result = client.post_tweet(result['tweet'], community_id=community)
                 if post_result and post_result.get("status") == "posted":
                     tweets_posted = 1
                     console.print(f"[green]Posted! Tweet ID: {post_result['id']}[/green]")
@@ -2712,6 +2732,161 @@ def scan_reddit_cmd(ctx, since, limit):
 
         console.print(f"\n[bold]{len(responses)} responses drafted.[/bold] "
                       f"DRY_RUN={'on' if config.dry_run else 'off'}")
+
+
+@main.command("publish-devto")
+@click.option("--slug", default=None, help="Publish a specific content piece by slug")
+@click.option("--all-verified", is_flag=True, help="Publish all verified content pieces")
+@click.option("--draft", is_flag=True, help="Save as Dev.to draft instead of publishing")
+@click.pass_context
+def publish_devto_cmd(ctx, slug, all_verified, draft):
+    """Publish content to Dev.to for organic developer discovery."""
+    config = ctx.obj["config"]
+    db = ctx.obj["db"]
+    console = ctx.obj["console"]
+
+    if not config.has_devto:
+        console.print("[red]DEVTO_API_KEY required. Get one from dev.to/settings/extensions[/red]")
+        return
+
+    from advocate.social.devto import DevToClient
+    from advocate.db import query_rows, update_row, now_iso
+
+    client = DevToClient(config)
+
+    # Determine which content pieces to publish
+    if slug:
+        rows = query_rows(db, "content_pieces", where={"slug": slug})
+        if not rows:
+            console.print(f"[red]No content piece found with slug '{slug}'[/red]")
+            return
+    elif all_verified:
+        rows = query_rows(db, "content_pieces", where={"status": "verified"})
+        if not rows:
+            console.print("[yellow]No verified content pieces to publish.[/yellow]")
+            return
+    else:
+        console.print("[yellow]Specify --slug <slug> or --all-verified[/yellow]")
+        return
+
+    site_base = ""
+    if config.site_base_url and config.github_repo:
+        owner = config.github_repo.split("/")[0] if "/" in config.github_repo else ""
+        site_base = f"https://{owner}.github.io{config.site_base_url}" if owner else ""
+
+    run_ctx = start_run(db, "publish-devto", {"count": len(rows), "draft": draft}, config)
+
+    published = []
+    for row in rows:
+        console.print(f"  Publishing: {row['title'][:60]}...")
+        canonical = f"{site_base}/content/{row['slug']}/" if site_base else None
+        if draft:
+            result = client.publish_article(
+                title=row["title"],
+                body_md=row.get("body_md", ""),
+                tags=None,
+                canonical_url=canonical,
+                published=False,
+            )
+        else:
+            result = client.publish_and_track(
+                db, title=row["title"],
+                body_md=row.get("body_md", ""),
+                tags=None,
+                canonical_url=canonical,
+            )
+
+        status = result.get("status", "unknown")
+        if status in ("published", "draft"):
+            label = "Published" if status == "published" else "Saved as draft"
+            color = "green" if status == "published" else "cyan"
+            console.print(f"    [{color}]{label}: {result['url']}[/{color}]")
+            published.append(result)
+            # Link Dev.to article back to content piece
+            db_update = {
+                "devto_article_id": result.get("id"),
+                "devto_url": result.get("url", ""),
+            }
+            if status == "published":
+                db_update["status"] = "published"
+                db_update["published_at"] = now_iso()
+            update_row(db, "content_pieces", row["id"], db_update)
+        elif status == "blocked_dry_run":
+            console.print("    [yellow]Blocked by DRY_RUN (set DRY_RUN=false to publish)[/yellow]")
+        elif status == "duplicate":
+            console.print("    [dim]Already published (duplicate detected)[/dim]")
+        elif status == "rate_limited":
+            console.print(f"    [yellow]Rate limited: {result.get('reason')}[/yellow]")
+            break
+        else:
+            console.print(f"    [red]{status}: {result.get('body', result.get('reason', ''))}[/red]")
+
+    finalize_run(run_ctx, config, db, LedgerOutputs(
+        artifact_type="devto_publish",
+        additional={"published": len(published), "total": len(rows)},
+    ), verification=None)
+
+    console.print(f"\n[bold]{len(published)}/{len(rows)} articles published to Dev.to[/bold]")
+
+
+@main.command("devto-stats")
+@click.pass_context
+def devto_stats_cmd(ctx):
+    """Pull engagement stats from Dev.to and sync back to DB."""
+    config = ctx.obj["config"]
+    db = ctx.obj["db"]
+    console = ctx.obj["console"]
+
+    if not config.has_devto:
+        console.print("[red]DEVTO_API_KEY required.[/red]")
+        return
+
+    from advocate.social.devto import DevToClient
+    from advocate.db import query_rows, update_row, now_iso
+
+    client = DevToClient(config)
+    stats = client.get_all_stats()
+
+    if not stats:
+        console.print("[yellow]No published articles found on Dev.to.[/yellow]")
+        return
+
+    # Match Dev.to articles back to content pieces and sync stats
+    content_rows = query_rows(db, "content_pieces")
+    devto_id_map = {r.get("devto_article_id"): r for r in content_rows if r.get("devto_article_id")}
+    title_map = {r["title"].strip().lower(): r for r in content_rows}
+    synced = 0
+
+    console.print(f"\n[bold]Dev.to Article Stats ({len(stats)} articles)[/bold]\n")
+    total_views = 0
+    total_reactions = 0
+    total_comments = 0
+
+    for s in stats:
+        total_views += s["page_views"]
+        total_reactions += s["reactions"]
+        total_comments += s["comments"]
+        console.print(f"  {s['title'][:55]}")
+        console.print(f"    Views: {s['page_views']}  Reactions: {s['reactions']}  Comments: {s['comments']}  {s['url']}")
+
+        # Find matching content piece by devto_article_id or title
+        content_row = devto_id_map.get(s.get("id"))
+        if not content_row:
+            content_row = title_map.get(s["title"].strip().lower())
+
+        if content_row:
+            update_row(db, "content_pieces", content_row["id"], {
+                "devto_article_id": s.get("id"),
+                "devto_url": s.get("url", ""),
+                "devto_views": s["page_views"],
+                "devto_reactions": s["reactions"],
+                "devto_comments": s["comments"],
+                "devto_synced_at": now_iso(),
+            })
+            synced += 1
+
+    console.print(f"\n[bold]Totals: {total_views} views, {total_reactions} reactions, {total_comments} comments[/bold]")
+    console.print(f"[dim]Synced stats for {synced}/{len(stats)} articles back to DB[/dim]")
 
 
 @main.command("deploy")

@@ -160,8 +160,48 @@ def _extract_snippets(content: str, query_tokens: set[str], max_snippets: int = 
     return [s[1] for s in scored[:max_snippets]]
 
 
+_rag_index_cache: object | None = None  # Module-level RAG index cache
+_rag_cache_dir: str | None = None  # cache_dir that was used for RAG init
+_in_hybrid = False  # Re-entrancy guard: rag.hybrid_search calls search() for BM25
+
+
 def search(query: str, index: SearchIndex, cache_dir: str, top_k: int = 10) -> list[SearchResult]:
-    """Search the index using BM25 scoring."""
+    """Search the index. Uses hybrid RAG (BM25 + vector + reranker) if available,
+    falls back to BM25-only.
+
+    When called from rag.hybrid_search (for its BM25 component), _in_hybrid
+    ensures we run BM25 only — no recursion.
+    """
+    global _rag_index_cache, _rag_cache_dir, _in_hybrid
+
+    # Try hybrid search — skip if already inside a hybrid call (re-entrancy guard)
+    # Uses Config to pick up CHROMA_API_KEY from .env (pydantic-settings doesn't
+    # export to os.environ, so os.environ.get alone would miss it).
+    # Only activates when cache_dir matches the config's docs_cache_dir to avoid
+    # connecting to prod vectors during tests with temp directories.
+    # Re-attempts if called with a different (matching) cache_dir than last time.
+    abs_cache = os.path.abspath(cache_dir)
+    if _rag_index_cache is None and not _in_hybrid and abs_cache != _rag_cache_dir:
+        _rag_cache_dir = abs_cache
+        try:
+            from ..config import Config
+            _cfg = Config()
+            if _cfg.chroma_api_key and abs_cache == os.path.abspath(_cfg.docs_cache_dir):
+                from .rag import connect_rag_index_from_config
+                _rag_index_cache = connect_rag_index_from_config(_cfg)
+        except (ImportError, Exception):
+            _rag_index_cache = None
+
+    if not _in_hybrid and _rag_index_cache is not None and _rag_index_cache.chunks and abs_cache == _rag_cache_dir:
+        try:
+            from .rag import hybrid_search as _hybrid
+            _in_hybrid = True
+            result = _hybrid(query, _rag_index_cache, index, cache_dir, top_k=top_k)
+            _in_hybrid = False
+            return result
+        except Exception:
+            _in_hybrid = False
+
     query_tokens = tokenize(query)
     if not query_tokens or index.doc_count == 0:
         return []

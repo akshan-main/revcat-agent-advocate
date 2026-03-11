@@ -277,8 +277,14 @@ class TwitterClient:
         lines.append("\nPick ONE that fits naturally at the end of your tweet. Don't force it.")
         return "\n".join(lines)
 
-    def post_tweet(self, text: str, force: bool = False, reply_to: str | None = None) -> dict | None:
-        """Post a tweet via Twitter API v2 with OAuth 1.0a."""
+    def post_tweet(self, text: str, force: bool = False, reply_to: str | None = None,
+                   community_id: str | None = None) -> dict | None:
+        """Post a tweet via Twitter API v2 with OAuth 1.0a.
+
+        Args:
+            community_id: Post into a Twitter Community for organic reach.
+                          Find IDs at twitter.com/i/communities/<id>.
+        """
         if len(text) > 280:
             return {"status": "error", "reason": f"Tweet is {len(text)} chars, max 280", "text": text}
 
@@ -291,6 +297,8 @@ class TwitterClient:
         payload = {"text": text}
         if reply_to:
             payload["reply"] = {"in_reply_to_tweet_id": reply_to}
+        if community_id:
+            payload["community_id"] = community_id
 
         resp = requests.post(
             "https://api.twitter.com/2/tweets",
@@ -304,8 +312,12 @@ class TwitterClient:
             return {"status": "posted", "id": data["data"]["id"]}
         return {"status": "error", "code": resp.status_code, "body": resp.text}
 
-    def autonomous_post(self, search_index, topic: str | None = None, thread: bool = False, count: int = 4) -> dict:
+    def autonomous_post(self, search_index, topic: str | None = None, thread: bool = False,
+                        count: int = 4, community_id: str | None = None) -> dict:
         """Fully autonomous: research → draft → post. The social media agent handles everything.
+
+        Args:
+            community_id: Post into a Twitter Community for organic reach.
 
         Returns dict with posted tweet IDs, text, and status.
         """
@@ -329,7 +341,8 @@ class TwitterClient:
         posted = []
         last_id = None
         for i, text in enumerate(tweets):
-            result = self.post_tweet(text, force=False, reply_to=last_id)
+            result = self.post_tweet(text, force=False, reply_to=last_id,
+                                     community_id=community_id if i == 0 else None)
             if result and result.get("status") == "posted":
                 last_id = result["id"]
                 posted.append({"text": text, "id": last_id, "position": f"{i+1}/{len(tweets)}"})

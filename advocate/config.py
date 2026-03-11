@@ -32,13 +32,19 @@ class Config(BaseSettings):
     reddit_username: str | None = None
     reddit_password: str | None = None
 
+    # Dev.to (free — for publishing articles with organic discovery)
+    devto_api_key: str | None = None
+
     # Safety flags
     demo_mode: bool = False
     dry_run: bool = True
     allow_writes: bool = False
 
-    # Hugging Face (free, for embeddings and reranking)
+    # Hugging Face (free, for embeddings)
     hf_token: str | None = None
+
+    # Contextual AI (free $50 / 1B tokens, cross-encoder reranker)
+    contextual_api_key: str | None = None
 
     # Turso (free, cloud SQLite)
     turso_database_url: str | None = None
@@ -74,7 +80,8 @@ class Config(BaseSettings):
     @field_validator(
         "revenuecat_api_key", "anthropic_api_key", "github_token", "hf_token",
         "turso_database_url", "turso_auth_token", "chroma_api_key",
-        "twitter_bearer_token", "reddit_client_id",
+        "contextual_api_key",
+        "twitter_bearer_token", "reddit_client_id", "devto_api_key",
         "goatcounter_token", "goatcounter_site",
         mode="before",
     )
@@ -116,3 +123,7 @@ class Config(BaseSettings):
     @property
     def has_reddit(self) -> bool:
         return self.reddit_client_id is not None
+
+    @property
+    def has_devto(self) -> bool:
+        return self.devto_api_key is not None

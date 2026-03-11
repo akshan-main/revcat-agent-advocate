@@ -75,8 +75,32 @@
             {% endif %}
 
             {% if exp.results_json and exp.results_json is mapping %}
+                {# Verdict block #}
+                {% if exp.results_json.verdict is defined %}
+                <div class="verdict-block verdict-{{ exp.results_json.verdict }}">
+                    <div class="verdict-header">
+                        <span class="verdict-label">Verdict:</span>
+                        <span class="verdict-badge verdict-badge-{{ exp.results_json.verdict }}">{{ exp.results_json.verdict | upper }}</span>
+                        {% if exp.results_json.verdict_confidence is defined %}
+                        <span class="verdict-confidence">{{ (exp.results_json.verdict_confidence * 100) | int }}% confidence</span>
+                        {% endif %}
+                    </div>
+                    {% if exp.results_json.verdict_confidence is defined %}
+                    <div class="confidence-bar">
+                        <div class="confidence-fill confidence-fill-{{ exp.results_json.verdict }}" style="width: {{ (exp.results_json.verdict_confidence * 100) | int }}%"></div>
+                    </div>
+                    {% endif %}
+                    {% if exp.results_json.verdict_reasoning is defined %}
+                    <p class="verdict-reasoning">{{ exp.results_json.verdict_reasoning }}</p>
+                    {% endif %}
+                    {% if exp.results_json.verdict_next_action is defined %}
+                    <p class="verdict-next"><strong>Next action:</strong> {{ exp.results_json.verdict_next_action }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
                 {# Show only non-redundant result fields #}
-                {% set skip_keys = ['hypothesis', 'tactic'] %}
+                {% set skip_keys = ['hypothesis', 'tactic', 'verdict', 'verdict_confidence', 'verdict_reasoning', 'verdict_next_action'] %}
                 {% set result_items = [] %}
                 {% for key, value in exp.results_json.items() %}
                     {% if key not in skip_keys %}

@@ -9,7 +9,6 @@ Rules live in firewall.yaml at project root.
 """
 import fnmatch
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -253,7 +252,7 @@ def execute_rollback(eval_result: EvalResult, db_conn=None, content_id: int | No
     if action == "quarantine" and db_conn and content_id:
         try:
             db_conn.execute(
-                "UPDATE content_pieces SET status = 'quarantined' WHERE id = ?",
+                "UPDATE content_pieces SET status = 'draft' WHERE id = ?",
                 (content_id,),
             )
             db_conn.commit()
@@ -267,19 +266,20 @@ def execute_rollback(eval_result: EvalResult, db_conn=None, content_id: int | No
     elif action == "revert_site":
         summary_parts.append("Site revert triggered — rebuild from last known-good state.")
 
-    # Log to ledger if available
+    # Log to ledger via proper chain logic
     if db_conn:
         try:
-            from ..db import insert_row, now_iso
-            insert_row(db_conn, "run_log", {
-                "run_id": f"rollback_{eval_result.gate_name}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
-                "sequence": 0,
-                "command": "rollback",
-                "started_at": now_iso(),
-                "ended_at": now_iso(),
-                "inputs": f'{{"gate": "{eval_result.gate_name}", "failures": {eval_result.failures}}}',
-                "success": 1,
-            })
+            from ..ledger import start_run, finalize_run, LedgerOutputs
+            from ..config import Config
+            config = Config()
+            ctx = start_run(db_conn, "rollback", {
+                "gate": eval_result.gate_name,
+                "failures": eval_result.failures,
+            }, config)
+            finalize_run(ctx, config, db_conn, LedgerOutputs(
+                artifact_type="rollback",
+                additional={"action": action, "content_id": content_id},
+            ), verification=None, success=True)
         except Exception:
             pass
 

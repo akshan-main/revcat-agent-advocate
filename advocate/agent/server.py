@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Allowed origins for CORS (GitHub Pages + localhost dev)
 ALLOWED_ORIGINS = {
-    "https://akshankrithick.github.io",
+    "https://akshan-main.github.io",
     "http://localhost:8000",
     "http://localhost:3000",
     "http://127.0.0.1:8000",

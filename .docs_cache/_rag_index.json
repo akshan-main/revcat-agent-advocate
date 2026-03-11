@@ -1,6 +1,6 @@
 {
   "doc_count": 326,
-  "chunk_count": 2787,
+  "chunk_count": 2825,
   "embedding_model": "hf-inference:sentence-transformers/all-mpnet-base-v2",
   "vector_db": "chromadb-cloud",
   "reranker": "hf-inference:cross-encoder/ms-marco-MiniLM-L-12-v2"

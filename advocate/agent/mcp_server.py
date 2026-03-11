@@ -456,7 +456,7 @@ def create_mcp_server(config: Config) -> FastMCP:
 
 ## Tech Stack
 - **Language:** Python 3.11+
-- **LLM:** Claude API (Anthropic) — model configurable via AI_MODEL env var
+- **LLM:** Claude API (Anthropic) — defaults to AI_MODEL env var; application letter hardcodes claude-opus-4-6
 - **Vector DB:** ChromaDB Cloud (cosine similarity, persistent)
 - **Embeddings:** all-mpnet-base-v2 (768-dim) via HF Inference API
 - **Reranker:** ms-marco-MiniLM-L-12-v2 (cross-encoder) via HF Inference API

@@ -17,6 +17,12 @@ class ExperimentStatus(str, Enum):
     CONCLUDED = "concluded"
 
 
+class ExperimentVerdict(str, Enum):
+    SCALE = "scale"
+    KILL = "kill"
+    ITERATE = "iterate"
+
+
 class Severity(str, Enum):
     CRITICAL = "critical"
     MAJOR = "major"

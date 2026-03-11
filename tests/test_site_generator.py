@@ -111,3 +111,70 @@ def test_build_site_returns_page_count(db_conn, tmp_path):
     config = _setup_config(tmp_path)
     count = build_site(db_conn, config)
     assert count >= 5  # at least: index, apply, content, experiments, feedback, runbook
+
+
+def test_experiments_page_renders_verdict(db_conn, tmp_path):
+    """Experiment with verdict data renders verdict badge and confidence bar."""
+    config = _setup_config(tmp_path)
+
+    insert_row(db_conn, "growth_experiments", {
+        "name": "test-exp",
+        "hypothesis": "Testing verdict rendering",
+        "metric": "pages_generated",
+        "channel": "organic_search",
+        "tactic": "Generate pages",
+        "status": "concluded",
+        "inputs_json": {},
+        "outputs_json": {"pages_generated": 5},
+        "results_json": {
+            "verdict": "scale",
+            "verdict_confidence": 0.85,
+            "verdict_reasoning": "Strong output with good engagement.",
+            "verdict_next_action": "Double investment in SEO.",
+        },
+        "duration_days": 30,
+        "created_at": now_iso(),
+        "concluded_at": now_iso(),
+    })
+
+    build_site(db_conn, config)
+
+    with open(os.path.join(config.site_output_dir, "experiments", "index.html")) as f:
+        html = f.read()
+
+    assert "verdict-badge" in html
+    assert "SCALE" in html
+    assert "85%" in html
+    assert "Strong output" in html
+    assert "Double investment" in html
+    assert "confidence-bar" in html
+
+
+def test_feedback_page_renders_qa_memo(db_conn, tmp_path):
+    """Feedback items render as QA memos with impact bars."""
+    config = _setup_config(tmp_path)
+
+    insert_row(db_conn, "product_feedback", {
+        "title": "Missing error codes in webhook docs",
+        "severity": "critical",
+        "area": "docs",
+        "repro_steps": "1. Open webhook docs\n2. Look for error codes",
+        "expected": "Error codes listed",
+        "actual": "No error codes found",
+        "evidence_links_json": ["https://docs.revenuecat.com/webhooks"],
+        "proposed_fix": "Add error code reference table",
+        "status": "new",
+        "created_at": now_iso(),
+    })
+
+    build_site(db_conn, config)
+
+    with open(os.path.join(config.site_output_dir, "feedback", "index.html")) as f:
+        html = f.read()
+
+    assert "qa-memo" in html
+    assert "QA-001" in html
+    assert "impact-critical" in html
+    assert "Blocks developer workflow" in html
+    assert "1 evidence link" in html
+    assert "Missing error codes" in html

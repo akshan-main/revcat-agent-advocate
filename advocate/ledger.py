@@ -2,11 +2,10 @@ import hashlib
 import hmac
 import json
 import os
-import sqlite3
 from datetime import datetime, timezone
 
 from .config import Config
-from .db import insert_row, now_iso, query_rows
+from .db import DBConnection, insert_row, now_iso, query_rows
 from .models import (
     ChainVerification,
     LedgerOutputs,
@@ -20,7 +19,7 @@ from .models import (
 class RunContext:
     """Context manager for tracking a single agent run."""
 
-    def __init__(self, db_conn: sqlite3.Connection, command: str, inputs: dict, config: Config):
+    def __init__(self, db_conn: DBConnection, command: str, inputs: dict, config: Config):
         self.db_conn = db_conn
         self.config = config
         self.command = command
@@ -49,18 +48,21 @@ class RunContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         # If not finalized, finalize with failure
         if not hasattr(self, "_finalized"):
+            error_info = {}
+            if exc_type is not None:
+                error_info = {"error": f"{exc_type.__name__}: {exc_val}"}
             finalize_run(
                 self,
                 self.config,
                 self.db_conn,
-                outputs=LedgerOutputs(),
+                outputs=LedgerOutputs(additional=error_info),
                 verification=None,
                 success=exc_type is None,
             )
         return False
 
 
-def start_run(db_conn: sqlite3.Connection, command: str, inputs: dict, config: Config) -> RunContext:
+def start_run(db_conn: DBConnection, command: str, inputs: dict, config: Config) -> RunContext:
     return RunContext(db_conn, command, inputs, config)
 
 
@@ -102,7 +104,7 @@ def _compute_signature(hmac_key: str, hash_value: str) -> str:
 def finalize_run(
     ctx: RunContext,
     config: Config,
-    db_conn: sqlite3.Connection,
+    db_conn: DBConnection,
     outputs: LedgerOutputs,
     verification: VerificationResult | None,
     success: bool = True,
@@ -160,7 +162,7 @@ def finalize_run(
     return entry
 
 
-def verify_chain(db_conn: sqlite3.Connection, config: Config | None = None) -> ChainVerification:
+def verify_chain(db_conn: DBConnection, config: Config | None = None) -> ChainVerification:
     rows = query_rows(db_conn, "run_log", order_by="sequence ASC")
 
     if not rows:

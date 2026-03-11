@@ -282,9 +282,9 @@ def format_alert_dashboard(db_conn) -> str:
     counts = {}
     for level in ("critical", "error", "warning", "info"):
         row = db_conn.execute(
-            "SELECT COUNT(*) FROM alert_log WHERE level = ?", [level]
+            "SELECT COUNT(*) as cnt FROM alert_log WHERE level = ?", [level]
         ).fetchone()
-        counts[level] = row[0]
+        counts[level] = row["cnt"]
 
     # Circuit breaker states
     breakers = db_conn.execute("SELECT * FROM circuit_breakers").fetchall()

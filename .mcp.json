@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "rcagent": {
+      "command": "python3",
+      "args": ["-m", "cli", "mcp-serve", "--transport", "stdio"],
+      "cwd": "/Users/akshankrithick/projects/rcagent"
+    }
+  }
+}

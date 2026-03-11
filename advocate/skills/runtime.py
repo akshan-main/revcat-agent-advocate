@@ -319,7 +319,7 @@ class SkillRuntime:
                         chunks = get_context_chunks(query, _rag_index, max_chunks=8, max_words=3000)
                         out = []
                         for c in chunks:
-                            out.append(f"**{c.doc_title}** (score: {c.score:.3f})\nURL: {c.doc_url}\n\n{c.text}")
+                            out.append(f"**{c.doc_title}**\nURL: {c.doc_url}\n\n{c.text}")
                         for r in results:
                             if not any(r.url in o for o in out):
                                 out.append(f"**{r.title}** (BM25: {r.score:.2f})\nURL: {r.url}\nSHA256: {r.doc_sha256[:16]}...\n" + "\n".join(f"  - {s}" for s in r.snippets[:2]))

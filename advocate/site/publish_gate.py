@@ -72,6 +72,12 @@ def check_banned_phrases(db_conn) -> list[GateViolation]:
     violations = []
     body = _get_letter_body(db_conn)
     if not body:
+        violations.append(GateViolation(
+            file="application-letter",
+            line=0,
+            phrase="(empty)",
+            reason="Application letter body is empty — cannot verify content",
+        ))
         return violations
 
     lines = body.split("\n")
@@ -104,7 +110,12 @@ def check_citation_count(db_conn) -> list[GateViolation]:
     """Verify the letter contains real documentation citations."""
     body = _get_letter_body(db_conn)
     if not body:
-        return []
+        return [GateViolation(
+            file="application-letter",
+            line=0,
+            phrase="(empty)",
+            reason="Application letter body is empty — cannot count citations",
+        )]
 
     # Match markdown links pointing to URLs: [text](http...)
     citations = re.findall(r'\[([^\]]+)\]\(https?://[^)]+\)', body)
@@ -119,22 +130,40 @@ def check_citation_count(db_conn) -> list[GateViolation]:
 
 
 def run_publish_gate(site_dir: str, db_conn, config) -> GateResult:
-    """Run publish gate checks on the application letter."""
+    """Run publish gate checks on the application letter and ledger chain."""
     violations = check_banned_phrases(db_conn)
     violations.extend(check_citation_count(db_conn))
+
+    # Verify ledger chain integrity
+    chain_valid = True
+    try:
+        from ..ledger import verify_chain
+        chain = verify_chain(db_conn, config)
+        chain_valid = chain.valid
+        if not chain_valid:
+            violations.append(GateViolation(
+                file="run_log",
+                line=0,
+                phrase=f"chain broken at sequence(s): {chain.breaks}",
+                reason="Ledger hash chain integrity check failed",
+            ))
+    except Exception:
+        pass  # No ledger entries is OK
 
     passed = len(violations) == 0
 
     parts = []
     if violations:
-        parts.append(f"{len(violations)} violation(s) found in letter")
+        parts.append(f"{len(violations)} violation(s) found")
+    if not chain_valid:
+        parts.append("ledger chain broken")
     if not parts:
         parts.append("all checks passed")
 
     return GateResult(
         passed=passed,
         violations=violations,
-        chain_valid=True,
+        chain_valid=chain_valid,
         summary="; ".join(parts),
     )
 

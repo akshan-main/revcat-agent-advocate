@@ -204,7 +204,7 @@ def check_rate_limit(db_conn, channel: str) -> tuple[bool, str]:
         "SELECT COUNT(*) as cnt FROM distribution_queue WHERE channel = ? AND status = 'posted' AND posted_at > ?",
         [channel, hour_ago],
     ).fetchone()
-    hourly = row["cnt"] if isinstance(row, dict) else row[0]
+    hourly = row["cnt"]
 
     if hourly >= limits["max_per_hour"]:
         return False, f"hourly_limit: {hourly}/{limits['max_per_hour']}"
@@ -215,7 +215,7 @@ def check_rate_limit(db_conn, channel: str) -> tuple[bool, str]:
         "SELECT COUNT(*) as cnt FROM distribution_queue WHERE channel = ? AND status = 'posted' AND posted_at > ?",
         [channel, day_ago],
     ).fetchone()
-    daily = row["cnt"] if isinstance(row, dict) else row[0]
+    daily = row["cnt"]
 
     if daily >= limits["max_per_day"]:
         return False, f"daily_limit: {daily}/{limits['max_per_day']}"

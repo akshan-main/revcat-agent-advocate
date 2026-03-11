@@ -1,5 +1,10 @@
 .env
 advocate.db
+revcat-turso.db
+*.db-info
+*.db-shm
+*.db-wal
+*.db-journal
 # .docs_cache/ — tracked in repo (3MB, needed for Render search API deployment)
 site_output/
 runs/

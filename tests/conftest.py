@@ -2,25 +2,25 @@ import os
 import pytest
 
 from advocate.config import Config
-from advocate.db import init_db
+from advocate.db import init_db_from_config
 
 
 @pytest.fixture
-def db_conn():
-    """In-memory SQLite with schema initialized."""
-    conn = init_db(":memory:")
+def db_conn(mock_config):
+    """In-memory libsql DB with schema initialized."""
+    conn = init_db_from_config(mock_config)
     yield conn
     conn.close()
 
 
 @pytest.fixture
 def mock_config(tmp_path):
-    """Config with test values, demo mode on."""
+    """Config with test values, demo mode on. Uses local libsql (no Turso)."""
     return Config(
         demo_mode=True,
         dry_run=True,
         allow_writes=False,
-        db_path=str(tmp_path / "test.db"),
+        db_path=":memory:",
         docs_cache_dir=str(tmp_path / "docs"),
         site_output_dir=str(tmp_path / "site"),
         runs_dir=str(tmp_path / "runs"),

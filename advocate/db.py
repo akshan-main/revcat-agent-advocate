@@ -1,6 +1,7 @@
 import json
-import sqlite3
 from datetime import datetime, timezone
+
+import libsql_experimental as libsql
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS content_pieces (
@@ -16,7 +17,13 @@ CREATE TABLE IF NOT EXISTS content_pieces (
     created_at TEXT NOT NULL,
     published_at TEXT,
     word_count INTEGER DEFAULT 0,
-    citations_count INTEGER DEFAULT 0
+    citations_count INTEGER DEFAULT 0,
+    devto_article_id INTEGER,
+    devto_url TEXT,
+    devto_views INTEGER DEFAULT 0,
+    devto_reactions INTEGER DEFAULT 0,
+    devto_comments INTEGER DEFAULT 0,
+    devto_synced_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS growth_experiments (
@@ -106,6 +113,18 @@ CREATE TABLE IF NOT EXISTS doc_snapshots (
     UNIQUE(url, doc_sha256)
 );
 
+CREATE TABLE IF NOT EXISTS agent_memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cycle_id TEXT,
+    lesson_type TEXT NOT NULL CHECK(lesson_type IN ('content_perf', 'topic_signal', 'channel_insight', 'strategy', 'failure')),
+    key TEXT NOT NULL,
+    insight TEXT NOT NULL,
+    evidence TEXT,
+    confidence REAL DEFAULT 0.5,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_memory_type ON agent_memory(lesson_type);
 CREATE INDEX IF NOT EXISTS idx_content_status ON content_pieces(status);
 CREATE INDEX IF NOT EXISTS idx_content_type ON content_pieces(content_type);
 CREATE INDEX IF NOT EXISTS idx_run_log_command ON run_log(command);
@@ -145,7 +164,7 @@ class _DictCursor:
 
 
 class DBConnection:
-    """Unified database connection wrapping either sqlite3 or libsql (Turso)."""
+    """Unified database connection wrapping libsql (Turso cloud or local)."""
 
     def __init__(self, conn, is_turso: bool = False):
         self._conn = conn
@@ -156,9 +175,7 @@ class DBConnection:
             cursor = self._conn.execute(sql, tuple(params) if isinstance(params, list) else params)
         else:
             cursor = self._conn.execute(sql)
-        if self._is_turso:
-            return _DictCursor(cursor)
-        return cursor
+        return _DictCursor(cursor)
 
     def executescript(self, sql):
         self._conn.executescript(sql)
@@ -184,36 +201,25 @@ class DBConnection:
 
 
 def init_db(db_path: str, turso_url: str | None = None, turso_token: str | None = None) -> DBConnection:
-    """Initialize database: uses Turso cloud if credentials provided, else local SQLite."""
+    """Initialize database via libsql — Turso cloud when credentials provided, local libsql otherwise."""
     if turso_url and turso_token:
-        import libsql_experimental as libsql
         conn = libsql.connect(turso_url, auth_token=turso_token)
-        wrapped = DBConnection(conn, is_turso=True)
-        # Run schema (executescript splits statements)
-        for statement in SCHEMA.split(";"):
-            statement = statement.strip()
-            if statement:
-                try:
-                    wrapped.execute(statement)
-                except Exception:
-                    pass  # IF NOT EXISTS handles duplicates
-        wrapped.commit()
-        return wrapped
-    elif db_path == ":memory:" or not turso_url:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.executescript(SCHEMA)
-        wrapped = DBConnection(conn, is_turso=False)
-        return wrapped
+        is_turso = True
     else:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.executescript(SCHEMA)
-        return DBConnection(conn, is_turso=False)
+        conn = libsql.connect(db_path)
+        is_turso = False
+
+    wrapped = DBConnection(conn, is_turso=is_turso)
+    # Run schema statement by statement (libsql doesn't support executescript)
+    for statement in SCHEMA.split(";"):
+        statement = statement.strip()
+        if statement:
+            try:
+                wrapped.execute(statement)
+            except Exception:
+                pass  # IF NOT EXISTS handles duplicates
+    wrapped.commit()
+    return wrapped
 
 
 def _serialize_value(v):
@@ -223,7 +229,7 @@ def _serialize_value(v):
 
 
 def _row_to_dict(row) -> dict:
-    """Convert a row to dict, handling both sqlite3.Row and plain dict."""
+    """Convert a row to dict."""
     if isinstance(row, dict):
         return row
     return dict(row)
@@ -283,7 +289,7 @@ def update_row(conn: DBConnection, table: str, row_id: int, data: dict):
 
 def count_rows(conn: DBConnection, table: str, where: dict | None = None) -> int:
     _validate_table(table)
-    sql = f"SELECT COUNT(*) FROM {table}"
+    sql = f"SELECT COUNT(*) as cnt FROM {table}"
     params = []
     if where:
         clauses = []
@@ -294,9 +300,7 @@ def count_rows(conn: DBConnection, table: str, where: dict | None = None) -> int
             params.append(v)
         sql += " WHERE " + " AND ".join(clauses)
     result = conn.execute(sql, tuple(params)).fetchone()
-    if isinstance(result, dict):
-        return list(result.values())[0]
-    return result[0]
+    return result["cnt"]
 
 
 def rows_since(
@@ -313,13 +317,33 @@ def rows_since(
     return [_row_to_dict(row) for row in rows]
 
 
+def _migrate_content_pieces(conn: DBConnection):
+    """Add devto columns to content_pieces if missing."""
+    new_cols = [
+        ("devto_article_id", "INTEGER"),
+        ("devto_url", "TEXT"),
+        ("devto_views", "INTEGER DEFAULT 0"),
+        ("devto_reactions", "INTEGER DEFAULT 0"),
+        ("devto_comments", "INTEGER DEFAULT 0"),
+        ("devto_synced_at", "TEXT"),
+    ]
+    for col_name, col_type in new_cols:
+        try:
+            conn.execute(f"ALTER TABLE content_pieces ADD COLUMN {col_name} {col_type}")
+        except Exception:
+            pass  # Column already exists
+    conn.commit()
+
+
 def init_db_from_config(config) -> DBConnection:
     """Initialize database using config object; picks Turso or local automatically."""
-    return init_db(
+    conn = init_db(
         config.db_path,
         turso_url=config.turso_database_url,
         turso_token=config.turso_auth_token,
     )
+    _migrate_content_pieces(conn)
+    return conn
 
 
 def now_iso() -> str:
@@ -329,6 +353,7 @@ def now_iso() -> str:
 ALL_TABLES = {
     "seo_pages", "content_pieces", "community_interactions",
     "product_feedback", "run_log", "growth_experiments", "doc_snapshots",
+    "agent_memory",
 }
 
 # Allowed column names for ORDER BY / WHERE to prevent SQL injection
@@ -340,6 +365,9 @@ _ALLOWED_COLUMNS = {
     "success", "keyword", "template_type", "experiment_id", "url", "path",
     "doc_sha256", "content_length", "fetched_at", "changed_from", "thread_url",
     "counterpart", "intent", "question", "sent_at", "body_md",
+    "devto_article_id", "devto_url", "devto_views", "devto_reactions",
+    "devto_comments", "devto_synced_at",
+    "cycle_id", "lesson_type", "key", "insight", "evidence", "confidence",
 }
 
 
@@ -386,7 +414,7 @@ def exists_similar(conn: DBConnection, table: str, match_cols: dict, threshold: 
         # Check existing rows
         rows = conn.execute(f"SELECT {col} FROM {table}").fetchall()
         for row in rows:
-            existing = row[col] if isinstance(row, dict) else row[0]
+            existing = row[col]
             if not existing:
                 continue
             existing_norm = _re.sub(r'[^a-z0-9\s]', '', str(existing).strip().lower())

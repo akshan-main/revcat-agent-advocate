@@ -78,7 +78,7 @@ revcat-advocate build-site</code></pre>
 <h2>Reliability Engineering</h2>
 
 <h3>Pre-Execution Action Firewall</h3>
-<p>Every external action passes through a layered gate before execution:</p>
+<p>External actions are checked against applicable gates before execution:</p>
 <table>
     <thead><tr><th>Layer</th><th>Gate</th><th>Blocks</th></tr></thead>
     <tbody>
@@ -89,7 +89,7 @@ revcat-advocate build-site</code></pre>
         <tr><td>5. Governance Suite</td><td>17-case red-team</td><td>Prompt injection, PII leaks, competitor attacks, brand violations</td></tr>
     </tbody>
 </table>
-<p>No action reaches an external system without passing every applicable layer. The firewall is enforced in code, not configuration.</p>
+<p>External actions are gated by applicable layers. DRY_RUN/ALLOW_WRITES and the tweet critic are enforced in code; the YAML firewall provides additional configurable rules for actions routed through the agent core.</p>
 
 <h3>Failure Categories and Retry Strategy</h3>
 <table>
@@ -119,6 +119,19 @@ revcat-advocate build-site</code></pre>
     <li><strong>Scorecard metrics:</strong> Success rate, word count, citation count, experiment outcomes, and failure log are computed live from the database on every site build.</li>
     <li><strong>Staged rollout:</strong> <code>build-site</code> renders locally for inspection. <code>deploy</code> is a separate, explicit command. The <code>submit</code> pipeline gates deployment on publish-gate pass.</li>
 </ul>
+
+<h3>Post-Cycle Enforcement</h3>
+<p>After every autonomous agent cycle, the following actions run in <strong>code, not prompt</strong> — the agent cannot skip them:</p>
+<table>
+    <thead><tr><th>Action</th><th>Condition</th><th>Contract</th></tr></thead>
+    <tbody>
+        <tr><td>Dev.to stats sync</td><td><code>conditional(has_devto)</code></td><td>Only runs when <code>DEVTO_API_KEY</code> is configured. Pulls views, reactions, comments for all published articles back to Turso. Skipped silently when no key is set.</td></tr>
+        <tr><td>Lesson recording warning</td><td><code>always</code></td><td>If the agent did not call <code>record_lesson</code> during the cycle, a warning is logged. The cycle still succeeds — but the gap is visible in the ledger.</td></tr>
+        <tr><td>Site rebuild</td><td><code>always</code></td><td>Runs via <code>build-site</code> in the weekly CI workflow after the agent cycle completes.</td></tr>
+        <tr><td>Ledger verification</td><td><code>always</code></td><td>Runs via <code>verify-ledger</code> in CI. If the hash chain is broken, the site shows a red badge.</td></tr>
+    </tbody>
+</table>
+<p>This is a deliberate contract: <code>post_cycle_devto_sync = conditional(has_devto)</code>. The agent decides what to create; the code decides what happens after.</p>
 </section>
 
 <section>

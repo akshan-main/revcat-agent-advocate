@@ -133,6 +133,18 @@ jobs:
           SEARCH_API_URL: ${{ secrets.SEARCH_API_URL }}
         run: revcat-advocate build-site --clean
 
+      - name: Publish gate
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: revcat-advocate publish-gate
+
+      - name: Verify ledger
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: revcat-advocate verify-ledger
+
       - name: Setup Pages
         if: ${{ inputs.deploy }}
         uses: actions/configure-pages@v4

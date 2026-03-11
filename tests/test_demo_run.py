@@ -101,9 +101,11 @@ def test_demo_run_full_pipeline(tmp_path, monkeypatch):
         assert "command" in data
 
     # Verify chain integrity
-    from advocate.db import init_db
+    from advocate.db import init_db_from_config
     from advocate.ledger import verify_chain
-    db = init_db(str(tmp_path / "test.db"))
+    from advocate.config import Config
+    cfg = Config(db_path=str(tmp_path / "test.db"), _env_file=None)
+    db = init_db_from_config(cfg)
     chain = verify_chain(db)
     assert chain.valid is True, f"Chain broken at: {chain.breaks}"
     assert chain.total_entries >= 7

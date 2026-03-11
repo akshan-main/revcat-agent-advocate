@@ -582,7 +582,7 @@ def build_site(db_conn, config, clean: bool = False):
                             "id": "",
                             "text": tweet_text[:280],
                             "created_at": (run.get("started_at") or "")[:10],
-                            "status": "posted" if tc.get("result_summary") else "draft",
+                            "status": "sent" if tc.get("result_summary") else "draft",
                         })
 
     twitter_bot_template = env.get_template("twitter_bot.html")

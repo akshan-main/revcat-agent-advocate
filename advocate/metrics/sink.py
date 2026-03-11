@@ -379,7 +379,7 @@ def generate_impact_report(db_conn, config: Config, experiment_id: int | None = 
     actions = 0
     try:
         row = db_conn.execute("SELECT COUNT(*) as cnt FROM run_log").fetchone()
-        actions = row["cnt"] if isinstance(row, dict) else row[0]
+        actions = row["cnt"]
     except Exception:
         pass
 

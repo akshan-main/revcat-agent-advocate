@@ -149,8 +149,41 @@ CORE_AGENT_TOOLS = [
         },
     },
     {
+        "name": "publish_to_devto",
+        "description": "Publish all verified content pieces to Dev.to. Returns what was published with URLs. Use this after writing content to get it in front of developers immediately.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "sync_devto_stats",
+        "description": "Pull engagement stats (views, reactions, comments) from Dev.to for all published articles. Use this to see what content is performing well.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "record_lesson",
+        "description": "Record a lesson learned for future cycles. This builds persistent memory that feeds into future decisions. ALWAYS record lessons at the end of a cycle.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "lesson_type": {"type": "string", "enum": ["content_perf", "topic_signal", "channel_insight", "strategy", "failure"], "description": "Category of lesson"},
+                "key": {"type": "string", "description": "Short label, e.g. 'vibe-coding-articles' or 'devto-tutorial-format'"},
+                "insight": {"type": "string", "description": "What you learned — be specific and actionable"},
+                "evidence": {"type": "string", "description": "Data backing this lesson (stats, observations, comparisons)"},
+                "confidence": {"type": "number", "description": "How confident 0.0-1.0 (use 0.3 for hunches, 0.7 for observed patterns, 0.9 for measured results)"},
+            },
+            "required": ["lesson_type", "key", "insight"],
+        },
+    },
+    {
         "name": "complete",
-        "description": "Signal that you've completed the current task cycle. Summarize what was accomplished.",
+        "description": "Signal that you've completed the current task cycle. Summarize what was accomplished. IMPORTANT: always record_lesson BEFORE completing.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -164,20 +197,27 @@ CORE_AGENT_TOOLS = [
 
 
 CORE_AGENT_SYSTEM = """\
-You are the RevenueCat Developer Advocate agent — an LLM with tool-use that generates \
-developer content, drafts community responses, and files product feedback.
+You are a persistent autonomous Developer Advocate operator for RevenueCat. You are not \
+a one-shot content generator — you are a living agent that remembers what it tried, \
+measures what worked, and gets smarter every cycle.
 
-YOUR WORKFLOW:
-1. OBSERVE — Use analyze_state and scan_community to see current state + signals.
-2. PLAN — Use decide_next_action. CRITICAL: check existing content titles and pick a NEW topic. Never write about a topic you already covered.
-3. ACT — Execute using the available tools.
-4. EVALUATE — Use evaluate_output to check quality.
+YOUR LOOP (every cycle):
+1. OBSERVE — analyze_state shows your full history: content published, Dev.to engagement \
+stats, past lessons learned, community signals. sync_devto_stats first to get fresh numbers.
+2. REASON — What content performed well? What topics are trending? What hasn't been tried? \
+Use decide_next_action to log your thinking. Check your LESSONS LEARNED section carefully.
+3. ACT — Write content, generate feedback, draft tweets, scan community. Pick actions \
+based on data, not random topics.
+4. PUBLISH — Use publish_to_devto to push verified content live immediately.
+5. LEARN — Use record_lesson to write back what you tried and why. This memory persists \
+across cycles. Future-you will read it. Be specific and actionable.
 
-TOPIC SELECTION:
-- analyze_state shows existing article titles. DO NOT write about the same topic again.
-- Community signals show trending developer pain points. Use them as inspiration but don't repeat what you already covered.
-- Use search_docs to find documentation GAPS — areas where docs are thin or missing. That's where the best content comes from.
-- Write about something DIFFERENT every cycle. Research first, decide second.
+TOPIC SELECTION (data-driven):
+- analyze_state shows existing article titles — NEVER repeat a topic.
+- Dev.to stats show which articles get views/reactions — double down on what works.
+- Community signals show trending pain points — write about real problems.
+- Past lessons tell you what formats/angles resonated — use them.
+- search_docs reveals documentation gaps — that's where the best content comes from.
 
 QUALITY STANDARDS:
 - Every factual claim must be citation-backed from docs
@@ -185,11 +225,12 @@ QUALITY STANDARDS:
 - Feedback must be actionable with repro steps
 
 EFFICIENCY RULES:
-- Draft at most 1 community response per cycle.
 - Each cycle MUST produce at least one long-form article via write_content on a NEW topic.
-- If evaluate_output rejects something, fix it ONCE then move on.
+- After writing, publish_to_devto to get it live.
+- Draft at most 1 community response per cycle.
+- ALWAYS record_lesson before calling complete — even if the lesson is "this didn't work."
 
-Call complete when you've finished a meaningful unit of work.\
+You are building a track record. Every cycle adds to it. Act accordingly.\
 """
 
 
@@ -238,6 +279,7 @@ class AgenticCore:
         messages = [{"role": "user", "content": user_msg}]
         actions_taken = []
         result_summary = None
+        turn = 0
 
         from ..ledger import start_run, finalize_run, log_tool_call
         from ..models import LedgerOutputs
@@ -257,6 +299,8 @@ class AgenticCore:
                 except Exception as e:
                     if console:
                         console.print(f"  [red]API error: {e}[/red]")
+                    log_tool_call(ledger_ctx, "api_error", "", f"{type(e).__name__}: {e}")
+                    result_summary = f"Failed: {e}"
                     break
 
                 # Handle end_turn (no more tool calls)
@@ -310,6 +354,27 @@ class AgenticCore:
                 if result_summary:
                     break
 
+            # ── Post-cycle enforcement (code, not prompt) ──────────────
+            # These run regardless of what the agent chose to do.
+            post_cycle_notes = []
+
+            # 1. Always sync Dev.to stats if key is configured
+            if self.config.has_devto:
+                try:
+                    stats_result = self._tool_sync_devto_stats()
+                    log_tool_call(ledger_ctx, "post_cycle.sync_devto_stats", "", stats_result[:200])
+                    post_cycle_notes.append("devto_stats_synced")
+                except Exception as e:
+                    post_cycle_notes.append(f"devto_stats_failed: {e}")
+
+            # 2. Warn if no lessons were recorded this cycle
+            tools_used = [a["tool"] for a in actions_taken]
+            lesson_recorded = "record_lesson" in tools_used
+            if not lesson_recorded:
+                post_cycle_notes.append("WARNING: no lesson recorded this cycle")
+                if console:
+                    console.print("  [yellow]Post-cycle: agent did not record any lessons[/yellow]")
+
             finalize_run(ledger_ctx, self.config, self.db,
                          outputs=LedgerOutputs(
                              artifact_type="agent_cycle",
@@ -317,6 +382,8 @@ class AgenticCore:
                                  "actions": len(actions_taken),
                                  "turns": turn + 1,
                                  "summary": (result_summary or "")[:500],
+                                 "post_cycle": post_cycle_notes,
+                                 "lesson_recorded": lesson_recorded,
                              },
                          ),
                          verification=None)
@@ -325,6 +392,7 @@ class AgenticCore:
             "summary": result_summary or "Agent cycle completed",
             "actions_taken": actions_taken,
             "turns": turn + 1,
+            "lesson_recorded": lesson_recorded,
         }
 
     def _handle_tool(self, name: str, inp: dict, ledger_ctx, console=None) -> str:
@@ -352,6 +420,12 @@ class AgenticCore:
                 return self._tool_decide(inp)
             elif name == "build_site":
                 return self._tool_build_site()
+            elif name == "publish_to_devto":
+                return self._tool_publish_devto()
+            elif name == "sync_devto_stats":
+                return self._tool_sync_devto_stats()
+            elif name == "record_lesson":
+                return self._tool_record_lesson(inp, ledger_ctx)
             elif name == "complete":
                 return inp.get("summary", "Complete")
             else:
@@ -407,6 +481,32 @@ class AgenticCore:
         lines.append(f"\nLEDGER: {count_rows(self.db, 'run_log')} entries")
         if runs:
             lines.append(f"  Last run: {runs[0].get('command')} at {runs[0].get('started_at')}")
+
+        # Dev.to performance (what's working)
+        published = [c for c in (query_rows(self.db, "content_pieces", order_by="devto_views DESC", limit=20))
+                     if c.get("devto_article_id")]
+        if published:
+            lines.append("\nDEV.TO PERFORMANCE (published articles, sorted by views):")
+            for p in published:
+                lines.append(f"  - {p['title'][:60]}: {p.get('devto_views', 0)} views, "
+                             f"{p.get('devto_reactions', 0)} reactions, {p.get('devto_comments', 0)} comments")
+                if p.get("devto_url"):
+                    lines.append(f"    URL: {p['devto_url']}")
+        else:
+            lines.append("\nDEV.TO: No articles published yet. Use publish_to_devto after writing.")
+
+        # Lessons learned (persistent memory from past cycles)
+        lessons = query_rows(self.db, "agent_memory", order_by="created_at DESC", limit=15)
+        if lessons:
+            lines.append("\nLESSONS LEARNED (from past cycles — use these to make better decisions):")
+            for lesson in lessons:
+                conf = lesson.get("confidence", 0.5)
+                lines.append(f"  [{lesson['lesson_type']}] {lesson['key']}: {lesson['insight']}")
+                if lesson.get("evidence"):
+                    lines.append(f"    Evidence: {lesson['evidence'][:100]}")
+                lines.append(f"    Confidence: {conf:.1f} | Recorded: {lesson['created_at'][:10]}")
+        else:
+            lines.append("\nLESSONS: No lessons recorded yet. Start recording what works and what doesn't.")
 
         # Doc index
         lines.append(f"\nDOCS INDEX: {self.search_index.doc_count if self.search_index else 0} documents indexed")
@@ -496,7 +596,7 @@ class AgenticCore:
         """Autonomously research, draft, and post a tweet."""
         from .firewall import check as fw_check
         verdict = fw_check("post_tweet", {
-            "dry_run": not self.config.dry_run,
+            "dry_run": self.config.dry_run,
             "critic_verdict": "approved",
         })
         if not verdict:
@@ -622,6 +722,87 @@ Give a score from 1-10 and specific actionable feedback."""
         from ..site.generator import build_site
         page_count = build_site(self.db, self.config)
         return f"Site built: {page_count} pages generated."
+
+    def _tool_publish_devto(self) -> str:
+        """Publish all verified content to Dev.to."""
+        from ..social.devto import DevToClient
+        from ..db import update_row
+        client = DevToClient(self.config)
+
+        verified = query_rows(self.db, "content_pieces", where={"status": "verified"})
+        unpublished = [c for c in verified if not c.get("devto_article_id")]
+
+        if not unpublished:
+            return "No verified unpublished content to publish."
+
+        results = []
+        for piece in unpublished:
+            result = client.publish_from_content_piece(piece)
+            if result.get("status") == "published":
+                update_row(self.db, "content_pieces", piece["id"], {
+                    "status": "published",
+                    "devto_article_id": result.get("id"),
+                    "devto_url": result.get("url", ""),
+                    "published_at": now_iso(),
+                })
+                results.append(f"Published: {piece['title'][:50]} → {result.get('url', '')}")
+            else:
+                results.append(f"Failed: {piece['title'][:50]} — {result.get('status')}")
+
+        return "\n".join(results) if results else "Nothing published."
+
+    def _tool_sync_devto_stats(self) -> str:
+        """Sync engagement stats from Dev.to back to DB."""
+        from ..social.devto import DevToClient
+        from ..db import update_row
+        client = DevToClient(self.config)
+
+        if not self.config.has_devto:
+            return "No Dev.to API key configured."
+
+        stats = client.get_all_stats()
+        if not stats:
+            return "No Dev.to articles found."
+
+        synced = 0
+        lines = ["Dev.to engagement stats:"]
+        for s in stats:
+            lines.append(f"  {s.get('title', '')[:50]}: {s['page_views']} views, "
+                         f"{s['reactions']} reactions, {s['comments']} comments")
+
+            # Match back to content piece by article ID or title
+            published = query_rows(self.db, "content_pieces", where={"status": "published"})
+            for p in published:
+                if p.get("devto_article_id") == s.get("id") or (
+                    p.get("title", "").lower()[:30] == s.get("title", "").lower()[:30]
+                ):
+                    update_row(self.db, "content_pieces", p["id"], {
+                        "devto_article_id": s.get("id"),
+                        "devto_url": s.get("url", ""),
+                        "devto_views": s["page_views"],
+                        "devto_reactions": s["reactions"],
+                        "devto_comments": s["comments"],
+                        "devto_synced_at": now_iso(),
+                    })
+                    synced += 1
+                    break
+
+        lines.append(f"\nSynced stats for {synced} articles back to DB.")
+        return "\n".join(lines)
+
+    def _tool_record_lesson(self, inp: dict, ledger_ctx) -> str:
+        """Record a lesson to persistent memory."""
+        from ..db import insert_row
+        insert_row(self.db, "agent_memory", {
+            "cycle_id": ledger_ctx.run_id if ledger_ctx else "",
+            "lesson_type": inp["lesson_type"],
+            "key": inp["key"],
+            "insight": inp["insight"],
+            "evidence": inp.get("evidence", ""),
+            "confidence": inp.get("confidence", 0.5),
+            "created_at": now_iso(),
+        })
+        return f"Lesson recorded: [{inp['lesson_type']}] {inp['key']}: {inp['insight'][:80]}"
 
 
 def _agentic_content_writer(

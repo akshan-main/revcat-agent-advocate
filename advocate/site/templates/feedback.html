@@ -15,25 +15,41 @@
 <div class="feedback-grid">
     {% for fb in feedbacks %}
     {% if not fb.title.startswith('Missing fields in') %}
-    <div class="feedback-card">
-        <div class="feedback-header">
-            <h3>{{ fb.title }}</h3>
+    <div class="qa-memo">
+        <div class="qa-memo-header">
+            <div class="qa-memo-ref">
+                <span class="memo-number">QA-{{ '%03d' | format(loop.index) }}</span>
+                <time>{{ fb.created_at[:10] }}</time>
+            </div>
             <div class="feedback-badges">
                 <span class="badge badge-{{ fb.severity }}">{{ fb.severity }}</span>
                 <span class="badge badge-area">{{ fb.area }}</span>
             </div>
         </div>
+
+        <h3 class="qa-memo-title">{{ fb.title }}</h3>
+
+        {% if fb.severity == 'critical' %}
+        <div class="impact-bar impact-critical"><strong>Impact:</strong> Blocks developer workflow</div>
+        {% elif fb.severity == 'major' %}
+        <div class="impact-bar impact-major"><strong>Impact:</strong> Significant developer friction</div>
+        {% elif fb.severity == 'minor' %}
+        <div class="impact-bar impact-minor"><strong>Impact:</strong> Minor inconvenience</div>
+        {% else %}
+        <div class="impact-bar impact-suggestion"><strong>Impact:</strong> Enhancement opportunity</div>
+        {% endif %}
+
         <div class="feedback-body">
             {% if fb.repro_steps %}
             <h4>Reproduction Steps</h4>
             <div class="feedback-text">{{ fb.repro_steps | nl2br }}</div>
             {% endif %}
             {% if fb.expected %}
-            <h4>Expected</h4>
+            <h4>Expected Behavior</h4>
             <div class="feedback-text">{{ fb.expected | nl2br }}</div>
             {% endif %}
             {% if fb.actual %}
-            <h4>Actual</h4>
+            <h4>Actual Behavior</h4>
             <div class="feedback-text">{{ fb.actual | nl2br }}</div>
             {% endif %}
             {% if fb.evidence_links_json %}
@@ -50,8 +66,14 @@
             <div class="feedback-text">{{ fb.proposed_fix | nl2br }}</div>
             {% endif %}
         </div>
-        <div class="feedback-footer">
-            <time>Filed: {{ fb.created_at[:10] }}</time>
+
+        <div class="verification-status">
+            {% if fb.evidence_links_json %}
+            {% set links = fb.evidence_links_json if fb.evidence_links_json is iterable and fb.evidence_links_json is not string else [] %}
+            <span class="vs-checked">{{ links | length }} evidence link{{ 's' if links | length != 1 }} attached</span>
+            {% else %}
+            <span class="vs-none">No evidence links</span>
+            {% endif %}
             {% if fb.github_issue_url %}<a href="{{ fb.github_issue_url }}">GitHub Issue</a>{% endif %}
         </div>
     </div>
