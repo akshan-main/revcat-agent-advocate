@@ -111,6 +111,17 @@ def finalize_run(
 ) -> RunEntry:
     ctx._finalized = True
 
+    # Re-read sequence at finalize time to avoid UNIQUE constraint races.
+    # The sequence was initially set at RunContext creation, but if another
+    # run finalized between then and now, it would be stale.
+    last = query_rows(db_conn, "run_log", order_by="sequence DESC", limit=1)
+    if last:
+        ctx.sequence = last[0]["sequence"] + 1
+        ctx.prev_hash = last[0]["hash"]
+    else:
+        ctx.sequence = 1
+        ctx.prev_hash = "GENESIS"
+
     entry = RunEntry(
         run_id=ctx.run_id,
         sequence=ctx.sequence,
