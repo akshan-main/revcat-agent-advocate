@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>RAG Pipeline</h1>
+    <p class="page-intro">
+        The agent retrieves documentation using a hybrid search pipeline: BM25 keyword matching, vector similarity via ChromaDB,
+        reciprocal rank fusion, and a cross-encoder reranker. These are the measured results from {{ metrics.hybrid.queries | default(0) }}
+        ground-truth queries with graded relevance.
+    </p>
+
+    <h2>Retrieval Comparison</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">
+        Three retrieval modes evaluated on the same query set. Hybrid combines BM25 + semantic + reranker.
+    </p>
+    <table class="scorecard-table">
+        <thead>
+            <tr><th>Metric</th><th>BM25</th><th>Semantic</th><th>Hybrid</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>MRR @5</td>
+                <td>{{ "%.3f" | format(metrics.bm25.mrr5) }}</td>
+                <td>{{ "%.3f" | format(metrics.semantic.mrr5) }}</td>
+                <td><strong>{{ "%.3f" | format(metrics.hybrid.mrr5) }}</strong></td>
+            </tr>
+            <tr>
+                <td>NDCG @5</td>
+                <td>{{ "%.3f" | format(metrics.bm25.ndcg5) }}</td>
+                <td>{{ "%.3f" | format(metrics.semantic.ndcg5) }}</td>
+                <td><strong>{{ "%.3f" | format(metrics.hybrid.ndcg5) }}</strong></td>
+            </tr>
+            <tr>
+                <td>Recall @5</td>
+                <td>{{ "%.1f" | format(metrics.bm25.recall5 * 100) }}%</td>
+                <td>{{ "%.1f" | format(metrics.semantic.recall5 * 100) }}%</td>
+                <td><strong>{{ "%.1f" | format(metrics.hybrid.recall5 * 100) }}%</strong></td>
+            </tr>
+            <tr>
+                <td>Hit Rate @1</td>
+                <td>{{ "%.0f" | format(metrics.bm25.hit_rate1 * 100) }}%</td>
+                <td>{{ "%.0f" | format(metrics.semantic.hit_rate1 * 100) }}%</td>
+                <td><strong>{{ "%.0f" | format(metrics.hybrid.hit_rate1 * 100) }}%</strong></td>
+            </tr>
+            <tr>
+                <td>Hit Rate @3</td>
+                <td>{{ "%.0f" | format(metrics.bm25.hit_rate3 * 100) }}%</td>
+                <td>{{ "%.0f" | format(metrics.semantic.hit_rate3 * 100) }}%</td>
+                <td><strong>{{ "%.0f" | format(metrics.hybrid.hit_rate3 * 100) }}%</strong></td>
+            </tr>
+            <tr>
+                <td>MAP</td>
+                <td>{{ "%.3f" | format(metrics.bm25.map) }}</td>
+                <td>{{ "%.3f" | format(metrics.semantic.map) }}</td>
+                <td><strong>{{ "%.3f" | format(metrics.hybrid.map) }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if metrics.validation %}
+    <h2>Validation Set</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">
+        {{ metrics.validation.queries }} held-out queries never tuned against. Confirms the pipeline generalizes.
+    </p>
+    <div class="scorecard-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="score-card">
+            <div class="score-value">{{ "%.3f" | format(metrics.validation.mrr5) }}</div>
+            <div class="score-label">MRR @5</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ "%.3f" | format(metrics.validation.ndcg5) }}</div>
+            <div class="score-label">NDCG @5</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ "%.0f" | format(metrics.validation.hit_rate3 * 100) }}%</div>
+            <div class="score-label">Hit Rate @3</div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if metrics.reranking %}
+    <h2>Reranker Impact</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">
+        A/B comparison: hybrid search with and without the Contextual AI cross-encoder reranker.
+    </p>
+    <table class="scorecard-table">
+        <thead>
+            <tr><th>Condition</th><th>MRR @5</th><th>Queries Affected</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Without reranker</td>
+                <td>{{ "%.3f" | format(metrics.reranking.no_reranker_mrr) }}</td>
+                <td>—</td>
+            </tr>
+            <tr>
+                <td>With reranker</td>
+                <td><strong>{{ "%.3f" | format(metrics.reranking.reranked_mrr) }}</strong></td>
+                <td>{{ metrics.reranking.improved }} improved, {{ metrics.reranking.degraded }} degraded</td>
+            </tr>
+            <tr>
+                <td><strong>Lift</strong></td>
+                <td><strong class="score-green">+{{ "%.3f" | format(metrics.reranking.lift) }}</strong></td>
+                <td>out of {{ metrics.reranking.total }} queries</td>
+            </tr>
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if metrics.index_stats %}
+    <h2>Index</h2>
+    <div class="scorecard-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="score-card">
+            <div class="score-value">{{ metrics.index_stats.bm25_docs }}</div>
+            <div class="score-label">Doc Pages</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ metrics.index_stats.rag_chunks }}</div>
+            <div class="score-label">Vector Chunks</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ metrics.index_stats.bm25_terms }}</div>
+            <div class="score-label">BM25 Terms</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <h2>Pipeline Components</h2>
+    <table class="scorecard-table">
+        <thead>
+            <tr><th>Stage</th><th>Component</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Embeddings</td><td>HF Inference API</td><td><code>all-mpnet-base-v2</code> (768-dim)</td></tr>
+            <tr><td>Vector DB</td><td>ChromaDB Cloud</td><td>Cosine similarity, heading-prefixed embeddings</td></tr>
+            <tr><td>Keyword</td><td>BM25</td><td>k1=1.2, b=0.75, stopword filtering</td></tr>
+            <tr><td>Query Expansion</td><td>Domain synonyms</td><td>RevenueCat-specific term expansion</td></tr>
+            <tr><td>Reranking</td><td>Contextual AI / HF</td><td><code>ctxl-rerank-v2</code> primary, <code>ms-marco-MiniLM</code> fallback</td></tr>
+            <tr><td>Fusion</td><td>Reciprocal Rank Fusion</td><td>k=60, 70/30 semantic/BM25 weighting</td></tr>
+            <tr><td>Chunking</td><td>Heading-aware</td><td>400 max words, 50-word overlap</td></tr>
+        </tbody>
+    </table>
+
+    {% if metrics.context_relevance %}
+    <h2>LLM-as-Judge</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">
+        Claude Haiku evaluates retrieval and generation quality across three dimensions.
+    </p>
+    <div class="scorecard-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="score-card">
+            <div class="score-value">{{ "%.3f" | format(metrics.context_relevance.mean_score) }}</div>
+            <div class="score-label">Context Relevance</div>
+            <div class="score-detail">do retrieved docs answer the query?</div>
+        </div>
+        {% if metrics.faithfulness %}
+        <div class="score-card">
+            <div class="score-value">{{ "%.3f" | format(metrics.faithfulness.mean_score) }}</div>
+            <div class="score-label">Faithfulness</div>
+            <div class="score-detail">are claims grounded in sources?</div>
+        </div>
+        {% endif %}
+        {% if metrics.answer_quality %}
+        <div class="score-card">
+            <div class="score-value">{{ "%.3f" | format(metrics.answer_quality.mean_score) }}</div>
+            <div class="score-label">Answer Quality</div>
+            <div class="score-detail">end-to-end retrieval + generation</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</article>
+{% endblock %}

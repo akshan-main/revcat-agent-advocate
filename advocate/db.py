@@ -353,7 +353,7 @@ def now_iso() -> str:
 ALL_TABLES = {
     "seo_pages", "content_pieces", "community_interactions",
     "product_feedback", "run_log", "growth_experiments", "doc_snapshots",
-    "agent_memory",
+    "agent_memory", "signals", "bandit_arms",
 }
 
 # Allowed column names for ORDER BY / WHERE to prevent SQL injection
@@ -368,6 +368,12 @@ _ALLOWED_COLUMNS = {
     "devto_article_id", "devto_url", "devto_views", "devto_reactions",
     "devto_comments", "devto_synced_at",
     "cycle_id", "lesson_type", "key", "insight", "evidence", "confidence",
+    # Signals table
+    "source", "signal_type", "body", "metadata_json", "impact", "urgency",
+    "freshness", "score", "claimed_by", "action_taken", "outcome_json",
+    "acted_at", "expires_at",
+    # Bandit arms table
+    "arm_name", "alpha", "beta", "total_pulls", "total_reward", "last_pulled_at",
 }
 
 
@@ -422,6 +428,95 @@ def exists_similar(conn: DBConnection, table: str, match_cols: dict, threshold: 
             if existing_norm == norm:
                 return True
     return False
+
+
+def prune_memory(
+    conn: DBConnection,
+    max_age_days: int = 90,
+    min_confidence_old: float = 0.7,
+    max_per_type_key: int = 20,
+    dry_run: bool = False,
+) -> dict:
+    """Prune agent_memory to keep it useful instead of noisy.
+
+    Policy:
+    1. Keep all lessons from last ``max_age_days`` days.
+    2. Older lessons kept only if confidence >= ``min_confidence_old``.
+    3. Per (lesson_type, key) combo, keep at most ``max_per_type_key`` newest.
+    4. Hard-delete exact duplicates (same lesson_type + key + insight).
+
+    Returns dict with counts: duplicates_removed, low_confidence_removed,
+    excess_removed, total_removed, total_remaining.
+    """
+    stats = {
+        "duplicates_removed": 0,
+        "low_confidence_removed": 0,
+        "excess_removed": 0,
+        "total_removed": 0,
+        "total_remaining": 0,
+    }
+
+    cutoff = (datetime.now(timezone.utc) - __import__("datetime").timedelta(days=max_age_days)).isoformat()
+
+    # 1. Remove exact duplicates — keep the newest (highest id) per (lesson_type, key, insight)
+    dup_rows = conn.execute(
+        "SELECT lesson_type, key, insight, COUNT(*) as cnt, MAX(id) as keep_id "
+        "FROM agent_memory GROUP BY lesson_type, key, insight HAVING cnt > 1"
+    ).fetchall()
+    for row in dup_rows:
+        dupes_to_delete = conn.execute(
+            "SELECT id FROM agent_memory WHERE lesson_type = ? AND key = ? AND insight = ? AND id != ?",
+            (row["lesson_type"], row["key"], row["insight"], row["keep_id"]),
+        ).fetchall()
+        for d in dupes_to_delete:
+            if not dry_run:
+                conn.execute("DELETE FROM agent_memory WHERE id = ?", (d["id"],))
+            stats["duplicates_removed"] += 1
+
+    # 2. Remove old low-confidence lessons (older than cutoff AND confidence < threshold)
+    old_low = conn.execute(
+        "SELECT id FROM agent_memory WHERE created_at < ? AND confidence < ?",
+        (cutoff, min_confidence_old),
+    ).fetchall()
+    for row in old_low:
+        if not dry_run:
+            conn.execute("DELETE FROM agent_memory WHERE id = ?", (row["id"],))
+        stats["low_confidence_removed"] += 1
+
+    # 3. Per (lesson_type, key), keep only the newest max_per_type_key
+    #    but never delete lessons within the recency window (step 1 guarantee).
+    #    Delete oldest OLD entries until total <= cap.
+    groups = conn.execute(
+        "SELECT lesson_type, key, COUNT(*) as cnt "
+        "FROM agent_memory GROUP BY lesson_type, key HAVING cnt > ?",
+        (max_per_type_key,),
+    ).fetchall()
+    for grp in groups:
+        excess_count = grp["cnt"] - max_per_type_key
+        if excess_count <= 0:
+            continue
+        # Only delete old lessons (outside recency window), oldest first
+        deletable = conn.execute(
+            "SELECT id FROM agent_memory WHERE lesson_type = ? AND key = ? "
+            "AND created_at < ? "
+            "ORDER BY created_at ASC LIMIT ?",
+            (grp["lesson_type"], grp["key"], cutoff, excess_count),
+        ).fetchall()
+        for row in deletable:
+            if not dry_run:
+                conn.execute("DELETE FROM agent_memory WHERE id = ?", (row["id"],))
+            stats["excess_removed"] += 1
+
+    if not dry_run:
+        conn.commit()
+
+    stats["total_removed"] = (
+        stats["duplicates_removed"] + stats["low_confidence_removed"] + stats["excess_removed"]
+    )
+    remaining = conn.execute("SELECT COUNT(*) as cnt FROM agent_memory").fetchone()
+    stats["total_remaining"] = remaining["cnt"] if remaining else 0
+
+    return stats
 
 
 def reset_all_tables(conn: DBConnection):

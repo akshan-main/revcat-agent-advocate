@@ -2,6 +2,24 @@
 {% block content %}
 <h1>Content</h1>
 
+{% if devto_stats and devto_stats.total_views > 0 %}
+<div class="scorecard-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.5rem;">
+    <div class="score-card">
+        <div class="score-value">{{ devto_stats.total_views }}</div>
+        <div class="score-label">Dev.to Views</div>
+        <div class="score-detail">across {{ devto_stats.published }} articles</div>
+    </div>
+    <div class="score-card">
+        <div class="score-value">{{ devto_stats.total_reactions }}</div>
+        <div class="score-label">Reactions</div>
+    </div>
+    <div class="score-card">
+        <div class="score-value">{{ devto_stats.total_comments }}</div>
+        <div class="score-label">Comments</div>
+    </div>
+</div>
+{% endif %}
+
 {% if content_pieces %}
 <h2>Articles</h2>
 <div class="content-grid">
@@ -12,7 +30,18 @@
         <div class="content-meta">
             <span>{{ piece.word_count }} words</span>
             <span>{{ piece.citations_count }} citations</span>
+            {% if piece.devto_views %}
+            <span>{{ piece.devto_views }} views</span>
+            {% endif %}
+            {% if piece.devto_reactions %}
+            <span>{{ piece.devto_reactions }} reactions</span>
+            {% endif %}
         </div>
+        {% if piece.devto_url %}
+        <span class="content-type" style="margin-top:0.2rem;">
+            <a href="{{ piece.devto_url }}" target="_blank" style="font-size:0.72rem;text-transform:uppercase;">Dev.to</a>
+        </span>
+        {% endif %}
         <time>{{ piece.created_at[:10] }}</time>
     </a>
     {% endfor %}

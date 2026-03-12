@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>Supervisor</h1>
+    <p class="page-intro">
+        Event-driven autonomous loop. Every 6 hours, the supervisor ingests signals from GitHub, Reddit
+        (quality-gated), Dev.to, and doc changes, scores them by impact &times; urgency &times; confidence &times; freshness,
+        claims the top signal, and executes an action through the firewall.
+    </p>
+
+    <h2>Architecture</h2>
+    <div class="scorecard-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="score-card">
+            <div class="score-value">OBSERVE</div>
+            <div class="score-label">Ingest Signals</div>
+            <div class="score-detail">GitHub, Reddit, Dev.to, docs, schedule</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">DECIDE</div>
+            <div class="score-label">Score &amp; Claim</div>
+            <div class="score-detail">impact &times; urgency &times; confidence &times; freshness</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">ACT</div>
+            <div class="score-label">Execute</div>
+            <div class="score-detail">firewall &rarr; rate limit &rarr; action &rarr; ledger</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">LEARN</div>
+            <div class="score-label">Update Priors</div>
+            <div class="score-detail">bandit rewards + agent memory</div>
+        </div>
+    </div>
+
+    {% if signal_stats %}
+    <h2>Signal Queue</h2>
+    <div class="scorecard-grid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="score-card score-hero">
+            <div class="score-value">{{ signal_stats.total }}</div>
+            <div class="score-label">Total Signals</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ signal_stats.pending }}</div>
+            <div class="score-label">Pending</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ signal_stats.acted }}</div>
+            <div class="score-label">Acted</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ signal_stats.skipped }}</div>
+            <div class="score-label">Skipped</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ signal_stats.expired }}</div>
+            <div class="score-label">Expired</div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if bandit_arms %}
+    <h2>Topic Bandit (Thompson Sampling)</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">
+        Each topic category is a bandit arm. Expected value = alpha / (alpha + beta).
+        Dev.to engagement feeds reward signal. Higher EV = more content allocation.
+    </p>
+    <table class="scorecard-table">
+        <thead>
+            <tr><th>Category</th><th>Expected Value</th><th>Pulls</th><th>Total Reward</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            {% for arm in bandit_arms %}
+            <tr>
+                <td><strong>{{ arm.arm_name }}</strong></td>
+                <td>{{ "%.3f" | format(arm.expected_value) }}</td>
+                <td>{{ arm.total_pulls }}</td>
+                <td>{{ "%.2f" | format(arm.total_reward) }}</td>
+                <td style="font-size:0.82rem;color:var(--text-muted);">{{ arm.description }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if recent_signals %}
+    <h2>Recent Signals</h2>
+    <div class="experiment-grid">
+        {% for sig in recent_signals %}
+        <div class="feedback-card" style="border-left:3px solid {% if sig.status == 'acted' %}var(--green){% elif sig.status == 'pending' %}#b45309{% elif sig.status == 'skipped' %}var(--text-muted){% else %}var(--border){% endif %}; padding-left:1rem;">
+            <div class="experiment-header">
+                <h3 style="font-size:0.9rem;">{{ sig.title[:80] }}</h3>
+                <span class="badge {% if sig.status == 'acted' %}badge-verified{% elif sig.status == 'pending' %}badge-running{% elif sig.status == 'skipped' %}badge-draft{% else %}badge-critical{% endif %}">{{ sig.status }}</span>
+            </div>
+            <div class="experiment-body" style="font-size:0.85rem;">
+                <span class="content-type">{{ sig.source }}</span>
+                <span class="content-type">{{ sig.signal_type }}</span>
+                {% if sig.action_taken %}
+                <span class="content-type" style="background:var(--green);color:#fff;">{{ sig.action_taken }}</span>
+                {% endif %}
+            </div>
+            <div class="experiment-footer">
+                <span>Score: <strong>{{ "%.3f" | format(sig.score) }}</strong></span>
+                <time>{{ sig.created_at[:16] }}</time>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not signal_stats and not recent_signals %}
+    <p class="placeholder">No supervisor cycles yet. Run: <code>python3 -m cli supervise</code></p>
+    {% endif %}
+</article>
+{% endblock %}

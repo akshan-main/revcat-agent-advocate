@@ -39,7 +39,6 @@ revcat-advocate build-site</code></pre>
         <tr><td><code>DEMO_MODE</code></td><td><code>false</code></td><td>Uses mock API responses and local fixture data for testing</td></tr>
     </tbody>
 </table>
-<p>Governance tested with a 17-case red-team suite covering prompt injection, PII extraction, competitor bashing, and brand safety.</p>
 
 <h3>Autonomy Model</h3>
 <table>
@@ -75,6 +74,100 @@ revcat-advocate build-site</code></pre>
 </section>
 
 <section>
+<h2>Signal Pipeline</h2>
+<p>The supervisor ingests signals from 5 producers, scores them, and acts on the highest-priority signal each cycle. Agent-task issues are handled by a <a href="#agent-task">separate event-driven workflow</a>, not the signal pipeline.</p>
+<table>
+    <thead><tr><th>Producer</th><th>Source</th><th>TTL</th><th>What it detects</th></tr></thead>
+    <tbody>
+        <tr><td>GitHub Issues</td><td>6 RC repos (purchases-ios, android, flutter, unity, kmp, js)</td><td>72h</td><td>New issues in last 72 hours</td></tr>
+        <tr><td>Reddit</td><td>6 subreddits (iOSProgramming, androiddev, FlutterDev, etc.)</td><td>48h</td><td>Quality-gated: requires minimum engagement (score &ge; 3 or comments &ge; 2) AND actionable content (question, problem, comparison)</td></tr>
+        <tr><td>Dev.to Stats</td><td>Published articles</td><td>72h</td><td>Engagement spikes (1.5x+ growth) and stalled articles</td></tr>
+        <tr><td>Doc Changes</td><td>Cached doc pages</td><td>72h</td><td>SHA256 changes between ingestion runs</td></tr>
+        <tr><td>Scheduled</td><td>Internal timers</td><td>48h</td><td>Content due (5 days), tweet due (2 days), feedback due (7 days)</td></tr>
+    </tbody>
+</table>
+
+<h3>Signal Scoring</h3>
+<p>Each signal is scored: <code>score = impact &times; urgency &times; confidence &times; freshness</code>. Freshness decays linearly from 1.0 to 0.05 over the signal's TTL. The highest-scoring unclaimed signal is acted on.</p>
+
+<h3>Deduplication &amp; Expiry</h3>
+<p>Signals are deduped by <code>(source, url)</code> or title hash. Each signal has a TTL — expired signals are marked and excluded from scoring. This prevents the agent from re-processing stale information.</p>
+</section>
+
+<section id="agent-task">
+<h2>Agent Tasks (Event-Driven)</h2>
+<p>Agent tasks are <strong>not</strong> part of the signal pipeline. They have their own GitHub Actions workflow (<code>agent-task.yml</code>) that triggers when an issue is labeled <code>agent-task</code>:</p>
+<ol>
+    <li>Issue labeled <code>agent-task</code> → workflow triggers immediately</li>
+    <li>Task injected as a signal, claimed directly by ID — no producer ingestion, no scoring queue</li>
+    <li>Supervisor decides the action (including <code>submit_form</code> for browser-based tasks) and executes it</li>
+    <li>Ledger entry recorded</li>
+    <li>Issue closed on success, left open on failure (CLI exits non-zero if task not acted on)</li>
+</ol>
+<p>This separation ensures operator tasks get immediate execution without competing against scored signals in the supervisor queue, while retaining access to all supervisor actions including browser automation.</p>
+</section>
+
+<section>
+<h2>Browser Automation</h2>
+<p>The supervisor can browse the web via <a href="https://github.com/anthropics/anthropic-mcp/tree/main/packages/playwright">Playwright MCP</a> (pinned to <code>@playwright/mcp@0.0.28</code>). Used for signal enrichment (fetching page content) and form submission.</p>
+<table>
+    <thead><tr><th>Capability</th><th>How it works</th></tr></thead>
+    <tbody>
+        <tr><td>Signal enrichment</td><td>Before acting on a signal, the browser fetches the page content to give the agent full context</td></tr>
+        <tr><td>Form submission</td><td>LLM interprets page DOM + operator-provided fields → generates click/type sequences via MCP</td></tr>
+        <tr><td>Domain allowlist</td><td>11 whitelisted domains: revenuecat.com (+ docs, www, community subdomains), github.com, dev.to, reddit.com (+ www, old), stackoverflow.com, jobs.ashbyhq.com</td></tr>
+        <tr><td>DRY_RUN gating</td><td>Form submissions blocked in dry-run mode</td></tr>
+    </tbody>
+</table>
+</section>
+
+<section>
+<h2>Community Scanning</h2>
+<p>The agent monitors developer communities for RevenueCat questions and discussions. All responses stay in <code>draft</code> status — nothing is auto-posted.</p>
+<table>
+    <thead><tr><th>Source</th><th>Targets</th><th>What it does</th></tr></thead>
+    <tbody>
+        <tr><td>GitHub</td><td>purchases-ios, purchases-android, purchases-flutter, purchases-unity, purchases-kmp, purchases-js</td><td>Scans issues, drafts doc-grounded responses</td></tr>
+        <tr><td>Reddit</td><td>iOSProgramming, androiddev, FlutterDev, gamedev, IndieDev, RevenueCat</td><td>Scans posts mentioning subscriptions or RevenueCat, drafts helpful replies</td></tr>
+        <tr><td>Twitter</td><td>RevenueCat developer community</td><td>Drafts tweets with critic-agent quality gate (length, code detection, LLM review)</td></tr>
+    </tbody>
+</table>
+</section>
+
+<section>
+<h2>Dev.to Closed Loop</h2>
+<p>Content published to Dev.to feeds engagement data back into the agent's decision-making:</p>
+<pre><code>write-content → publish-devto → Dev.to API
+    ↓
+devto-stats (pulls views, reactions, comments back to Turso)
+    ↓
+Bandit reward = max(views/500, reactions/20, comments/10)
+    ↓
+Thompson sampling updates Beta(alpha, beta) priors
+    ↓
+Next topic selection favors higher-engagement categories</code></pre>
+<p>The supervisor calls <code>sync_rewards_from_devto</code> to update bandit priors from Dev.to engagement stats. The autonomous agent core also enforces Dev.to stats sync as a post-cycle step (conditional on <code>has_devto</code>). This creates a self-improving content strategy based on real engagement data.</p>
+</section>
+
+<section>
+<h2>Memory Pruning</h2>
+<p>Agent memory grows over time as lessons are recorded each cycle. The pruning system keeps memory useful instead of noisy:</p>
+<table>
+    <thead><tr><th>Policy</th><th>Rule</th></tr></thead>
+    <tbody>
+        <tr><td>Recency</td><td>Keep all lessons from last 90 days regardless of confidence</td></tr>
+        <tr><td>Quality gate</td><td>Older lessons survive only if confidence &ge; 0.7</td></tr>
+        <tr><td>Per-key cap</td><td>Max 20 lessons per (lesson_type, key) combo — keeps the newest</td></tr>
+        <tr><td>Deduplication</td><td>Exact duplicates (same type + key + insight) are hard-deleted, keeping newest</td></tr>
+    </tbody>
+</table>
+<pre><code>revcat-advocate prune-memory                  # apply default policies
+revcat-advocate prune-memory --dry-run         # preview what would be pruned
+revcat-advocate prune-memory --max-age 60      # tighter window
+revcat-advocate prune-memory --min-confidence 0.5  # stricter quality gate</code></pre>
+</section>
+
+<section>
 <h2>Reliability Engineering</h2>
 
 <h3>Pre-Execution Action Firewall</h3>
@@ -86,10 +179,33 @@ revcat-advocate build-site</code></pre>
         <tr><td>2. Safety</td><td><code>SafetyError</code> exception</td><td>POST/PUT/DELETE to RC API, write-capable MCP tools</td></tr>
         <tr><td>3. Publish Gate</td><td>Banned phrase + citation check</td><td>Deployment if letter contains overclaims or too few citations</td></tr>
         <tr><td>4. Tweet Critic</td><td>Programmatic + LLM review</td><td>Tweets that fail length, code detection, or quality checks</td></tr>
-        <tr><td>5. Governance Suite</td><td>17-case red-team</td><td>Prompt injection, PII leaks, competitor attacks, brand violations</td></tr>
     </tbody>
 </table>
-<p>External actions are gated by applicable layers. DRY_RUN/ALLOW_WRITES and the tweet critic are enforced in code; the YAML firewall provides additional configurable rules for actions routed through the agent core.</p>
+<p>External actions are gated by applicable layers. DRY_RUN/ALLOW_WRITES and the tweet critic are enforced in code; the YAML firewall provides additional configurable rules for actions routed through both the supervisor and the agent core.</p>
+
+<h3>Supervisor Rate Limits</h3>
+<p>Per-day limits enforced by the YAML firewall to prevent runaway autonomous actions:</p>
+<table>
+    <thead><tr><th>Action</th><th>Daily Limit</th></tr></thead>
+    <tbody>
+        <tr><td>Write content</td><td>2/day</td></tr>
+        <tr><td>Draft tweets</td><td>3/day</td></tr>
+        <tr><td>Draft community responses</td><td>5/day</td></tr>
+        <tr><td>Generate feedback</td><td>2/day</td></tr>
+        <tr><td>Rebuild site</td><td>3/day</td></tr>
+    </tbody>
+</table>
+
+<h3>Eval Gates (Post-Production)</h3>
+<p>Quality thresholds checked after content is produced. Failures trigger rollback:</p>
+<table>
+    <thead><tr><th>Gate</th><th>Threshold</th><th>On Failure</th></tr></thead>
+    <tbody>
+        <tr><td>Content</td><td>&ge; 3 citations, &ge; 500 words, 0 unverified claims, Sources section required</td><td>Quarantine (hidden from site)</td></tr>
+        <tr><td>Tweet</td><td>&le; 280 chars, critic must approve, max 3 rewrite attempts</td><td>Discard (never posted)</td></tr>
+        <tr><td>Feedback</td><td>Must have repro steps and proposed fix</td><td>Held in draft</td></tr>
+    </tbody>
+</table>
 
 <h3>Failure Categories and Retry Strategy</h3>
 <table>
@@ -114,7 +230,7 @@ revcat-advocate build-site</code></pre>
 
 <h3>Eval and Observability</h3>
 <ul>
-    <li><strong>Hash-chained ledger:</strong> Every CLI command produces a <code>RunEntry</code> with inputs, tool calls, sources, outputs, and SHA256 hash linking to the previous entry. Tamper detection is automatic.</li>
+    <li><strong>Hash-chained ledger:</strong> Key commands (content generation, experiments, feedback, tweets, agent cycles) produce a <code>RunEntry</code> with inputs, tool calls, sources, outputs, and SHA256 hash linking to the previous entry. Tamper detection is automatic.</li>
     <li><strong>Citation verification:</strong> Content verifier HEAD-checks every cited URL, matches quoted snippets against cached doc hashes, and validates code snippet syntax.</li>
     <li><strong>Scorecard metrics:</strong> Success rate, word count, citation count, experiment outcomes, and failure log are computed live from the database on every site build.</li>
     <li><strong>Staged rollout:</strong> <code>build-site</code> renders locally for inspection. <code>deploy</code> is a separate, explicit command. The <code>submit</code> pipeline gates deployment on publish-gate pass.</li>
@@ -129,6 +245,7 @@ revcat-advocate build-site</code></pre>
         <tr><td>Lesson recording warning</td><td><code>always</code></td><td>If the agent did not call <code>record_lesson</code> during the cycle, a warning is logged. The cycle still succeeds — but the gap is visible in the ledger.</td></tr>
         <tr><td>Site rebuild</td><td><code>always</code></td><td>Runs via <code>build-site</code> in the weekly CI workflow after the agent cycle completes.</td></tr>
         <tr><td>Ledger verification</td><td><code>always</code></td><td>Runs via <code>verify-ledger</code> in CI. If the hash chain is broken, the site shows a red badge.</td></tr>
+        <tr><td>Memory pruning</td><td><code>always</code></td><td>Removes duplicates, old low-confidence lessons, and excess per-key entries. Recent lessons (last 90 days) are never pruned by the per-key cap.</td></tr>
     </tbody>
 </table>
 <p>This is a deliberate contract: <code>post_cycle_devto_sync = conditional(has_devto)</code>. The agent decides what to create; the code decides what happens after.</p>
@@ -155,7 +272,6 @@ revcat-advocate build-site</code></pre>
         <tr><td><code>tweet --topic "..."</code></td><td>Draft tweets (DRY_RUN gated)</td></tr>
         <tr><td><code>scan-github</code></td><td>Scan RC repos for issues, draft responses</td></tr>
         <tr><td><code>scan-reddit</code></td><td>Scan subreddits, draft responses</td></tr>
-        <tr><td><code>competitive-digest</code></td><td>Competitive intel from public pages</td></tr>
         <tr><td><code>analyze-docs</code></td><td>Documentation quality analysis</td></tr>
         <tr><td><code>repro-test</code></td><td>API/MCP repro scenarios</td></tr>
         <tr><td><code>weekly-report</code></td><td>Weekly activity summary</td></tr>
@@ -165,6 +281,19 @@ revcat-advocate build-site</code></pre>
         <tr><td><code>serve</code></td><td>HTTP API server</td></tr>
         <tr><td><code>mcp-serve</code></td><td>MCP server for other agents</td></tr>
         <tr><td><code>auto --interval 6h</code></td><td>Scheduled task loop (content, experiments, feedback, site build)</td></tr>
+        <tr><td><code>supervise</code></td><td>Run supervisor cycle (signal-driven OODA loop)</td></tr>
+        <tr><td><code>supervise --daemon --interval 21600</code></td><td>Continuous supervisor (6-hour cycles)</td></tr>
+        <tr><td><code>agent --goal "..."</code></td><td>Autonomous agent with a specific goal</td></tr>
+        <tr><td><code>scan-github --limit 10</code></td><td>Scan 6 RC repos for issues, draft responses</td></tr>
+        <tr><td><code>scan-reddit --limit 10</code></td><td>Scan 6 subreddits, draft responses</td></tr>
+        <tr><td><code>publish-devto</code></td><td>Publish content to Dev.to</td></tr>
+        <tr><td><code>devto-stats</code></td><td>Sync Dev.to engagement stats back to DB</td></tr>
+        <tr><td><code>prune-memory</code></td><td>Prune stale/duplicate agent memory entries</td></tr>
+        <tr><td><code>verify-ledger</code></td><td>Verify hash chain integrity</td></tr>
+        <tr><td><code>publish-gate</code></td><td>Run publish gate checks on content</td></tr>
+        <tr><td><code>submit</code></td><td>Full submit pipeline: gate check → build → deploy</td></tr>
+        <tr><td><code>deploy</code></td><td>Deploy to GitHub Pages</td></tr>
+        <tr><td><code>skills</code></td><td>List all Claude Code skills</td></tr>
         <tr><td><code>demo-run</code></td><td>Full pipeline end-to-end</td></tr>
     </tbody>
 </table>
@@ -186,14 +315,22 @@ revcat-advocate build-site</code></pre>
 
 <section>
 <h2>Architecture</h2>
-<pre><code>Docs (LLM Index + .md mirrors)
-    -> Knowledge Engine (BM25 + RAG hybrid search)
-        -> Content Engine (Claude API + citation verification)
-        -> Growth Engine (experiments + programmatic SEO)
-        -> Feedback Engine (doc analysis + repro harness)
-        -> Social (GitHub, Reddit, X; all DRY_RUN gated)
-    -> Governance (red-team suite, safety gates)
-        -> Static Site (GitHub Pages)</code></pre>
+<pre><code>RevenueCat Docs (LLM Index + .md mirrors)
+    -> Hybrid RAG (BM25 + ChromaDB vectors + Contextual AI reranker)
+        -> Content Engine (Claude + citation verification)
+        -> Growth Engine (experiments + SEO)
+        -> Feedback Engine (doc analysis)
+        -> Social (Dev.to + Twitter + GitHub/Reddit scanning)
+    -> Supervisor (signal-driven OODA loop, 6-hour cycles)
+        -> Signal Pipeline (5 producers: GitHub, Reddit, Dev.to, docs, schedule)
+        -> Thompson Sampling Bandit (10 topic categories, Beta priors)
+        -> Playwright MCP Browser (enrichment + form submission)
+        -> Action Firewall (YAML rules + rate limits + eval gates)
+    -> Turso (10-table cloud DB, all state)
+    -> Ledger (SHA256 hash chain + optional HMAC signing)
+    -> Agent Memory (lessons + pruning policies)
+    -> MCP Server (22 tools + 3 resources via FastMCP)
+    -> Static Site (GitHub Pages)</code></pre>
 </section>
 
 <section>

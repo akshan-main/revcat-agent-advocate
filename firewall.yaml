@@ -18,6 +18,19 @@ rules:
   - action: write_content
     deny_if: ["word_count < 300"]
 
+  # ── Supervisor Rate Limits ────────────────────────────────────────
+  # Prevent runaway autonomous actions per day.
+  - action: supervisor_write_content
+    deny_if: ["write_content_today > 2"]
+  - action: supervisor_draft_community_response
+    deny_if: ["draft_community_response_today > 5"]
+  - action: supervisor_draft_tweet
+    deny_if: ["draft_tweet_today > 3"]
+  - action: supervisor_generate_feedback
+    deny_if: ["generate_feedback_today > 2"]
+  - action: supervisor_rebuild_site
+    deny_if: ["rebuild_site_today > 3"]
+
 # ── Eval Gates ───────────────────────────────────────────────────────
 # Quality thresholds checked after production. Failures trigger rollback.
 

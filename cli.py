@@ -1310,6 +1310,34 @@ def verify_ledger_cmd(ctx):
             console.print("[red]HMAC signature verification FAILED[/red]")
 
 
+@main.command("prune-memory")
+@click.option("--max-age", default=90, help="Keep all lessons from last N days (default 90)")
+@click.option("--min-confidence", default=0.7, type=float, help="Older lessons need this confidence to survive (default 0.7)")
+@click.option("--max-per-key", default=20, help="Max lessons per (type, key) combo (default 20)")
+@click.option("--dry-run", is_flag=True, help="Show what would be pruned without deleting")
+@click.pass_context
+def prune_memory_cmd(ctx, max_age, min_confidence, max_per_key, dry_run):
+    """Prune stale, duplicate, and low-confidence agent memory entries."""
+    from advocate.db import prune_memory
+    db = ctx.obj["db"]
+    console = ctx.obj["console"]
+
+    stats = prune_memory(db, max_age_days=max_age, min_confidence_old=min_confidence,
+                         max_per_type_key=max_per_key, dry_run=dry_run)
+
+    mode = "[yellow]DRY RUN[/yellow] — " if dry_run else ""
+    console.print(f"\n{mode}[bold]Memory Pruning Results[/bold]")
+    table = Table(show_header=True)
+    table.add_column("Category", style="bold")
+    table.add_column("Removed", justify="right")
+    table.add_row("Exact duplicates", str(stats["duplicates_removed"]))
+    table.add_row(f"Old + low confidence (<{min_confidence})", str(stats["low_confidence_removed"]))
+    table.add_row(f"Excess per (type,key) (>{max_per_key})", str(stats["excess_removed"]))
+    table.add_row("Total removed", f"[bold]{stats['total_removed']}[/bold]")
+    table.add_row("Remaining", f"[green]{stats['total_remaining']}[/green]")
+    console.print(table)
+
+
 @main.command("generate-application")
 @click.pass_context
 def generate_application(ctx):
@@ -2080,42 +2108,6 @@ def ops_dashboard_cmd(ctx):
         f.write(dashboard)
 
 
-@main.command("competitive-digest")
-@click.pass_context
-def competitive_digest_cmd(ctx):
-    """Generate weekly competitive intelligence digest (public data only)."""
-    config = ctx.obj["config"]
-    console = ctx.obj["console"]
-    db = ctx.obj["db"]
-
-    from advocate.intelligence.competitive import generate_competitive_digest, format_competitive_digest
-
-    with start_run(db, "competitive-digest", {}, config) as run_ctx:
-        console.print("[bold]Generating competitive digest (public data only)...[/bold]")
-        digest = generate_competitive_digest(config)
-
-        console.print(f"  Signals: {len(digest.signals)}")
-        for signal in digest.signals:
-            console.print(f"  [{signal.competitor}] {signal.title}")
-
-        if digest.action_items:
-            console.print("\n[bold]Action items:[/bold]")
-            for item in digest.action_items:
-                console.print(f"  - {item}")
-
-        report_md = format_competitive_digest(digest)
-        report_dir = os.path.join(config.site_output_dir, "reports")
-        os.makedirs(report_dir, exist_ok=True)
-        with open(os.path.join(report_dir, "competitive_digest.md"), "w") as f:
-            f.write(report_md)
-
-        finalize_run(run_ctx, config, db,
-                     outputs=LedgerOutputs(
-                         artifact_type="competitive_digest",
-                         additional={"signals": len(digest.signals)},
-                     ),
-                     verification=None)
-
 
 @main.command("demo-run")
 @click.pass_context
@@ -2127,26 +2119,25 @@ def demo_run(ctx):
     console.print("=" * 50)
 
     steps = [
-        ("Step 1/12", "Ingesting RevenueCat docs...", ingest_docs, {"force": False}),
-        ("Step 2/12", "Analyzing documentation quality...", analyze_docs_cmd, {}),
-        ("Step 3/12", "Generating competitive digest...", competitive_digest_cmd, {}),
-        ("Step 4/12", "Running API/MCP repro tests...", repro_test_cmd, {"scenario": None}),
-        ("Step 5/12", "Generating application letter...", generate_application, {}),
-        ("Step 6/12", "Writing content piece 1...", write_content, {
+        ("Step 1/11", "Ingesting RevenueCat docs...", ingest_docs, {"force": False}),
+        ("Step 2/11", "Analyzing documentation quality...", analyze_docs_cmd, {}),
+        ("Step 3/11", "Running API/MCP repro tests...", repro_test_cmd, {"scenario": None}),
+        ("Step 4/11", "Generating application letter...", generate_application, {}),
+        ("Step 5/11", "Writing content piece 1...", write_content, {
             "topic": "Using RevenueCat Charts API for Agent Dashboards",
             "content_type": "tutorial", "count": 1,
         }),
-        ("Step 7/12", "Writing content piece 2...", write_content, {
+        ("Step 6/11", "Writing content piece 2...", write_content, {
             "topic": "Building Agent-Native Monetization with RevenueCat MCP Server",
             "content_type": "agent_playbook", "count": 1,
         }),
-        ("Step 8/12", "Running programmatic SEO experiment...", run_experiment, {
+        ("Step 7/11", "Running programmatic SEO experiment...", run_experiment, {
             "name": "programmatic-seo", "inputs": "{}",
         }),
-        ("Step 9/12", "Generating product feedback...", generate_feedback, {"count": 3}),
-        ("Step 10/12", "Collecting impact metrics...", collect_metrics_cmd, {"experiment_id": None}),
-        ("Step 11/12", "Generating weekly report...", weekly_report, {"with_charts": False}),
-        ("Step 12/12", "Building static site...", build_site_cmd, {}),
+        ("Step 8/11", "Generating product feedback...", generate_feedback, {"count": 3}),
+        ("Step 9/11", "Collecting impact metrics...", collect_metrics_cmd, {"experiment_id": None}),
+        ("Step 10/11", "Generating weekly report...", weekly_report, {"with_charts": False}),
+        ("Step 11/11", "Building static site...", build_site_cmd, {}),
     ]
 
     failed = []
@@ -2389,6 +2380,74 @@ def mcp_serve_cmd(ctx, transport, port):
         console.print(f"[bold]revcat-agent-advocate: MCP Server (SSE on port {port})[/bold]")
         console.print(f"Connect: http://localhost:{port}/sse")
         mcp.run(transport="sse", sse_port=port)
+
+
+@main.command("supervise")
+@click.option("--max-actions", default=3, help="Max actions per cycle")
+@click.option("--daemon", is_flag=True, help="Run continuously instead of single cycle")
+@click.option("--interval", default=21600, help="Seconds between cycles in daemon mode (default 21600 = 6 hours)")
+@click.option("--task-issue", is_flag=True, help="Execute a single agent-task issue from AGENT_TASK_* env vars")
+@click.pass_context
+def supervise_cmd(ctx, max_actions, daemon, interval, task_issue):
+    """Run the supervisor. Single cycle by default, --daemon for continuous."""
+    config = ctx.obj["config"]
+    console = ctx.obj["console"]
+
+    from advocate.agent.supervisor import Supervisor
+
+    supervisor = Supervisor(config, db_conn=ctx.obj["db"])
+
+    if task_issue:
+        # Direct task execution from agent-task.yml workflow.
+        # Reads from env vars (not shell-interpolated) to avoid injection.
+        import os
+        title = os.environ.get("AGENT_TASK_TITLE", "")
+        body = os.environ.get("AGENT_TASK_BODY", "")
+        number = os.environ.get("AGENT_TASK_NUMBER", "")
+        if not title:
+            console.print("[red]AGENT_TASK_TITLE env var not set[/red]")
+            raise SystemExit(1)
+
+        console.print(f"[bold]Agent Task #{number}:[/bold] {title[:80]}")
+        console.print("=" * 50)
+
+        # Direct execution: inject signal, claim it, act on it.
+        # No producer ingestion, no scoring queue — just execute the task.
+        result = supervisor.run_task_issue(
+            title=title,
+            body=body[:4000],
+            issue_number=number,
+            console=console,
+        )
+        if result.get("acted"):
+            console.print(f"\n[bold green]Task complete[/bold green]: {result['action']}")
+        else:
+            console.print(f"\n[bold red]Task not executed[/bold red]: {result.get('reason', 'unknown')}")
+            raise SystemExit(1)
+        return
+
+    if daemon:
+        console.print("[bold]revcat-agent-advocate: Supervisor Daemon[/bold]")
+        console.print(f"Interval: {interval}s | Max actions/cycle: {max_actions}")
+        console.print("=" * 50)
+        supervisor.run_daemon(
+            interval_seconds=interval,
+            max_actions=max_actions,
+            console=console,
+        )
+    else:
+        console.print("[bold]revcat-agent-advocate: Supervisor Cycle[/bold]")
+        console.print("=" * 50)
+
+        result = supervisor.run_cycle(max_actions=max_actions, console=console)
+
+        console.print("\n[bold green]Cycle complete[/bold green]")
+        console.print(f"Actions: {len(result['actions_taken'])}, Skipped: {result['actions_skipped']}")
+
+        stats = result.get("signal_stats", {})
+        if stats:
+            console.print(f"Signal queue: {stats.get('pending', 0)} pending, "
+                          f"{stats.get('acted', 0)} acted, {stats.get('expired', 0)} expired")
 
 
 @main.command("agent")

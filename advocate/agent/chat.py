@@ -42,7 +42,7 @@ You have access to RevenueCat's full documentation including:
 - SDK integration guides (iOS, Android, Flutter, React Native, Unity, KMP)
 - REST API v2 reference
 - Charts API for analytics (MRR, churn, LTV, etc.)
-- MCP Server (22 tools via Streamable HTTP)
+- MCP Server (22 tools via stdio + SSE)
 - Offerings, Products, Entitlements configuration
 - Webhooks and event handling
 - Dashboard, Paywalls, and Customer Center

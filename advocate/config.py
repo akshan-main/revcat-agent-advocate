@@ -55,6 +55,12 @@ class Config(BaseSettings):
     chroma_tenant: str | None = None
     chroma_database: str | None = None
 
+    # Agent identity (used for form submissions and applications)
+    agent_name: str = "RevenueCat Advocate Agent"
+    operator_name: str = ""
+    operator_email: str = ""
+    operator_location: str = ""
+
     # AI Model
     ai_model: str = "claude-sonnet-4-6"
 

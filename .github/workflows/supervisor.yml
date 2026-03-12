@@ -1,0 +1,70 @@
+name: Supervisor
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      max_actions:
+        description: 'Max actions per cycle'
+        default: '3'
+      dry_run:
+        description: 'Dry run (no external posts)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: supervisor
+  cancel-in-progress: false
+
+jobs:
+  supervisor-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+      TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      CONTEXTUAL_API_KEY: ${{ secrets.CONTEXTUAL_API_KEY }}
+      DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+      GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      GITHUB_REPO: ${{ github.repository }}
+      TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+      TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+      TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+      TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build supervisor image
+        run: docker build -f Dockerfile.supervisor -t supervisor .
+
+      - name: Ingest docs
+        run: |
+          docker run --rm \
+            -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN -e HF_TOKEN \
+            --entrypoint revcat-advocate \
+            supervisor ingest-docs
+
+      - name: Supervisor cycle
+        timeout-minutes: 18
+        run: |
+          docker run --rm --read-only --tmpfs /tmp --tmpfs /home/agent/.cache \
+            -e ANTHROPIC_API_KEY -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN \
+            -e HF_TOKEN -e CONTEXTUAL_API_KEY -e DEVTO_API_KEY -e GITHUB_TOKEN -e GITHUB_REPO \
+            -e TWITTER_API_KEY -e TWITTER_API_SECRET \
+            -e TWITTER_ACCESS_TOKEN -e TWITTER_ACCESS_SECRET \
+            -e DRY_RUN \
+            supervisor \
+            --max-actions ${{ github.event_name == 'schedule' && '1' || github.event.inputs.max_actions || '3' }}
+
+      - name: Verify ledger
+        run: |
+          docker run --rm \
+            -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN \
+            --entrypoint revcat-advocate \
+            supervisor verify-ledger

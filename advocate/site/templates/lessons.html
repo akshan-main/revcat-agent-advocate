@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>Agent Memory</h1>
+    <p class="page-intro">
+        The agent records lessons after each autonomous cycle. These persist across runs and inform future decisions.
+        Each lesson has a type, confidence score, and the evidence that prompted it.
+    </p>
+
+    <div class="scorecard-grid">
+        <div class="score-card score-hero">
+            <div class="score-value">{{ lessons | length }}</div>
+            <div class="score-label">Lessons Recorded</div>
+            <div class="score-detail">across {{ cycle_count }} agent cycles</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ type_counts.strategy | default(0) }}</div>
+            <div class="score-label">Strategy</div>
+            <div class="score-detail">high-level direction shifts</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ type_counts.content_perf | default(0) }}</div>
+            <div class="score-label">Content Perf</div>
+            <div class="score-detail">what content works</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ type_counts.failure | default(0) }}</div>
+            <div class="score-label">Failures</div>
+            <div class="score-detail">what went wrong</div>
+        </div>
+    </div>
+
+    {% if lessons %}
+    <h2>All Lessons</h2>
+    <div class="experiment-grid">
+        {% for lesson in lessons %}
+        <div class="feedback-card" style="border-left:3px solid {% if lesson.confidence >= 0.7 %}var(--green){% elif lesson.confidence >= 0.4 %}#b45309{% else %}var(--text-muted){% endif %}; padding-left:1rem;">
+            <div class="experiment-header">
+                <h3 style="font-size:0.95rem;">{{ lesson.key }}</h3>
+                <span class="badge {% if lesson.lesson_type == 'failure' %}badge-critical{% elif lesson.lesson_type == 'strategy' %}badge-verified{% elif lesson.lesson_type == 'content_perf' %}badge-running{% else %}badge-draft{% endif %}">{{ lesson.lesson_type }}</span>
+            </div>
+            <div class="experiment-body" style="font-size:0.88rem;">
+                <p>{{ lesson.insight }}</p>
+                {% if lesson.evidence %}
+                <details>
+                    <summary style="font-size:0.82rem;color:var(--text-muted);cursor:pointer;"><strong>Evidence</strong></summary>
+                    <div style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted);padding-left:0.5rem;border-left:2px solid var(--border);">{{ lesson.evidence }}</div>
+                </details>
+                {% endif %}
+            </div>
+            <div class="experiment-footer">
+                <span>Confidence: <strong>{{ "%.0f" | format(lesson.confidence * 100) }}%</strong></span>
+                <time>{{ lesson.created_at[:10] }}</time>
+                {% if lesson.cycle_id %}
+                <span style="font-size:0.75rem;font-family:monospace;">{{ lesson.cycle_id[:25] }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="placeholder">No lessons recorded yet. Run: <code>python3 -m cli agent --goal "..." --max-turns 3</code></p>
+    {% endif %}
+</article>
+{% endblock %}

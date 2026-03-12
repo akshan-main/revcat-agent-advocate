@@ -45,7 +45,7 @@ def _md_to_html(md_text: str, base_url: str = "") -> Markup:
     # Normalize absolute GitHub Pages URLs to relative paths first
     # This ensures the site works regardless of who deploys it
     html = re.sub(
-        r'href="https?://[^"]*\.github\.io/[^"/]*/((content|experiments|feedback|runbook|apply|twitter-bot|scorecard|research)(?:/[^"]*)?)"',
+        r'href="https?://[^"]*\.github\.io/[^"/]*/((content|experiments|feedback|runbook|apply|twitter-bot|scorecard|research|rag|lessons|supervisor)(?:/[^"]*)?)"',
         r'href="/\1"',
         html,
     )
@@ -58,7 +58,7 @@ def _md_to_html(md_text: str, base_url: str = "") -> Markup:
     # Rewrite internal links (e.g. /content/ -> /revcat-agent-advocate/content/)
     if base_url:
         html = re.sub(
-            r'href="/((?:content|experiments|feedback|runbook|apply|twitter-bot|scorecard|research)(?:/[^"]*)?)"',
+            r'href="/((?:content|experiments|feedback|runbook|apply|twitter-bot|scorecard|research|rag|lessons|supervisor)(?:/[^"]*)?)"',
             f'href="{base_url}/\\1"',
             html,
         )
@@ -410,7 +410,7 @@ def build_site(db_conn, config, clean: bool = False):
         site_dir = output_dir
 
     # Ensure output dirs
-    for subdir in ["apply", "content", "experiments", "feedback", "runbook", "assets", "twitter-bot", "scorecard", "research"]:
+    for subdir in ["apply", "content", "experiments", "feedback", "runbook", "assets", "twitter-bot", "scorecard", "research", "rag", "lessons", "supervisor"]:
         os.makedirs(os.path.join(site_dir, subdir), exist_ok=True)
 
     # Root redirect (at site_output/index.html)
@@ -451,9 +451,18 @@ def build_site(db_conn, config, clean: bool = False):
     # 4. Content pages
     content_pieces = [p for p in query_rows(db_conn, "content_pieces", order_by="created_at DESC") if p.get("slug") != "application-letter"]
     seo_pages = query_rows(db_conn, "seo_pages", order_by="created_at DESC")
+    # Dev.to aggregate stats for content page
+    devto_published = [p for p in content_pieces if p.get("devto_article_id")]
+    devto_stats = {
+        "published": len(devto_published),
+        "total_views": sum(p.get("devto_views", 0) or 0 for p in devto_published),
+        "total_reactions": sum(p.get("devto_reactions", 0) or 0 for p in devto_published),
+        "total_comments": sum(p.get("devto_comments", 0) or 0 for p in devto_published),
+    }
+
     template = env.get_template("content.html")
     with open(os.path.join(site_dir, "content", "index.html"), "w") as f:
-        f.write(template.render(**shared, page_title="Content", content_pieces=content_pieces, seo_pages=seo_pages))
+        f.write(template.render(**shared, page_title="Content", content_pieces=content_pieces, seo_pages=seo_pages, devto_stats=devto_stats))
 
     # Individual content pages
     detail_template = env.get_template("content_detail.html")
@@ -694,6 +703,68 @@ def build_site(db_conn, config, clean: bool = False):
             cycle_count=len(agent_cycles),
         ))
 
+    # 6f. RAG Pipeline page — load eval results from tests/
+    rag_results_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "tests", "rag_eval_results.json",
+    )
+    rag_metrics = {}
+    if os.path.exists(rag_results_path):
+        try:
+            with open(rag_results_path) as f:
+                rag_metrics = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if rag_metrics:
+        rag_template = env.get_template("rag.html")
+        with open(os.path.join(site_dir, "rag", "index.html"), "w") as f:
+            f.write(rag_template.render(**shared, page_title="RAG Pipeline", metrics=rag_metrics))
+
+    # 6g. Agent Memory / Lessons page
+    lessons = query_rows(db_conn, "agent_memory", order_by="created_at DESC")
+    agent_cycle_count = len([
+        r for r in query_rows(db_conn, "run_log")
+        if r.get("command") in ("agent-cycle", "auto")
+    ])
+    type_counts = {}
+    for lesson in lessons:
+        lt = lesson.get("lesson_type", "other")
+        type_counts[lt] = type_counts.get(lt, 0) + 1
+
+    lessons_template = env.get_template("lessons.html")
+    with open(os.path.join(site_dir, "lessons", "index.html"), "w") as f:
+        f.write(lessons_template.render(
+            **shared, page_title="Agent Memory",
+            lessons=lessons,
+            cycle_count=agent_cycle_count,
+            type_counts=type_counts,
+        ))
+
+    # 6h. Supervisor page — signal queue + bandit arms + recent signals
+    try:
+        from ..agent.signals import ensure_signals_schema, get_signal_stats, get_recent_signals
+        from ..agent.bandit import ensure_bandit_schema, get_arm_stats
+
+        ensure_signals_schema(db_conn)
+        ensure_bandit_schema(db_conn)
+
+        signal_stats = get_signal_stats(db_conn)
+        bandit_arms = get_arm_stats(db_conn)
+        recent_signals = get_recent_signals(db_conn, limit=20)
+
+        supervisor_template = env.get_template("supervisor.html")
+        with open(os.path.join(site_dir, "supervisor", "index.html"), "w") as f:
+            f.write(supervisor_template.render(
+                **shared, page_title="Supervisor",
+                signal_stats=signal_stats,
+                bandit_arms=bandit_arms,
+                recent_signals=recent_signals,
+            ))
+    except Exception as e:
+        import sys
+        print(f"WARNING: Supervisor page generation failed: {e}", file=sys.stderr)
+
     # 7. Runbook page (with skills data)
     skills = []
     skills_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".claude", "skills")
@@ -748,6 +819,9 @@ def _generate_sitemap(output_dir: str, base_url: str, content_slugs: list[str], 
         ("twitter-bot/", "0.8"),
         ("scorecard/", "0.8"),
         ("research/", "0.7"),
+        ("rag/", "0.7"),
+        ("lessons/", "0.6"),
+        ("supervisor/", "0.7"),
         ("runbook/", "0.5"),
     ]
     for slug in content_slugs:

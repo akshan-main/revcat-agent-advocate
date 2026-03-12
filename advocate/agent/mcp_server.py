@@ -473,14 +473,13 @@ def create_mcp_server(config: Config) -> FastMCP:
 4. **Feedback Engine** — Doc analysis, API/MCP repro testing, structured feedback
 5. **Community Engine** — GitHub/Reddit/X scanning, response drafting (DRY_RUN gated)
 6. **Intelligence** — Competitive analysis, doc quality scoring, ROI dashboard
-7. **Governance** — 17-case red-team suite (prompt injection, PII, brand safety)
-8. **Ledger** — Hash-chained (SHA256), HMAC-signed, tamper-evident audit trail
-9. **MCP Server** — Exposes all tools to other AI agents
-10. **HTTP API** — JSON endpoints for integration
-11. **Chat** — Interactive doc-grounded Q&A with slash commands
-12. **Scheduler** — Autonomous 6h cycle (ingest, content, experiments, feedback, site)
-13. **Distribution** — Content approval queue, publication status tracking
-14. **Reliability** — Circuit breakers, ops dashboard, health monitoring
+7. **Ledger** — Hash-chained (SHA256), HMAC-signed, tamper-evident audit trail
+8. **MCP Server** — Exposes all tools to other AI agents
+9. **HTTP API** — JSON endpoints for integration
+10. **Chat** — Interactive doc-grounded Q&A with slash commands
+11. **Scheduler** — Autonomous 6h cycle (ingest, content, experiments, feedback, site)
+12. **Distribution** — Content approval queue, publication status tracking
+13. **Reliability** — Circuit breakers, ops dashboard, health monitoring
 
 ## Current State
 - Docs indexed: {index.doc_count if index else 0}
@@ -494,7 +493,6 @@ def create_mcp_server(config: Config) -> FastMCP:
 - DRY_RUN=true (default) — no external posts, drafts only
 - ALLOW_WRITES=false (default) — read-only API access
 - DEMO_MODE available — mock API responses for testing
-- Red-team suite: prompt injection, PII extraction, competitor bashing, brand safety
 - Key actions logged in tamper-evident ledger
 
 ## MCP Connection
