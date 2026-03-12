@@ -36,6 +36,8 @@ jobs:
       - name: Ingest docs
         run: |
           docker volume create docs_cache
+          docker run --rm --user 0 -v docs_cache:/data alpine \
+            sh -c "mkdir -p /data/.docs_cache && chown -R 1000:1000 /data"
           docker run --rm \
             -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN -e HF_TOKEN \
             -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/data/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
