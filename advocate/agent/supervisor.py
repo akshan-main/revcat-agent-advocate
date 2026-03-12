@@ -149,7 +149,8 @@ class Supervisor:
         mark_acted(self.db, signal_id, action, outcome)
 
         success = outcome.get("status") not in ("error", "skipped")
-        return {"acted": success, "action": action, "outcome": outcome}
+        reason = outcome.get("reason") or outcome.get("error") or outcome.get("status", "unknown")
+        return {"acted": success, "action": action, "outcome": outcome, "reason": reason}
 
     def run_cycle(self, max_actions: int = 3, console=None) -> dict:
         ensure_signals_schema(self.db)
@@ -312,7 +313,11 @@ class Supervisor:
                         f"body={signal.get('body', '')[:200]}, "
                         f"source={signal.get('source')}\n\n"
                         f"Pick ONE action from: {valid_actions}\n"
-                        f"submit_form = use browser to navigate to a URL and fill/submit a form.\n"
+                        f"submit_form = ONLY if body has an explicit URL, Name:, Email:, Location:, Visa:, and GDPR: fields for filling a web form. If any are missing, do NOT pick submit_form.\n"
+                        f"write_content = write a blog post, tutorial, article, or application letter.\n"
+                        f"draft_tweet = compose a tweet.\n"
+                        f"generate_feedback = analyze docs for issues.\n"
+                        f"browse_and_respond = read a URL and draft a response.\n"
                         f"Reply with just the action name, nothing else."
                     ),
                 }],
