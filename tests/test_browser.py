@@ -135,12 +135,12 @@ async def test_playwright_mcp_navigate_calls_tool(mock_config):
     browser._session = AsyncMock()
 
     mock_content = MagicMock()
-    mock_content.text = "Navigated to https://example.com"
+    mock_content.text = "Navigated to https://github.com/revenuecat"
     browser._session.call_tool.return_value = MagicMock(content=[mock_content])
 
-    result = await browser.navigate("https://example.com")
+    result = await browser.navigate("https://github.com/revenuecat")
     browser._session.call_tool.assert_called_once_with(
-        "browser_navigate", {"url": "https://example.com"}
+        "browser_navigate", {"url": "https://github.com/revenuecat"}
     )
     assert result["status"] == "ok"
     assert "Navigated" in result["content"]
