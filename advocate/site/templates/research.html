@@ -66,48 +66,6 @@
     <p class="placeholder">No agent cycles recorded yet. Run: <code>python3 -m cli agent --goal "..." --max-turns 3</code></p>
     {% endif %}
 
-    {% if signals %}
-    <h2>Community Signals</h2>
-    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
-        Questions and issues detected from GitHub and Reddit. Each signal is a potential content gap.
-    </p>
-    <div class="experiment-grid">
-        {% for signal in signals %}
-        <div class="feedback-card">
-            <div class="experiment-header">
-                <h3 style="font-size:0.95rem;">{{ signal.question[:120] }}{% if signal.question|length > 120 %}...{% endif %}</h3>
-                <span class="badge {% if signal.status == 'sent' %}badge-verified{% elif signal.status == 'draft' %}badge-draft{% else %}badge-running{% endif %}">{{ signal.status }}</span>
-            </div>
-            <div class="experiment-body" style="font-size:0.85rem;">
-                <p>
-                    <strong>Channel:</strong> {{ signal.channel }}
-                    {% if signal.counterpart %} &middot; <strong>From:</strong> {{ signal.counterpart }}{% endif %}
-                    {% if signal.thread_url %}
-                        {% if signal.thread_url.startswith('http') %}
-                            &middot; <a href="{{ signal.thread_url }}" target="_blank">source</a>
-                        {% else %}
-                            &middot; <span style="font-size:0.82rem;color:var(--text-muted);">{{ signal.thread_url[:80] }}{% if signal.thread_url|length > 80 %}…{% endif %}</span>
-                        {% endif %}
-                    {% endif %}
-                </p>
-                {% if signal.intent %}
-                <p><strong>Intent:</strong> {{ signal.intent }}</p>
-                {% endif %}
-                {% if signal.draft_response %}
-                <details>
-                    <summary><strong>Draft Response</strong></summary>
-                    <div style="margin-top:0.5rem;">{{ signal.draft_response | nl2br }}</div>
-                </details>
-                {% endif %}
-            </div>
-            <div class="experiment-footer">
-                <time>{{ signal.created_at[:10] }}</time>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
     {% if produced_content %}
     <h2>Content Produced from Research</h2>
     <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">

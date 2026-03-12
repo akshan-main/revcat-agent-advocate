@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+    <h1>Community Interactions</h1>
+    <p class="page-intro">
+        The agent monitors GitHub issues and Reddit posts for developer questions about in-app subscriptions.
+        When it finds a relevant question, it searches the RevenueCat docs, drafts a cited response, and logs it here.
+    </p>
+
+    <div class="scorecard-grid">
+        <div class="score-card">
+            <div class="score-value">{{ github_count }}</div>
+            <div class="score-label">GitHub</div>
+            <div class="score-detail">issues scanned and responded to</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ reddit_count }}</div>
+            <div class="score-label">Reddit</div>
+            <div class="score-detail">posts and comments analyzed</div>
+        </div>
+        <div class="score-card">
+            <div class="score-value">{{ response_count }}</div>
+            <div class="score-label">Responses Drafted</div>
+            <div class="score-detail">community answers with doc citations</div>
+        </div>
+    </div>
+
+    {% if interactions %}
+    <h2>Interactions</h2>
+    <div class="experiment-grid">
+        {% for item in interactions %}
+        <div class="feedback-card">
+            <div class="experiment-header">
+                <h3 style="font-size:0.95rem;">{{ item.question[:120] }}{% if item.question|length > 120 %}...{% endif %}</h3>
+                <span class="badge {% if item.status == 'sent' %}badge-verified{% elif item.status == 'draft' %}badge-draft{% else %}badge-running{% endif %}">{{ item.status }}</span>
+            </div>
+            <div class="experiment-body" style="font-size:0.85rem;">
+                <p>
+                    <span class="content-type">{{ item.channel }}</span>
+                    {% if item.counterpart %} &middot; <strong>From:</strong> {{ item.counterpart }}{% endif %}
+                    {% if item.thread_url %}
+                        {% if item.thread_url.startswith('http') %}
+                            &middot; <a href="{{ item.thread_url }}" target="_blank">source &rarr;</a>
+                        {% endif %}
+                    {% endif %}
+                </p>
+                {% if item.intent %}
+                <p><strong>Intent:</strong> {{ item.intent }}</p>
+                {% endif %}
+                {% if item.draft_response %}
+                <details>
+                    <summary><strong>Draft Response</strong></summary>
+                    <div style="margin-top:0.5rem;">{{ item.draft_response | nl2br }}</div>
+                </details>
+                {% endif %}
+            </div>
+            <div class="experiment-footer">
+                <time>{{ item.created_at[:10] }}</time>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="placeholder">No community interactions yet. Run: <code>python3 -m cli scan-github --limit 10</code></p>
+    {% endif %}
+</article>
+{% endblock %}

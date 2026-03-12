@@ -410,7 +410,7 @@ def build_site(db_conn, config, clean: bool = False):
         site_dir = output_dir
 
     # Ensure output dirs
-    for subdir in ["apply", "content", "experiments", "feedback", "runbook", "assets", "twitter-bot", "scorecard", "research", "rag", "lessons", "supervisor"]:
+    for subdir in ["apply", "content", "experiments", "feedback", "runbook", "assets", "twitter-bot", "scorecard", "research", "rag", "lessons", "supervisor", "community"]:
         os.makedirs(os.path.join(site_dir, subdir), exist_ok=True)
 
     # Root redirect (at site_output/index.html)
@@ -695,12 +695,25 @@ def build_site(db_conn, config, clean: bool = False):
             **shared,
             page_title="Research Workflow",
             agent_cycles=agent_cycles,
-            signals=signals[:30],
             produced_content=produced_content,
             signal_count=signal_count,
             response_count=response_count,
             content_from_research=content_from_research,
             cycle_count=len(agent_cycles),
+        ))
+
+    # 6f-2. Community Interactions page (GitHub/Reddit responses)
+    github_interactions = [s for s in signals if s.get("channel") == "github"]
+    reddit_interactions = [s for s in signals if s.get("channel") == "reddit"]
+    community_template = env.get_template("community.html")
+    with open(os.path.join(site_dir, "community", "index.html"), "w") as f:
+        f.write(community_template.render(
+            **shared,
+            page_title="Community Interactions",
+            interactions=signals[:50],
+            github_count=len(github_interactions),
+            reddit_count=len(reddit_interactions),
+            response_count=response_count,
         ))
 
     # 6f. RAG Pipeline page — load eval results from tests/
@@ -818,6 +831,7 @@ def _generate_sitemap(output_dir: str, base_url: str, content_slugs: list[str], 
         ("feedback/", "0.7"),
         ("twitter-bot/", "0.8"),
         ("scorecard/", "0.8"),
+        ("community/", "0.7"),
         ("research/", "0.7"),
         ("rag/", "0.7"),
         ("lessons/", "0.6"),
