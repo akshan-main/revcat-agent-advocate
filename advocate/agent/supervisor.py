@@ -415,8 +415,9 @@ class Supervisor:
         signal_title = signal.get("title", "")
         metadata = json.loads(signal.get("metadata_json", "{}") or "{}")
 
-        # Task issues (manual_goal): use the task title directly as the topic
-        if signal.get("signal_type") == "manual_goal" and signal_title:
+        # Task issues (manual_goal): use the task title + body directly
+        is_task_issue = signal.get("signal_type") == "manual_goal"
+        if is_task_issue and signal_title:
             category = "task_issue"
             topic = signal_title
         else:
@@ -442,9 +443,16 @@ class Supervisor:
                 from .core import AgenticCore
 
                 core = AgenticCore(self.config, db_conn=self.db)
+                if is_task_issue:
+                    task_body = signal.get("body", "")[:2000]
+                    goal = f"{topic}\n\nTask details:\n{task_body}" if task_body else topic
+                    max_turns = 6
+                else:
+                    goal = f"Write a tutorial about: {topic}"
+                    max_turns = 12
                 result = core.run_cycle(
-                    goal=f"Write a tutorial about: {topic}",
-                    max_turns=12,
+                    goal=goal,
+                    max_turns=max_turns,
                     console=console,
                 )
 
