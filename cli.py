@@ -44,9 +44,11 @@ def main(ctx):
     """RevenueCat revcat-agent-advocate: Tamper-Evident Proof-of-Work Agent System"""
     ctx.ensure_object(dict)
     config = Config()
-    os.makedirs(config.runs_dir, exist_ok=True)
-    os.makedirs(config.docs_cache_dir, exist_ok=True)
-    os.makedirs(config.site_output_dir, exist_ok=True)
+    for d in (config.runs_dir, config.docs_cache_dir, config.site_output_dir):
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError:
+            pass  # read-only filesystem (Docker --read-only); dirs created on demand
     ctx.obj["config"] = config
     ctx.obj["db"] = _LazyDB(config)
     ctx.obj["console"] = Console()

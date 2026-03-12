@@ -53,6 +53,7 @@ jobs:
             -e TWITTER_API_KEY -e TWITTER_API_SECRET \
             -e TWITTER_ACCESS_TOKEN -e TWITTER_ACCESS_SECRET \
             -e AGENT_TASK_TITLE -e AGENT_TASK_BODY -e AGENT_TASK_NUMBER \
+            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/tmp/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
             --entrypoint revcat-advocate \
             supervisor supervise \
             --max-actions 1 \

@@ -59,6 +59,7 @@ jobs:
             -e TWITTER_API_KEY -e TWITTER_API_SECRET \
             -e TWITTER_ACCESS_TOKEN -e TWITTER_ACCESS_SECRET \
             -e DRY_RUN \
+            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/tmp/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
             supervisor \
             --max-actions ${{ github.event_name == 'schedule' && '1' || github.event.inputs.max_actions || '3' }}
 
