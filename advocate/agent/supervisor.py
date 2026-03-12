@@ -101,6 +101,11 @@ class Supervisor:
         if self.config.github_repo and issue_number:
             issue_url = f"https://github.com/{self.config.github_repo}/issues/{issue_number}"
 
+        # Delete any previous signal for this issue so task-issues can always re-run
+        if issue_url:
+            self.db.execute("DELETE FROM signals WHERE url = ? AND source = 'github'", (issue_url,))
+            self.db.commit()
+
         signal_id = ingest_signal(
             self.db,
             source="github",
