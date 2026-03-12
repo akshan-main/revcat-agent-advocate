@@ -2423,6 +2423,16 @@ def supervise_cmd(ctx, max_actions, daemon, interval, task_issue):
         )
         if result.get("acted"):
             console.print(f"\n[bold green]Task complete[/bold green]: {result['action']}")
+            # Post-task: rebuild site + deploy so changes appear on the website
+            try:
+                from advocate.site.generator import build_site as _build
+                console.print("[bold cyan]Post-task:[/bold cyan] Rebuilding site...")
+                _build(ctx.obj["db"], config)
+                if config.has_github:
+                    console.print("[bold cyan]Post-task:[/bold cyan] Deploying site...")
+                    ctx.invoke(deploy_cmd, repo=config.github_repo, branch="gh-pages", skip_gate=True)
+            except Exception as e:
+                console.print(f"[yellow]Post-task site rebuild/deploy failed: {e}[/yellow]")
         else:
             console.print(f"\n[bold red]Task not executed[/bold red]: {result.get('reason', 'unknown')}")
             raise SystemExit(1)
@@ -2450,6 +2460,18 @@ def supervise_cmd(ctx, max_actions, daemon, interval, task_issue):
         if stats:
             console.print(f"Signal queue: {stats.get('pending', 0)} pending, "
                           f"{stats.get('acted', 0)} acted, {stats.get('expired', 0)} expired")
+
+        # Post-cycle: rebuild site + deploy so changes appear on the website
+        if result.get("actions_taken"):
+            try:
+                from advocate.site.generator import build_site as _build
+                console.print("\n[bold cyan]Post-cycle:[/bold cyan] Rebuilding site...")
+                _build(ctx.obj["db"], config)
+                if config.has_github:
+                    console.print("[bold cyan]Post-cycle:[/bold cyan] Deploying site...")
+                    ctx.invoke(deploy_cmd, repo=config.github_repo, branch="gh-pages", skip_gate=True)
+            except Exception as e:
+                console.print(f"[yellow]Post-cycle site rebuild/deploy failed: {e}[/yellow]")
 
 
 @main.command("agent")

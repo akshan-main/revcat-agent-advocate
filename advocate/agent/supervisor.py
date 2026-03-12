@@ -303,7 +303,7 @@ class Supervisor:
 
             valid_actions = list(set(ACTION_MAP.values()) - {"skip", None}) + ["submit_form"]
             response = client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=self.config.ai_model,
                 max_tokens=50,
                 messages=[{
                     "role": "user",
