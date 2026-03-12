@@ -412,20 +412,25 @@ class Supervisor:
         if not self.config.has_anthropic:
             return {"status": "skipped", "reason": "no anthropic key"}
 
-        category = pull_arm(self.db)
-        topic_suggestions = get_topic_for_category(category)
-        topic = topic_suggestions[0] if topic_suggestions else "RevenueCat Developer Guide"
-
         signal_title = signal.get("title", "")
         metadata = json.loads(signal.get("metadata_json", "{}") or "{}")
 
-        if signal.get("signal_type") == "engagement_spike":
-            slug = metadata.get("slug", "")
-            if slug:
-                topic = f"Deep Dive: {signal_title.split(':')[-1].strip()}"
+        # Task issues (manual_goal): use the task title directly as the topic
+        if signal.get("signal_type") == "manual_goal" and signal_title:
+            category = "task_issue"
+            topic = signal_title
+        else:
+            category = pull_arm(self.db)
+            topic_suggestions = get_topic_for_category(category)
+            topic = topic_suggestions[0] if topic_suggestions else "RevenueCat Developer Guide"
 
-        if signal.get("signal_type") in ("pain_point", "new_issue"):
-            topic = f"How to: {signal_title[:80]}"
+            if signal.get("signal_type") == "engagement_spike":
+                slug = metadata.get("slug", "")
+                if slug:
+                    topic = f"Deep Dive: {signal_title.split(':')[-1].strip()}"
+
+            if signal.get("signal_type") in ("pain_point", "new_issue"):
+                topic = f"How to: {signal_title[:80]}"
 
         if console:
             console.print(f"  Category: {category}, Topic: {topic[:60]}")

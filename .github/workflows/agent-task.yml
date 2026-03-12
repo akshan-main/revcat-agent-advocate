@@ -35,9 +35,11 @@ jobs:
 
       - name: Ingest docs
         run: |
+          docker volume create docs_cache
           docker run --rm \
             -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN -e HF_TOKEN \
-            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/tmp/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
+            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/data/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
+            -v docs_cache:/data \
             --entrypoint revcat-advocate \
             supervisor ingest-docs
 
@@ -54,7 +56,8 @@ jobs:
             -e TWITTER_API_KEY -e TWITTER_API_SECRET \
             -e TWITTER_ACCESS_TOKEN -e TWITTER_ACCESS_SECRET \
             -e AGENT_TASK_TITLE -e AGENT_TASK_BODY -e AGENT_TASK_NUMBER \
-            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/tmp/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
+            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/data/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
+            -v docs_cache:/data \
             --entrypoint revcat-advocate \
             supervisor supervise \
             --max-actions 1 \
