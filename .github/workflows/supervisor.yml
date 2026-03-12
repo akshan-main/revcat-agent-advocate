@@ -47,6 +47,7 @@ jobs:
         run: |
           docker run --rm \
             -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN -e HF_TOKEN \
+            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/tmp/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
             --entrypoint revcat-advocate \
             supervisor ingest-docs
 
@@ -67,5 +68,6 @@ jobs:
         run: |
           docker run --rm \
             -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN \
+            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/tmp/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
             --entrypoint revcat-advocate \
             supervisor verify-ledger

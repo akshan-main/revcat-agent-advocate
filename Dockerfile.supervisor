@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd -m agent
 WORKDIR /home/agent/app
 
-COPY . .
+COPY --chown=agent:agent . .
 RUN pip install --no-cache-dir .
 
 # Playwright MCP needs Chromium. Install deps manually (Debian Trixie
