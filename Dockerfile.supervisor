@@ -9,11 +9,14 @@ WORKDIR /home/agent/app
 COPY --chown=agent:agent . .
 RUN pip install --no-cache-dir .
 
-# Playwright MCP needs Chromium. Install deps manually (Debian Trixie
-# renamed ttf-unifont/ttf-ubuntu-font-family), then install browser.
-RUN npx @playwright/mcp@0.0.28 --help || true \
+# Install Playwright MCP globally so it's on the read-only filesystem at runtime.
+# Set browser path so both root (build) and agent (runtime) use the same location.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+RUN npm install -g @playwright/mcp@0.0.28 \
+    && chmod -R a+rx /usr/local/lib/node_modules/@playwright \
     && npx playwright@1.52.0 install chromium \
-    && npx playwright@1.52.0 install-deps chromium 2>/dev/null || true
+    && npx playwright@1.52.0 install-deps chromium 2>/dev/null || true \
+    && chmod -R a+rx /opt/pw-browsers
 
 USER agent
 
