@@ -35,6 +35,9 @@ revcat-advocate = "cli:main"
 [tool.setuptools.packages.find]
 include = ["advocate*"]
 
+[tool.setuptools.package-data]
+advocate = ["site/templates/*.html", "site/assets/*.css"]
+
 [tool.setuptools]
 py-modules = ["cli"]
 
