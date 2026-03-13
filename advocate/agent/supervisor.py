@@ -705,11 +705,15 @@ class Supervisor:
                             "- browser_click: click an element. Args: {\"element\": \"description\", \"ref\": \"refN\"}\n"
                             "- browser_type: type text into a field. Args: {\"element\": \"description\", \"ref\": \"refN\", \"text\": \"value\"}\n"
                             "- browser_select_option: select a dropdown option. Args: {\"element\": \"description\", \"ref\": \"refN\", \"values\": [\"option\"]}\n"
+                            "- browser_press_key: press a keyboard key. Args: {\"key\": \"PageDown\"} or {\"key\": \"End\"} or {\"key\": \"Tab\"}\n"
+                            "- browser_snapshot: get the current page accessibility snapshot. Args: {} (no args needed)\n"
                             "\nRules:\n"
                             "- Do ONE action at a time, then observe the result.\n"
                             "- Personal fields (name, email, location, visa) come from operator details.\n"
                             "- Questions about agent capabilities, links, portfolio — use agent self-knowledge.\n"
                             "- When you see a file upload field for resume/CV, skip it.\n"
+                            "- IMPORTANT: If the page snapshot is truncated or you can't see the submit button or GDPR checkbox, "
+                            "use browser_press_key with key 'End' or 'PageDown' to scroll down, then take a browser_snapshot.\n"
                             "- When done filling all fields, click the submit button.\n"
                             "- Only say DONE after you have attempted a real submit click.\n"
                             "- DONE is invalid if you have not attempted submit.\n"
@@ -735,13 +739,13 @@ class Supervisor:
                                 f"Task: {signal.get('title', '')}\n\n"
                                 f"Operator details:\n{body[:4000]}\n\n"
                                 f"{agent_ctx}\n\n"
-                                f"Current page state:\n{page_content[:6000]}\n\n"
+                                f"Current page state:\n{page_content[:12000]}\n\n"
                                 f"Observe this form and decide your first action."
                             ),
                         }]
 
                         max_steps = 30
-                        allowed_tools = {"browser_click", "browser_type", "browser_select_option"}
+                        allowed_tools = {"browser_click", "browser_type", "browser_select_option", "browser_press_key", "browser_snapshot"}
                         actions_taken = []
                         submit_attempted = False
                         done_received = False
@@ -857,7 +861,7 @@ class Supervisor:
                             messages.append({"role": "assistant", "content": reply})
                             messages.append({
                                 "role": "user",
-                                "content": f"{action_result}\n\nCurrent page state:\n{new_page[:6000]}\n\nDecide your next action."
+                                "content": f"{action_result}\n\nCurrent page state:\n{new_page[:12000]}\n\nDecide your next action."
                             })
 
                             if consecutive_errors >= 5:
