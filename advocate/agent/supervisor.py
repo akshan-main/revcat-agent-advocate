@@ -841,12 +841,20 @@ class Supervisor:
                                     })
                                     if tool == "browser_type":
                                         typed_fields += 1
-                                    # Only mark submit after successful click
+                                    # Mark submit after click or key press on submit-related elements
+                                    _submit_kws = ("submit", "apply", "send application", "complete application")
                                     if tool == "browser_click" and any(
                                         kw in element_text or kw in reasoning_text
-                                        for kw in ("submit", "apply", "send application", "complete application")
+                                        for kw in _submit_kws
                                     ):
                                         submit_attempted = True
+                                    # Also detect submit via keyboard (Tab to submit + Enter/Space)
+                                    if tool == "browser_press_key" and any(
+                                        kw in reasoning_text for kw in _submit_kws
+                                    ):
+                                        key_pressed = str(args.get("key", "")).lower()
+                                        if key_pressed in ("enter", "space", " "):
+                                            submit_attempted = True
                             except Exception as e:
                                 action_errors += 1
                                 consecutive_errors += 1
