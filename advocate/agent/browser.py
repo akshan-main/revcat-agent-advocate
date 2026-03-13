@@ -57,7 +57,22 @@ class PlaywrightMCPBrowser:
         # Ensure PLAYWRIGHT_BROWSERS_PATH is passed to the subprocess so
         # the MCP server can find the pre-installed Chromium.
         env = dict(os.environ)
-        pw_path = env.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")
+        pw_path = env.get("PLAYWRIGHT_BROWSERS_PATH", "")
+
+        # Auto-detect Playwright browsers path if not explicitly set
+        if not pw_path:
+            _candidates = [
+                os.path.expanduser("~/.cache/ms-playwright"),  # Linux default
+                "/opt/pw-browsers",  # Docker default
+                os.path.expanduser("~/Library/Caches/ms-playwright"),  # macOS
+            ]
+            for _cp in _candidates:
+                if os.path.isdir(_cp) and os.listdir(_cp):
+                    pw_path = _cp
+                    break
+            if not pw_path:
+                pw_path = _candidates[0]  # fallback to Linux default
+
         env["PLAYWRIGHT_BROWSERS_PATH"] = pw_path
 
         # Pre-flight: verify Chromium binary exists
