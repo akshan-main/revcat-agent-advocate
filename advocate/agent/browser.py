@@ -151,9 +151,12 @@ class PlaywrightMCPBrowser:
                 return {"status": "blocked_domain", "domain": urlparse(nav_url).hostname, "url": nav_url}
         result = await self._session.call_tool(name, arguments or {})
         texts = []
+        images = []
         for block in result.content:
             if hasattr(block, "text"):
                 texts.append(block.text)
+            if hasattr(block, "data") and hasattr(block, "mimeType"):
+                images.append({"data": block.data, "mime_type": block.mimeType})
         content = "\n".join(texts)
         # Detect browser-level errors in MCP response content
         _error_signals = (
@@ -163,7 +166,10 @@ class PlaywrightMCPBrowser:
         )
         if any(sig in content.lower() for sig in _error_signals):
             return {"status": "browser_error", "content": content}
-        return {"status": "ok", "content": content}
+        resp = {"status": "ok", "content": content}
+        if images:
+            resp["images"] = images
+        return resp
 
     async def navigate(self, url: str) -> dict:
         if not _validate_url(url):

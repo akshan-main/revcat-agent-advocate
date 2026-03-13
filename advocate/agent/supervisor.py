@@ -712,10 +712,10 @@ class Supervisor:
                             "- Personal fields (name, email, location, visa) come from operator details.\n"
                             "- Questions about agent capabilities, links, portfolio — use agent self-knowledge.\n"
                             "- When you see a file upload field for resume/CV, skip it.\n"
-                            "- IMPORTANT: If the page snapshot is truncated or you can't see the submit button or GDPR/privacy checkbox, "
-                            "use browser_press_key with key 'End' to scroll to the bottom, then take a browser_snapshot to see the rest.\n"
-                            "- If scrolling still doesn't reveal the checkbox/submit, use browser_press_key with key 'Tab' repeatedly "
-                            "to navigate past the GDPR text, then the checkbox and submit button should come into focus.\n"
+                            "- IMPORTANT: You will receive both accessibility tree text AND screenshots. "
+                            "When the accessibility tree is truncated, use the SCREENSHOT to visually identify elements like checkboxes and buttons.\n"
+                            "- If you can see an element in the screenshot but not in the accessibility tree, try browser_press_key with 'Tab' "
+                            "to navigate to it, then browser_press_key with 'Enter' or 'Space' to activate it.\n"
                             "- Do NOT press Space or random keys on form fields you already filled — it will clear them.\n"
                             "- When done filling all fields, click the submit button.\n"
                             "- Only say DONE after you have attempted a real submit click.\n"
@@ -748,7 +748,7 @@ class Supervisor:
                         }]
 
                         max_steps = 40
-                        allowed_tools = {"browser_click", "browser_type", "browser_select_option", "browser_press_key", "browser_snapshot"}
+                        allowed_tools = {"browser_click", "browser_type", "browser_select_option", "browser_press_key", "browser_snapshot", "browser_screenshot"}
                         actions_taken = []
                         submit_attempted = False
                         done_received = False
@@ -862,10 +862,32 @@ class Supervisor:
                                 new_page = "(snapshot failed)"
 
                             messages.append({"role": "assistant", "content": reply})
-                            messages.append({
-                                "role": "user",
-                                "content": f"{action_result}\n\nCurrent page state:\n{new_page[:20000]}\n\nDecide your next action."
-                            })
+
+                            # If snapshot is very long (truncated), supplement with screenshot
+                            use_screenshot = len(new_page) > 15000 or step >= 10
+                            screenshot_b64 = None
+                            if use_screenshot:
+                                try:
+                                    ss_result = await browser.call_tool("browser_screenshot")
+                                    if ss_result.get("images"):
+                                        screenshot_b64 = ss_result["images"][0]["data"]
+                                except Exception:
+                                    pass
+
+                            if screenshot_b64:
+                                import base64 as _b64
+                                messages.append({
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": f"{action_result}\n\nAccessibility tree (may be truncated):\n{new_page[:8000]}\n\nScreenshot of current page below. Use it to identify elements not visible in the accessibility tree. Decide your next action."},
+                                        {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": screenshot_b64}},
+                                    ],
+                                })
+                            else:
+                                messages.append({
+                                    "role": "user",
+                                    "content": f"{action_result}\n\nCurrent page state:\n{new_page[:20000]}\n\nDecide your next action."
+                                })
 
                             if consecutive_errors >= 5:
                                 break
