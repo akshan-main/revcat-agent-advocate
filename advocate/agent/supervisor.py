@@ -713,10 +713,13 @@ class Supervisor:
                             "- Questions about agent capabilities, links, portfolio — use agent self-knowledge.\n"
                             "- When you see a file upload field for resume/CV, skip it.\n"
                             "- IMPORTANT: You will receive both accessibility tree text AND screenshots. "
-                            "When the accessibility tree is truncated, use the SCREENSHOT to visually identify elements like checkboxes and buttons.\n"
+                            "When the accessibility tree is truncated, use the SCREENSHOT to visually identify elements.\n"
+                            "- The privacy/GDPR consent field is usually a DROPDOWN/SELECT (not a checkbox). "
+                            "Use browser_select_option or browser_click to select the correct option. "
+                            "If the operator says 'I am not located in the UK', select 'I am not located in the EEA/UK' or similar.\n"
                             "- If you can see an element in the screenshot but not in the accessibility tree, try browser_press_key with 'Tab' "
                             "to navigate to it, then browser_press_key with 'Enter' or 'Space' to activate it.\n"
-                            "- Do NOT press Space or random keys on form fields you already filled — it will clear them.\n"
+                            "- Do NOT press Space on form fields you already filled — it will clear them.\n"
                             "- When done filling all fields, click the submit button.\n"
                             "- Only say DONE after you have attempted a real submit click.\n"
                             "- DONE is invalid if you have not attempted submit.\n"
@@ -747,7 +750,7 @@ class Supervisor:
                             ),
                         }]
 
-                        max_steps = 40
+                        max_steps = 25
                         allowed_tools = {"browser_click", "browser_type", "browser_select_option", "browser_press_key", "browser_snapshot", "browser_screenshot"}
                         actions_taken = []
                         submit_attempted = False
@@ -871,8 +874,8 @@ class Supervisor:
 
                             messages.append({"role": "assistant", "content": reply})
 
-                            # If snapshot is very long (truncated), supplement with screenshot
-                            use_screenshot = len(new_page) > 15000 or step >= 10
+                            # Always use screenshot for visual grounding
+                            use_screenshot = True
                             screenshot_b64 = None
                             if use_screenshot:
                                 try:
