@@ -17,9 +17,10 @@ RUN pip install --no-cache-dir .
 # Install Playwright MCP globally so it's on the read-only filesystem at runtime.
 # Set browser path so both root (build) and agent (runtime) use the same location.
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+# Install MCP package globally, then use its bundled playwright to install chromium.
 RUN npm install -g @playwright/mcp@0.0.28 \
     && chmod -R a+rx /usr/local/lib/node_modules/@playwright \
-    && npx playwright@1.52.0 install chromium \
+    && /usr/local/lib/node_modules/@playwright/mcp/node_modules/.bin/playwright install chromium \
     && chmod -R a+rx /opt/pw-browsers
 
 USER agent
