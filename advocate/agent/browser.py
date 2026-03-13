@@ -78,11 +78,15 @@ class PlaywrightMCPBrowser:
         # Pre-flight: verify Chromium binary exists (check multiple patterns)
         _chrome_patterns = [
             "chromium-*/chrome-linux/chrome",
+            "chromium-*/chrome-linux64/chrome",
             "chromium-*/chrome-linux/headless_shell",
+            "chromium-*/chrome-linux64/headless_shell",
             "chromium_headless_shell-*/chrome-linux/headless_shell",
+            "chromium_headless_shell-*/chrome-headless-shell-linux64/headless_shell",
             "chromium-*/chrome",
             "chromium_headless_shell-*/headless_shell",
             "chromium-*/chrome-linux/chromium",
+            "chromium-*/chrome-linux64/chromium",
         ]
         chrome_candidates = []
         for pat in _chrome_patterns:
