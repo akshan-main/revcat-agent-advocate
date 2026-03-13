@@ -26,24 +26,29 @@ jobs:
       TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
       TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
       TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+      DRY_RUN: "false"
+      RUNS_DIR: ./runs
+      DOCS_CACHE_DIR: ./.docs_cache
+      SITE_OUTPUT_DIR: ./site_output
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build supervisor image
-        run: docker build -f Dockerfile.supervisor -t supervisor .
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project
+        run: pip install .
+
+      - name: Install Playwright MCP + Chromium
+        run: |
+          npm install -g @playwright/mcp@0.0.28
+          npx playwright install --with-deps chromium
 
       - name: Ingest docs
-        run: |
-          docker volume create docs_cache
-          docker run --rm --user 0 -v docs_cache:/data alpine \
-            sh -c "mkdir -p /data/.docs_cache && chown -R 1000:1000 /data"
-          docker run --rm \
-            -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN -e HF_TOKEN \
-            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/data/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
-            -v docs_cache:/data \
-            --entrypoint revcat-advocate \
-            supervisor ingest-docs --skip-rag
+        run: revcat-advocate ingest-docs --skip-rag
 
       - name: Execute agent task
         timeout-minutes: 18
@@ -51,28 +56,10 @@ jobs:
           AGENT_TASK_TITLE: ${{ github.event.issue.title }}
           AGENT_TASK_BODY: ${{ github.event.issue.body }}
           AGENT_TASK_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          docker run --rm --read-only --tmpfs /tmp --tmpfs /home/agent/.cache --tmpfs /home/agent/.npm \
-            -e ANTHROPIC_API_KEY -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN \
-            -e HF_TOKEN -e CONTEXTUAL_API_KEY -e DEVTO_API_KEY -e GITHUB_REPO \
-            -e TWITTER_API_KEY -e TWITTER_API_SECRET \
-            -e TWITTER_ACCESS_TOKEN -e TWITTER_ACCESS_SECRET \
-            -e AGENT_TASK_TITLE -e AGENT_TASK_BODY -e AGENT_TASK_NUMBER \
-            -e DRY_RUN=false \
-            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/data/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
-            -v docs_cache:/data \
-            --entrypoint revcat-advocate \
-            supervisor supervise \
-            --max-actions 1 \
-            --task-issue
+        run: revcat-advocate supervise --max-actions 1 --task-issue
 
       - name: Verify ledger
-        run: |
-          docker run --rm \
-            -e TURSO_DATABASE_URL -e TURSO_AUTH_TOKEN \
-            -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/tmp/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
-            --entrypoint revcat-advocate \
-            supervisor verify-ledger
+        run: revcat-advocate verify-ledger
 
       - name: Close issue on success
         if: success()
