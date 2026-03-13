@@ -267,6 +267,15 @@ class Supervisor:
     def _decide_action(self, signal: dict) -> str:
         signal_type = signal.get("signal_type", "")
 
+        # For manual_goal (task issues): detect submit_form pattern before LLM
+        if signal_type == "manual_goal":
+            body = signal.get("body", "")
+            import re as _re
+            has_url = bool(_re.search(r'(?i)(?:url|target|form|link)\s*[:=]\s*https?://\S+', body))
+            has_submit_keywords = bool(_re.search(r'(?i)\b(?:fill|submit|apply|application|form)\b', body))
+            if has_url and has_submit_keywords:
+                return "submit_form"
+
         action = ACTION_MAP.get(signal_type)
 
         if action is None:
@@ -647,11 +656,7 @@ class Supervisor:
                     browser = PlaywrightMCPBrowser(self.config)
                     await browser.connect()
                     try:
-                        await browser.navigate(url)
-                        snapshot = await browser.snapshot()
-                        page_content = snapshot.get("content", "")
-
-                        # Agent's self-knowledge for answering form questions
+                        # Build agent self-knowledge context
                         site_url = ""
                         repo_url = ""
                         if self.config.github_repo:
@@ -677,42 +682,103 @@ class Supervisor:
 
                         import anthropic
                         client = anthropic.Anthropic(api_key=self.config.anthropic_api_key)
-                        resp = client.messages.create(
-                            model="claude-sonnet-4-6",
-                            max_tokens=2000,
-                            messages=[{
-                                "role": "user",
-                                "content": (
-                                    f"Task from issue: {signal.get('title', '')}\n"
-                                    f"Operator details:\n{body[:4000]}\n\n"
-                                    f"{agent_ctx}\n"
-                                    f"Page:\n{page_content[:5000]}\n\n"
-                                    f"Fill this form. Personal fields (name, email, location, visa, GDPR) come from operator details. "
-                                    f"Questions about agent capabilities, links, and application letter — answer using agent self-knowledge. "
-                                    f"For text inputs: browser_type. For checkboxes/radio/dropdowns: browser_click. "
-                                    f"End with browser_click on submit.\n\n"
-                                    f"Return ONLY a JSON array of actions.\n"
-                                    f"Each: {{\"tool\": \"browser_click\"|\"browser_type\", \"args\": {{...}}}}\n"
-                                    f"browser_type args: {{\"element\": \"desc\", \"ref\": \"refN\", \"text\": \"value\"}}\n"
-                                    f"browser_click args: {{\"element\": \"desc\", \"ref\": \"refN\"}}"
-                                ),
-                            }],
+
+                        system_prompt = (
+                            "You are an autonomous agent filling out a web form using browser tools. "
+                            "You operate in a loop: observe the page, decide your next action, execute it, "
+                            "then observe the result. You have these tools:\n"
+                            "- browser_click: click an element. Args: {\"element\": \"description\", \"ref\": \"refN\"}\n"
+                            "- browser_type: type text into a field. Args: {\"element\": \"description\", \"ref\": \"refN\", \"text\": \"value\"}\n"
+                            "- browser_select_option: select a dropdown option. Args: {\"element\": \"description\", \"ref\": \"refN\", \"values\": [\"option\"]}\n"
+                            "\nRules:\n"
+                            "- Do ONE action at a time, then observe the result.\n"
+                            "- Personal fields (name, email, location, visa) come from operator details.\n"
+                            "- Questions about agent capabilities, links, portfolio — use agent self-knowledge.\n"
+                            "- When you see a file upload field for resume/CV, skip it.\n"
+                            "- When done filling all fields, click the submit button.\n"
+                            "- After submitting, say DONE.\n"
+                            "\nRespond with a JSON object: {\"tool\": \"...\", \"args\": {...}, \"reasoning\": \"...\"}\n"
+                            "Or {\"done\": true, \"reasoning\": \"...\"} when the form is submitted."
                         )
 
+                        # Navigate and get initial state
+                        await browser.navigate(url)
+                        snapshot = await browser.snapshot()
+                        page_content = snapshot.get("content", "")
+
+                        messages = [{
+                            "role": "user",
+                            "content": (
+                                f"Task: {signal.get('title', '')}\n\n"
+                                f"Operator details:\n{body[:4000]}\n\n"
+                                f"{agent_ctx}\n\n"
+                                f"Current page state:\n{page_content[:6000]}\n\n"
+                                f"Observe this form and decide your first action."
+                            ),
+                        }]
+
+                        max_steps = 30
+                        actions_taken = []
                         import json as _json
-                        actions_text = resp.content[0].text.strip()
-                        if actions_text.startswith("```"):
-                            actions_text = actions_text.split("\n", 1)[1].rsplit("```", 1)[0]
-                        actions = _json.loads(actions_text)
 
-                        results = []
-                        for action in actions:
-                            tool = action.get("tool", "")
-                            args = action.get("args", {})
-                            r = await browser.call_tool(tool, args)
-                            results.append({"tool": tool, "status": r.get("status")})
+                        for step in range(max_steps):
+                            resp = client.messages.create(
+                                model=self.config.ai_model,
+                                max_tokens=1000,
+                                system=system_prompt,
+                                messages=messages,
+                            )
+                            reply = resp.content[0].text.strip()
 
-                        return {"status": "submitted", "actions_taken": len(results), "url": url}
+                            # Parse the response
+                            try:
+                                if reply.startswith("```"):
+                                    reply = reply.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                                action_data = _json.loads(reply)
+                            except (_json.JSONDecodeError, IndexError):
+                                # LLM returned non-JSON — check if it said DONE
+                                if "DONE" in reply.upper() or "done" in reply:
+                                    break
+                                messages.append({"role": "assistant", "content": reply})
+                                messages.append({"role": "user", "content": "Respond with valid JSON. One action at a time."})
+                                continue
+
+                            # Check if done
+                            if action_data.get("done"):
+                                if console:
+                                    console.print(f"  Step {step + 1}: DONE — {action_data.get('reasoning', '')[:80]}")
+                                break
+
+                            tool = action_data.get("tool", "")
+                            args = action_data.get("args", {})
+                            reasoning = action_data.get("reasoning", "")
+
+                            if console:
+                                console.print(f"  Step {step + 1}: {tool}({args.get('element', '')[:40]}) — {reasoning[:60]}")
+
+                            # Execute the action
+                            try:
+                                result = await browser.call_tool(tool, args)
+                                action_result = f"Action executed. Result: {_json.dumps(result)[:500]}"
+                                actions_taken.append({"step": step + 1, "tool": tool, "element": args.get("element", ""), "status": "ok"})
+                            except Exception as e:
+                                action_result = f"Action failed: {str(e)[:200]}"
+                                actions_taken.append({"step": step + 1, "tool": tool, "element": args.get("element", ""), "status": "error", "error": str(e)[:100]})
+
+                            # Observe: get fresh page state after action
+                            try:
+                                snapshot = await browser.snapshot()
+                                new_page = snapshot.get("content", "")
+                            except Exception:
+                                new_page = "(snapshot failed)"
+
+                            messages.append({"role": "assistant", "content": reply})
+                            messages.append({
+                                "role": "user",
+                                "content": f"{action_result}\n\nCurrent page state:\n{new_page[:6000]}\n\nDecide your next action."
+                            })
+
+                        return {"status": "submitted", "actions_taken": len(actions_taken), "steps": actions_taken, "url": url}
                     finally:
                         await browser.disconnect()
 
