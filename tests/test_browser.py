@@ -215,6 +215,21 @@ async def test_playwright_mcp_fetch_page_text(mock_config):
     assert browser._session.call_tool.call_count == 2
 
 
+@pytest.mark.asyncio
+async def test_playwright_mcp_call_tool_detects_browser_error(mock_config):
+    """call_tool should detect 'Chrome is not installed' in MCP response."""
+    browser = PlaywrightMCPBrowser(mock_config)
+    browser._session = AsyncMock()
+
+    mock_content = MagicMock()
+    mock_content.text = "Error: Chrome is not installed. Please install Chrome."
+    browser._session.call_tool.return_value = MagicMock(content=[mock_content])
+
+    result = await browser.call_tool("browser_navigate", {"url": "https://github.com/test"})
+    assert result["status"] == "browser_error"
+    assert "Chrome is not installed" in result["content"]
+
+
 # ── Integration: fetch_page with MCP fallback ─────────────────────
 
 def test_fetch_page_falls_back_to_requests(mock_config):

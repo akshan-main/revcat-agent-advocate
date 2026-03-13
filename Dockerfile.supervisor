@@ -21,7 +21,12 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
 RUN npm install -g @playwright/mcp@0.0.28 \
     && chmod -R a+rx /usr/local/lib/node_modules/@playwright \
     && /usr/local/lib/node_modules/@playwright/mcp/node_modules/.bin/playwright install chromium \
-    && chmod -R a+rx /opt/pw-browsers
+    && chmod -R a+rx /opt/pw-browsers \
+    && echo "=== Chromium install verification ===" \
+    && ls -la /opt/pw-browsers/ \
+    && ls -la /opt/pw-browsers/chromium-*/chrome-linux/ 2>/dev/null || ls -la /opt/pw-browsers/chromium-*/ \
+    && which mcp-server-playwright \
+    && echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH"
 
 USER agent
 

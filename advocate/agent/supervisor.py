@@ -812,11 +812,6 @@ class Supervisor:
 
                             element_text = str(args.get("element", "")).lower()
                             reasoning_text = str(reasoning).lower()
-                            if tool == "browser_click" and any(
-                                kw in element_text or kw in reasoning_text
-                                for kw in ("submit", "apply", "send application", "complete application")
-                            ):
-                                submit_attempted = True
 
                             # Execute the action
                             try:
@@ -839,6 +834,12 @@ class Supervisor:
                                     })
                                     if tool == "browser_type":
                                         typed_fields += 1
+                                    # Only mark submit after successful click
+                                    if tool == "browser_click" and any(
+                                        kw in element_text or kw in reasoning_text
+                                        for kw in ("submit", "apply", "send application", "complete application")
+                                    ):
+                                        submit_attempted = True
                             except Exception as e:
                                 action_errors += 1
                                 consecutive_errors += 1

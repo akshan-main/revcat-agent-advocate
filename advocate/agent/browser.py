@@ -50,10 +50,36 @@ class PlaywrightMCPBrowser:
         except ImportError:
             raise ImportError("mcp SDK not installed")
 
+        import os
+        import glob as _glob
         mcp_binary = shutil.which("mcp-server-playwright")
+
+        # Ensure PLAYWRIGHT_BROWSERS_PATH is passed to the subprocess so
+        # the MCP server can find the pre-installed Chromium.
+        env = dict(os.environ)
+        pw_path = env.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")
+        env["PLAYWRIGHT_BROWSERS_PATH"] = pw_path
+
+        # Pre-flight: verify Chromium binary exists
+        chrome_candidates = _glob.glob(os.path.join(pw_path, "chromium-*/chrome-linux/chrome"))
+        if not chrome_candidates:
+            chrome_candidates = _glob.glob(os.path.join(pw_path, "chromium-*/chrome-linux/headless_shell"))
+        if not chrome_candidates:
+            # List what's actually there for debugging
+            try:
+                contents = os.listdir(pw_path) if os.path.isdir(pw_path) else []
+            except OSError:
+                contents = []
+            raise RuntimeError(
+                f"Chromium not found at {pw_path}. "
+                f"Contents: {contents}. "
+                f"Set PLAYWRIGHT_BROWSERS_PATH to the correct path."
+            )
+
         server_params = StdioServerParameters(
             command=mcp_binary or "npx",
             args=["--headless"] if mcp_binary else ["@playwright/mcp@0.0.28", "--headless"],
+            env=env,
         )
         self._streams = stdio_client(server_params)
         streams = await self._streams.__aenter__()
@@ -89,7 +115,16 @@ class PlaywrightMCPBrowser:
         for block in result.content:
             if hasattr(block, "text"):
                 texts.append(block.text)
-        return {"status": "ok", "content": "\n".join(texts)}
+        content = "\n".join(texts)
+        # Detect browser-level errors in MCP response content
+        _error_signals = (
+            "chrome is not installed", "chromium is not installed",
+            "browser is not installed", "no browser found",
+            "executable doesn't exist", "failed to launch",
+        )
+        if any(sig in content.lower() for sig in _error_signals):
+            return {"status": "browser_error", "content": content}
+        return {"status": "ok", "content": content}
 
     async def navigate(self, url: str) -> dict:
         if not _validate_url(url):
