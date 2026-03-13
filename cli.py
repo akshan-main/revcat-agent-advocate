@@ -56,8 +56,9 @@ def main(ctx):
 
 @main.command("ingest-docs")
 @click.option("--force", is_flag=True, help="Re-fetch all pages even if cached")
+@click.option("--skip-rag", is_flag=True, help="Skip RAG vector index build (BM25 only)")
 @click.pass_context
-def ingest_docs(ctx, force):
+def ingest_docs(ctx, force, skip_rag):
     """Download RevenueCat LLM docs index and fetch .md mirror pages."""
     config = ctx.obj["config"]
     db = ctx.obj["db"]
@@ -85,10 +86,15 @@ def ingest_docs(ctx, force):
         log_tool_call(run_ctx, "knowledge.build_index", "", f"docs={index.doc_count}, terms={len(index.inverted_index)}")
 
         # Build RAG index (ChromaDB Cloud + HF Inference embeddings)
-        from advocate.knowledge.rag import build_rag_index_from_config
-        rag_index = build_rag_index_from_config(config, db)
-        log_tool_call(run_ctx, "knowledge.build_rag_index", "",
-                      f"chunks={rag_index.chunk_count}, docs={rag_index.doc_count}")
+        rag_chunks = 0
+        if not skip_rag:
+            from advocate.knowledge.rag import build_rag_index_from_config
+            rag_index = build_rag_index_from_config(config, db)
+            rag_chunks = rag_index.chunk_count
+            log_tool_call(run_ctx, "knowledge.build_rag_index", "",
+                          f"chunks={rag_index.chunk_count}, docs={rag_index.doc_count}")
+        else:
+            log_tool_call(run_ctx, "knowledge.build_rag_index", "skipped", "skip_rag=True")
 
         table = Table(title="Ingestion Report")
         table.add_column("Metric")
@@ -99,7 +105,7 @@ def ingest_docs(ctx, force):
         table.add_row("Changed", str(report.changed))
         table.add_row("Unavailable (404)", str(report.errored))
         table.add_row("BM25 index docs", str(index.doc_count))
-        table.add_row("RAG chunks", str(rag_index.chunk_count))
+        table.add_row("RAG chunks", str(rag_chunks))
         console.print(table)
 
         finalize_run(run_ctx, config, db,

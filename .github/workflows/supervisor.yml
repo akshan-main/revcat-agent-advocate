@@ -53,7 +53,7 @@ jobs:
             -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/data/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
             -v docs_cache:/data \
             --entrypoint revcat-advocate \
-            supervisor ingest-docs
+            supervisor ingest-docs --skip-rag
 
       - name: Supervisor cycle
         timeout-minutes: 18
