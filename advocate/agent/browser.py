@@ -171,14 +171,15 @@ async def _mcp_fetch(url: str, config: Config) -> dict:
 
 def _run_async(coro):
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                return pool.submit(asyncio.run, coro).result(timeout=TIMEOUT_MS / 1000 + 10)
-        else:
-            return loop.run_until_complete(coro)
+        loop = asyncio.get_running_loop()
     except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return pool.submit(asyncio.run, coro).result(timeout=TIMEOUT_MS / 1000 + 10)
+    else:
         return asyncio.run(coro)
 
 
