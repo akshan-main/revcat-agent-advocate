@@ -75,19 +75,39 @@ class PlaywrightMCPBrowser:
 
         env["PLAYWRIGHT_BROWSERS_PATH"] = pw_path
 
-        # Pre-flight: verify Chromium binary exists
-        chrome_candidates = _glob.glob(os.path.join(pw_path, "chromium-*/chrome-linux/chrome"))
+        # Pre-flight: verify Chromium binary exists (check multiple patterns)
+        _chrome_patterns = [
+            "chromium-*/chrome-linux/chrome",
+            "chromium-*/chrome-linux/headless_shell",
+            "chromium_headless_shell-*/chrome-linux/headless_shell",
+            "chromium-*/chrome",
+            "chromium_headless_shell-*/headless_shell",
+            "chromium-*/chrome-linux/chromium",
+        ]
+        chrome_candidates = []
+        for pat in _chrome_patterns:
+            chrome_candidates = _glob.glob(os.path.join(pw_path, pat))
+            if chrome_candidates:
+                break
         if not chrome_candidates:
-            chrome_candidates = _glob.glob(os.path.join(pw_path, "chromium-*/chrome-linux/headless_shell"))
-        if not chrome_candidates:
-            # List what's actually there for debugging
+            # Deep debug: list all files recursively (2 levels) for diagnostics
+            debug_tree = []
             try:
-                contents = os.listdir(pw_path) if os.path.isdir(pw_path) else []
+                for entry in os.listdir(pw_path):
+                    entry_path = os.path.join(pw_path, entry)
+                    if os.path.isdir(entry_path):
+                        try:
+                            sub = os.listdir(entry_path)
+                            debug_tree.append(f"{entry}/: {sub[:10]}")
+                        except OSError:
+                            debug_tree.append(f"{entry}/: <unreadable>")
+                    else:
+                        debug_tree.append(entry)
             except OSError:
-                contents = []
+                debug_tree = ["<unreadable>"]
             raise RuntimeError(
                 f"Chromium not found at {pw_path}. "
-                f"Contents: {contents}. "
+                f"Tree: {debug_tree}. "
                 f"Set PLAYWRIGHT_BROWSERS_PATH to the correct path."
             )
 
