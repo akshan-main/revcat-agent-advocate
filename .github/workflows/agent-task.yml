@@ -58,6 +58,7 @@ jobs:
             -e TWITTER_API_KEY -e TWITTER_API_SECRET \
             -e TWITTER_ACCESS_TOKEN -e TWITTER_ACCESS_SECRET \
             -e AGENT_TASK_TITLE -e AGENT_TASK_BODY -e AGENT_TASK_NUMBER \
+            -e DRY_RUN=false \
             -e RUNS_DIR=/tmp/runs -e DOCS_CACHE_DIR=/data/.docs_cache -e SITE_OUTPUT_DIR=/tmp/site_output \
             -v docs_cache:/data \
             --entrypoint revcat-advocate \

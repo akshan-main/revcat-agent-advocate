@@ -618,7 +618,7 @@ class Supervisor:
         # Validate operator provided required personal/legal fields.
         # Identity fields
         has_email = bool(re.search(r'[\w.+-]+@[\w-]+\.[\w.]+', body))
-        has_name = bool(re.search(r'(?i)(?:name|operator)\s*[:=]\s*\S+', body))
+        has_name = bool(re.search(r'(?i)(?:name|operator)[^:=\n]*[:=]\s*\S+', body))
         # Legal/consent fields — required for form submissions involving personal data
         has_location = bool(re.search(r'(?i)(?:location|city|country|address)\s*[:=]\s*\S+', body))
         has_visa = bool(re.search(r'(?i)(?:visa|work.?auth|authorization|right.?to.?work|citizenship)\s*[:=]\s*\S+', body))
