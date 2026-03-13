@@ -29,7 +29,7 @@ jobs:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       CONTEXTUAL_API_KEY: ${{ secrets.CONTEXTUAL_API_KEY }}
       DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
-      GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.TOKEN || secrets.GITHUB_TOKEN }}
       GITHUB_REPO: ${{ github.repository }}
       TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
       TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}

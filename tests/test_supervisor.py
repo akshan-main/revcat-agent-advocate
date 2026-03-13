@@ -61,6 +61,26 @@ def test_decide_action_tweet_due(db_conn, mock_config):
     assert supervisor._decide_action(signal) == "draft_tweet"
 
 
+def test_decide_action_manual_goal_submit_pattern(db_conn, mock_config):
+    supervisor = Supervisor(mock_config, db_conn=db_conn)
+    signal = {
+        "signal_type": "manual_goal",
+        "title": "Apply now",
+        "body": (
+            "URL: https://jobs.ashbyhq.com/revenuecat/abc/application\n"
+            "Please fill and submit this application form."
+        ),
+    }
+    assert supervisor._decide_action(signal) == "submit_form"
+
+
+def test_task_success_submit_form_requires_submit_attempted(db_conn, mock_config):
+    supervisor = Supervisor(mock_config, db_conn=db_conn)
+    assert supervisor._is_task_success("submit_form", {"status": "submitted", "submit_attempted": True}) is True
+    assert supervisor._is_task_success("submit_form", {"status": "submitted", "submit_attempted": False}) is False
+    assert supervisor._is_task_success("submit_form", {"status": "error"}) is False
+
+
 # ── Cycle Without Signals ──────────────────────────────────────────
 
 def test_run_cycle_no_external_signals(db_conn, mock_config):

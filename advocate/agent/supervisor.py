@@ -153,9 +153,24 @@ class Supervisor:
         outcome = self._execute_action(action, signal, console)
         mark_acted(self.db, signal_id, action, outcome)
 
-        success = outcome.get("status") not in ("error", "skipped")
+        success = self._is_task_success(action, outcome)
         reason = outcome.get("reason") or outcome.get("error") or outcome.get("status", "unknown")
         return {"acted": success, "action": action, "outcome": outcome, "reason": reason}
+
+    def _is_task_success(self, action: str, outcome: dict) -> bool:
+        """Task-issue success must represent actual completion, not just non-error execution."""
+        status = outcome.get("status")
+        if status in ("error", "skipped"):
+            return False
+
+        # Form submissions are high-stakes; require an explicit submit attempt.
+        if action == "submit_form":
+            return (
+                status == "submitted"
+                and bool(outcome.get("submit_attempted"))
+            )
+
+        return True
 
     def run_cycle(self, max_actions: int = 3, console=None) -> dict:
         ensure_signals_schema(self.db)
@@ -696,13 +711,21 @@ class Supervisor:
                             "- Questions about agent capabilities, links, portfolio — use agent self-knowledge.\n"
                             "- When you see a file upload field for resume/CV, skip it.\n"
                             "- When done filling all fields, click the submit button.\n"
-                            "- After submitting, say DONE.\n"
+                            "- Only say DONE after you have attempted a real submit click.\n"
+                            "- DONE is invalid if you have not attempted submit.\n"
                             "\nRespond with a JSON object: {\"tool\": \"...\", \"args\": {...}, \"reasoning\": \"...\"}\n"
                             "Or {\"done\": true, \"reasoning\": \"...\"} when the form is submitted."
                         )
 
                         # Navigate and get initial state
-                        await browser.navigate(url)
+                        nav_result = await browser.navigate(url)
+                        if nav_result.get("status") != "ok":
+                            return {
+                                "status": "error",
+                                "error": f"initial navigation failed: {nav_result.get('status', 'unknown')}",
+                                "url": url,
+                                "details": nav_result,
+                            }
                         snapshot = await browser.snapshot()
                         page_content = snapshot.get("content", "")
 
@@ -718,7 +741,14 @@ class Supervisor:
                         }]
 
                         max_steps = 30
+                        allowed_tools = {"browser_click", "browser_type", "browser_select_option"}
                         actions_taken = []
+                        submit_attempted = False
+                        done_received = False
+                        action_errors = 0
+                        typed_fields = 0
+                        consecutive_errors = 0
+                        last_page = page_content
                         import json as _json
 
                         for step in range(max_steps):
@@ -738,6 +768,7 @@ class Supervisor:
                             except (_json.JSONDecodeError, IndexError):
                                 # LLM returned non-JSON — check if it said DONE
                                 if "DONE" in reply.upper() or "done" in reply:
+                                    done_received = True
                                     break
                                 messages.append({"role": "assistant", "content": reply})
                                 messages.append({"role": "user", "content": "Respond with valid JSON. One action at a time."})
@@ -745,23 +776,72 @@ class Supervisor:
 
                             # Check if done
                             if action_data.get("done"):
+                                done_received = True
                                 if console:
                                     console.print(f"  Step {step + 1}: DONE — {action_data.get('reasoning', '')[:80]}")
                                 break
 
                             tool = action_data.get("tool", "")
-                            args = action_data.get("args", {})
+                            args = action_data.get("args", {}) or {}
                             reasoning = action_data.get("reasoning", "")
+
+                            if tool not in allowed_tools:
+                                actions_taken.append({
+                                    "step": step + 1,
+                                    "tool": tool,
+                                    "element": args.get("element", ""),
+                                    "status": "error",
+                                    "error": "invalid_tool",
+                                })
+                                action_errors += 1
+                                consecutive_errors += 1
+                                messages.append({"role": "assistant", "content": reply})
+                                messages.append({
+                                    "role": "user",
+                                    "content": (
+                                        f"Tool '{tool}' is invalid. Use one of: {sorted(allowed_tools)}. "
+                                        "Retry with valid JSON for one action."
+                                    ),
+                                })
+                                if consecutive_errors >= 5:
+                                    break
+                                continue
 
                             if console:
                                 console.print(f"  Step {step + 1}: {tool}({args.get('element', '')[:40]}) — {reasoning[:60]}")
 
+                            element_text = str(args.get("element", "")).lower()
+                            reasoning_text = str(reasoning).lower()
+                            if tool == "browser_click" and any(
+                                kw in element_text or kw in reasoning_text
+                                for kw in ("submit", "apply", "send application", "complete application")
+                            ):
+                                submit_attempted = True
+
                             # Execute the action
                             try:
                                 result = await browser.call_tool(tool, args)
-                                action_result = f"Action executed. Result: {_json.dumps(result)[:500]}"
-                                actions_taken.append({"step": step + 1, "tool": tool, "element": args.get("element", ""), "status": "ok"})
+                                result_status = result.get("status", "ok")
+                                if result_status != "ok":
+                                    action_errors += 1
+                                    consecutive_errors += 1
+                                    action_result = f"Action failed. Result: {_json.dumps(result)[:500]}"
+                                    actions_taken.append({
+                                        "step": step + 1, "tool": tool, "element": args.get("element", ""),
+                                        "status": "error", "error": result_status,
+                                    })
+                                else:
+                                    consecutive_errors = 0
+                                    action_result = f"Action executed. Result: {_json.dumps(result)[:500]}"
+                                    actions_taken.append({
+                                        "step": step + 1, "tool": tool, "element": args.get("element", ""),
+                                        "status": "ok",
+                                    })
+                                    if tool == "browser_type":
+                                        typed_fields += 1
                             except Exception as e:
+                                action_errors += 1
+                                consecutive_errors += 1
                                 action_result = f"Action failed: {str(e)[:200]}"
                                 actions_taken.append({"step": step + 1, "tool": tool, "element": args.get("element", ""), "status": "error", "error": str(e)[:100]})
 
@@ -769,6 +849,7 @@ class Supervisor:
                             try:
                                 snapshot = await browser.snapshot()
                                 new_page = snapshot.get("content", "")
+                                last_page = new_page
                             except Exception:
                                 new_page = "(snapshot failed)"
 
@@ -778,7 +859,53 @@ class Supervisor:
                                 "content": f"{action_result}\n\nCurrent page state:\n{new_page[:6000]}\n\nDecide your next action."
                             })
 
-                        return {"status": "submitted", "actions_taken": len(actions_taken), "steps": actions_taken, "url": url}
+                            if consecutive_errors >= 5:
+                                break
+
+                        confirm_keywords = (
+                            "thank you", "application submitted", "submission received",
+                            "we have received your application", "application has been submitted",
+                        )
+                        submission_confirmed = any(k in (last_page or "").lower() for k in confirm_keywords)
+
+                        if typed_fields == 0:
+                            return {
+                                "status": "error",
+                                "error": "form fill failed: no fields were typed",
+                                "actions_taken": len(actions_taken),
+                                "steps": actions_taken,
+                                "url": url,
+                            }
+
+                        if not submit_attempted:
+                            return {
+                                "status": "error",
+                                "error": "form was not submitted: no submit click attempted",
+                                "actions_taken": len(actions_taken),
+                                "steps": actions_taken,
+                                "url": url,
+                            }
+
+                        if not done_received and not submission_confirmed:
+                            return {
+                                "status": "error",
+                                "error": "form loop ended before completion signal",
+                                "actions_taken": len(actions_taken),
+                                "steps": actions_taken,
+                                "url": url,
+                            }
+
+                        return {
+                            "status": "submitted",
+                            "actions_taken": len(actions_taken),
+                            "steps": actions_taken,
+                            "url": url,
+                            "submit_attempted": submit_attempted,
+                            "done_received": done_received,
+                            "submission_confirmed": submission_confirmed,
+                            "action_errors": action_errors,
+                            "typed_fields": typed_fields,
+                        }
                     finally:
                         await browser.disconnect()
 

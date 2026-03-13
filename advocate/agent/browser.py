@@ -3,6 +3,7 @@
 Domain-allowlisted, dry_run-gated.
 """
 import asyncio
+import shutil
 from urllib.parse import urlparse
 
 from ..config import Config
@@ -49,9 +50,10 @@ class PlaywrightMCPBrowser:
         except ImportError:
             raise ImportError("mcp SDK not installed")
 
+        mcp_binary = shutil.which("mcp-server-playwright")
         server_params = StdioServerParameters(
-            command="npx",
-            args=["@playwright/mcp@0.0.28", "--headless"],
+            command=mcp_binary or "npx",
+            args=["--headless"] if mcp_binary else ["@playwright/mcp@0.0.28", "--headless"],
         )
         self._streams = stdio_client(server_params)
         streams = await self._streams.__aenter__()

@@ -82,32 +82,7 @@
     </table>
     {% endif %}
 
-    {% if recent_signals %}
-    <h2>Recent Signals</h2>
-    <div class="experiment-grid">
-        {% for sig in recent_signals %}
-        <div class="feedback-card" style="border-left:3px solid {% if sig.status == 'acted' %}var(--green){% elif sig.status == 'pending' %}#b45309{% elif sig.status == 'skipped' %}var(--text-muted){% else %}var(--border){% endif %}; padding-left:1rem;">
-            <div class="experiment-header">
-                <h3 style="font-size:0.9rem;">{{ sig.title[:80] }}</h3>
-                <span class="badge {% if sig.status == 'acted' %}badge-verified{% elif sig.status == 'pending' %}badge-running{% elif sig.status == 'skipped' %}badge-draft{% else %}badge-critical{% endif %}">{{ sig.status }}</span>
-            </div>
-            <div class="experiment-body" style="font-size:0.85rem;">
-                <span class="content-type">{{ sig.source }}</span>
-                <span class="content-type">{{ sig.signal_type }}</span>
-                {% if sig.action_taken %}
-                <span class="content-type" style="background:var(--green);color:#fff;">{{ sig.action_taken }}</span>
-                {% endif %}
-            </div>
-            <div class="experiment-footer">
-                <span>Score: <strong>{{ "%.3f" | format(sig.score) }}</strong></span>
-                <time>{{ sig.created_at[:16] }}</time>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if not signal_stats and not recent_signals %}
+    {% if not signal_stats %}
     <p class="placeholder">No supervisor cycles yet. Run: <code>python3 -m cli supervise</code></p>
     {% endif %}
 </article>
