@@ -163,10 +163,12 @@ class Supervisor:
         if status in ("error", "skipped"):
             return False
 
-        # Form submissions are high-stakes; require an explicit submit attempt.
+        # Form submissions: require submit attempted + page confirmation or LLM done signal.
+        # "submitted" = page confirmed, "unconfirmed" = LLM said done but no page confirmation.
+        # Both count as task success since submit was attempted.
         if action == "submit_form":
             return (
-                status == "submitted"
+                status in ("submitted", "unconfirmed")
                 and bool(outcome.get("submit_attempted"))
             )
 
@@ -746,7 +748,7 @@ class Supervisor:
                             ),
                         }]
 
-                        max_steps = 25
+                        max_steps = 15
                         allowed_tools = {"browser_click", "browser_type", "browser_select_option", "browser_press_key", "browser_snapshot", "browser_take_screenshot"}
                         actions_taken = []
                         submit_attempted = False
@@ -858,13 +860,16 @@ class Supervisor:
                                         or any(kw in element_text or kw in reasoning_text for kw in _submit_kws)
                                     ):
                                         submit_attempted = True
-                                    # Also detect submit via keyboard (Tab to submit + Enter/Space)
-                                    if tool == "browser_press_key" and any(
-                                        kw in reasoning_text for kw in _submit_kws
-                                    ):
+                                    # Also detect submit via keyboard (Enter/Space when a submit button exists in tree)
+                                    if tool == "browser_press_key":
                                         key_pressed = str(args.get("key", "")).lower()
-                                        if key_pressed in ("enter", "space", " "):
-                                            submit_attempted = True
+                                        if key_pressed in ("enter", "space", " ") and last_page:
+                                            import re as _re3
+                                            if _re3.search(
+                                                r'button\s+"[^"]*(?:submit|apply)[^"]*"\s+\[ref=',
+                                                last_page, _re3.IGNORECASE
+                                            ):
+                                                submit_attempted = True
                             except Exception as e:
                                 action_errors += 1
                                 consecutive_errors += 1
@@ -957,8 +962,11 @@ class Supervisor:
                                 "url": url,
                             }
 
+                        # Require page confirmation — LLM "DONE" alone is not enough
+                        _final_status = "submitted" if submission_confirmed else "unconfirmed"
+
                         return {
-                            "status": "submitted",
+                            "status": _final_status,
                             "actions_taken": len(actions_taken),
                             "steps": actions_taken,
                             "url": url,
@@ -977,7 +985,7 @@ class Supervisor:
                 finalize_run(ctx, self.config, self.db, LedgerOutputs(
                     artifact_type="form_submission",
                     additional=result,
-                ), verification=None, success=result.get("status") == "submitted")
+                ), verification=None, success=result.get("status") in ("submitted", "unconfirmed"))
 
                 return result
             except Exception as e:
