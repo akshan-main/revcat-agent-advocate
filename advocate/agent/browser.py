@@ -77,12 +77,21 @@ class PlaywrightMCPBrowser:
 
         # Pre-flight: verify Chromium binary exists (check multiple patterns)
         _chrome_patterns = [
+            # Linux
             "chromium-*/chrome-linux/chrome",
             "chromium-*/chrome-linux64/chrome",
             "chromium-*/chrome-linux/headless_shell",
             "chromium-*/chrome-linux64/headless_shell",
             "chromium_headless_shell-*/chrome-linux/headless_shell",
             "chromium_headless_shell-*/chrome-headless-shell-linux64/headless_shell",
+            # macOS
+            "chromium-*/chrome-mac-arm64/Google Chrome for Testing.app",
+            "chromium-*/chrome-mac/Google Chrome for Testing.app",
+            "chromium-*/chrome-mac-arm64/Chromium.app",
+            "chromium-*/chrome-mac/Chromium.app",
+            "chromium_headless_shell-*/chrome-headless-shell-mac-arm64/headless_shell",
+            "chromium_headless_shell-*/chrome-headless-shell-mac/headless_shell",
+            # Generic fallbacks
             "chromium-*/chrome",
             "chromium_headless_shell-*/headless_shell",
             "chromium-*/chrome-linux/chromium",
@@ -155,8 +164,13 @@ class PlaywrightMCPBrowser:
         for block in result.content:
             if hasattr(block, "text"):
                 texts.append(block.text)
-            if hasattr(block, "data") and hasattr(block, "mimeType"):
-                images.append({"data": block.data, "mime_type": block.mimeType})
+            # MCP ImageContent: check multiple possible attribute names
+            block_type = getattr(block, "type", "")
+            if block_type == "image" or hasattr(block, "data"):
+                b64_data = getattr(block, "data", None)
+                mime = getattr(block, "mimeType", None) or getattr(block, "mime_type", None) or "image/png"
+                if b64_data:
+                    images.append({"data": b64_data, "mime_type": mime})
         content = "\n".join(texts)
         # Detect browser-level errors in MCP response content
         _error_signals = (
@@ -189,7 +203,7 @@ class PlaywrightMCPBrowser:
         return await self.call_tool("browser_type", {"element": element, "ref": ref, "text": text})
 
     async def screenshot(self) -> dict:
-        return await self.call_tool("browser_screenshot")
+        return await self.call_tool("browser_take_screenshot")
 
     async def fetch_page_text(self, url: str) -> dict:
         nav_result = await self.navigate(url)

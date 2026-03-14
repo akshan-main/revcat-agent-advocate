@@ -706,19 +706,16 @@ class Supervisor:
                             "- browser_type: type text into a field. Args: {\"element\": \"description\", \"ref\": \"refN\", \"text\": \"value\"}\n"
                             "- browser_select_option: select a dropdown option. Args: {\"element\": \"description\", \"ref\": \"refN\", \"values\": [\"option\"]}\n"
                             "- browser_press_key: press a keyboard key. Args: {\"key\": \"PageDown\"} or {\"key\": \"End\"} or {\"key\": \"Tab\"}\n"
-                            "- browser_snapshot: get the current page accessibility snapshot. Args: {} (no args needed)\n"
+                            "- browser_snapshot: request the FULL accessibility tree (use when you need refs for elements not in the truncated view)\n"
                             "\nRules:\n"
                             "- Do ONE action at a time, then observe the result.\n"
                             "- Personal fields (name, email, location, visa) come from operator details.\n"
                             "- Questions about agent capabilities, links, portfolio — use agent self-knowledge.\n"
                             "- When you see a file upload field for resume/CV, skip it.\n"
-                            "- IMPORTANT: You will receive both accessibility tree text AND screenshots. "
-                            "When the accessibility tree is truncated, use the SCREENSHOT to visually identify elements.\n"
-                            "- The accessibility tree may be TRUNCATED and not show all elements. The SCREENSHOT will show the full page. "
-                            "ALWAYS check the screenshot image to see elements at the bottom of the form (consent fields, submit button).\n"
-                            "- If an element is visible in the screenshot but NOT in the accessibility tree, use Tab to navigate to it "
-                            "and Space/Enter to interact with it. Count your Tabs carefully from the last known field.\n"
-                            "- Do NOT press Space on form fields you already filled — it will clear them.\n"
+                            "- The accessibility tree you receive after each action is TRUNCATED for efficiency. "
+                            "If you see an element in the screenshot but can't find its [ref=...] in the truncated tree, "
+                            "call browser_snapshot to get the FULL untruncated tree, then use the ref from that.\n"
+                            "- You also receive a screenshot image after each action. Use it to see the full page layout.\n"
                             "- When done filling all fields, click the submit button.\n"
                             "- Only say DONE after you have attempted a real submit click.\n"
                             "- DONE is invalid if you have not attempted submit.\n"
@@ -750,7 +747,7 @@ class Supervisor:
                         }]
 
                         max_steps = 25
-                        allowed_tools = {"browser_click", "browser_type", "browser_select_option", "browser_press_key", "browser_snapshot", "browser_screenshot"}
+                        allowed_tools = {"browser_click", "browser_type", "browser_select_option", "browser_press_key", "browser_snapshot", "browser_take_screenshot"}
                         actions_taken = []
                         submit_attempted = False
                         done_received = False
@@ -845,9 +842,20 @@ class Supervisor:
                                         typed_fields += 1
                                     # Mark submit after click or key press on submit-related elements
                                     _submit_kws = ("submit", "apply", "send application", "complete application")
-                                    if tool == "browser_click" and any(
-                                        kw in element_text or kw in reasoning_text
-                                        for kw in _submit_kws
+                                    _ref_val = str(args.get("ref", "")).lower()
+                                    # Check element text, reasoning, AND whether the ref matches
+                                    # a known submit button ref from the last snapshot
+                                    _submit_ref_hit = False
+                                    if _ref_val and last_page:
+                                        # Look for button "Submit..." [ref=<ref>] in last snapshot
+                                        import re as _re2
+                                        _submit_ref_hit = bool(_re2.search(
+                                            rf'button\s+"[^"]*(?:submit|apply)[^"]*"\s+\[ref={_ref_val}\]',
+                                            last_page, _re2.IGNORECASE
+                                        ))
+                                    if tool == "browser_click" and (
+                                        _submit_ref_hit
+                                        or any(kw in element_text or kw in reasoning_text for kw in _submit_kws)
                                     ):
                                         submit_attempted = True
                                     # Also detect submit via keyboard (Tab to submit + Enter/Space)
@@ -876,25 +884,35 @@ class Supervisor:
                             # Always use screenshot for visual grounding
                             screenshot_b64 = None
                             try:
-                                ss_result = await browser.call_tool("browser_screenshot")
+                                ss_result = await browser.call_tool("browser_take_screenshot")
                                 if ss_result.get("images"):
                                     screenshot_b64 = ss_result["images"][0]["data"]
+                                    screenshot_mime = ss_result["images"][0].get("mime_type", "image/png")
                                     if console:
-                                        console.print(f"    [dim]Screenshot captured ({len(screenshot_b64)} bytes)[/dim]")
+                                        console.print(f"    [dim]Screenshot captured ({len(screenshot_b64)} bytes, {screenshot_mime})[/dim]")
                                 else:
                                     if console:
-                                        console.print(f"    [dim]Screenshot: no images in result. Keys: {list(ss_result.keys())}[/dim]")
+                                        # Debug: show content length to understand what screenshot returned
+                                        ss_content = ss_result.get("content", "")
+                                        console.print(f"    [dim]Screenshot: no images. content_len={len(ss_content)}, content_preview={ss_content[:100]}[/dim]")
                             except Exception as ss_err:
                                 if console:
                                     console.print(f"    [dim]Screenshot failed: {ss_err}[/dim]")
 
                             if screenshot_b64:
-                                import base64 as _b64
+                                # If agent explicitly requested browser_snapshot, send full tree
+                                # Otherwise send truncated (agent can request full when needed)
+                                if tool == "browser_snapshot":
+                                    tree_text = new_page
+                                    tree_label = "Full accessibility tree"
+                                else:
+                                    tree_text = new_page[:10000]
+                                    tree_label = "Accessibility tree (truncated — use browser_snapshot for full)"
                                 messages.append({
                                     "role": "user",
                                     "content": [
-                                        {"type": "text", "text": f"{action_result}\n\nAccessibility tree (may be truncated):\n{new_page[:8000]}\n\nScreenshot of current page below. Use it to identify elements not visible in the accessibility tree. Decide your next action."},
-                                        {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": screenshot_b64}},
+                                        {"type": "text", "text": f"{action_result}\n\n{tree_label}:\n{tree_text}\n\nScreenshot of current page below. Decide your next action."},
+                                        {"type": "image", "source": {"type": "base64", "media_type": screenshot_mime, "data": screenshot_b64}},
                                     ],
                                 })
                             else:
