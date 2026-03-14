@@ -714,14 +714,10 @@ class Supervisor:
                             "- When you see a file upload field for resume/CV, skip it.\n"
                             "- IMPORTANT: You will receive both accessibility tree text AND screenshots. "
                             "When the accessibility tree is truncated, use the SCREENSHOT to visually identify elements.\n"
-                            "- The privacy/GDPR consent is TWO RADIO BUTTONS at the bottom of the form, below a long privacy notice text. "
-                            "The options are: 'I am located in the EEA/UK and consent...' and 'I am not located in the EEA/UK'. "
-                            "Click the correct radio button. Below the radios is the 'Submit Application' button.\n"
-                            "- CRITICAL: The accessibility tree will be truncated before showing these elements because the GDPR privacy "
-                            "notice text is very long. You MUST use the screenshot to see the radio buttons and submit button. "
-                            "Look at the BOTTOM of the screenshot image.\n"
-                            "- STRATEGY for elements not in accessibility tree: From the last text field, press Tab a few times to reach "
-                            "the radio buttons, then press Space to select one. Then Tab once more to reach Submit, and press Enter.\n"
+                            "- The accessibility tree may be TRUNCATED and not show all elements. The SCREENSHOT will show the full page. "
+                            "ALWAYS check the screenshot image to see elements at the bottom of the form (consent fields, submit button).\n"
+                            "- If an element is visible in the screenshot but NOT in the accessibility tree, use Tab to navigate to it "
+                            "and Space/Enter to interact with it. Count your Tabs carefully from the last known field.\n"
                             "- Do NOT press Space on form fields you already filled — it will clear them.\n"
                             "- When done filling all fields, click the submit button.\n"
                             "- Only say DONE after you have attempted a real submit click.\n"
@@ -878,15 +874,19 @@ class Supervisor:
                             messages.append({"role": "assistant", "content": reply})
 
                             # Always use screenshot for visual grounding
-                            use_screenshot = True
                             screenshot_b64 = None
-                            if use_screenshot:
-                                try:
-                                    ss_result = await browser.call_tool("browser_screenshot")
-                                    if ss_result.get("images"):
-                                        screenshot_b64 = ss_result["images"][0]["data"]
-                                except Exception:
-                                    pass
+                            try:
+                                ss_result = await browser.call_tool("browser_screenshot")
+                                if ss_result.get("images"):
+                                    screenshot_b64 = ss_result["images"][0]["data"]
+                                    if console:
+                                        console.print(f"    [dim]Screenshot captured ({len(screenshot_b64)} bytes)[/dim]")
+                                else:
+                                    if console:
+                                        console.print(f"    [dim]Screenshot: no images in result. Keys: {list(ss_result.keys())}[/dim]")
+                            except Exception as ss_err:
+                                if console:
+                                    console.print(f"    [dim]Screenshot failed: {ss_err}[/dim]")
 
                             if screenshot_b64:
                                 import base64 as _b64
