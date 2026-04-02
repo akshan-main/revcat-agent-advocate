@@ -144,5 +144,5 @@ Hybrid BM25 + semantic retrieval with reranking.
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v  # 314 tests
+pytest tests/ -v
 ```
